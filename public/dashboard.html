@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TDT Optimization — Dashboard Mockup</title>
+<style>
+  :root{
+    --bg: rgb(245,245,246);
+    --panel: rgb(220,237,232);
+    --accent: rgb(30,115,100);
+    --muted: #6b7280;
+    --card-shadow: 0 8px 24px rgba(6,30,24,0.06);
+    --radius: 12px;
+    --mono: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:var(--mono);background:linear-gradient(180deg,var(--bg),#f7f8f9);
+    color:#06241b;-webkit-font-smoothing:antialiased;
+  }
+  .container{max-width:1200px;margin:24px auto;padding:18px;}
+
+  header{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+  .logo{width:62px;height:62px;border-radius:10px;background:linear-gradient(135deg,#d9efe9,#b8e6dd);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent);font-size:18px;box-shadow:var(--card-shadow)}
+  h1{margin:0;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+
+  .nav{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .nav button{background:transparent;border:1px solid transparent;padding:8px 12px;border-radius:10px;cursor:pointer;color:var(--muted)}
+  .card{background:var(--panel);padding:16px;border-radius:var(--radius);box-shadow:var(--card-shadow);}
+
+  /* top area */
+  .top-grid{display:grid;grid-template-columns:1fr 320px;gap:18px;margin-bottom:18px}
+  .actions-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .action-card{background:white;padding:14px;border-radius:10px;border:1px solid #e9f3ef;display:flex;flex-direction:column;gap:8px;cursor:pointer}
+  .action-card h3{margin:0;font-size:15px;color:#053a2d}
+  .action-card p{margin:0;color:var(--muted);font-size:13px}
+
+  .kpi-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .kpi{background:white;padding:12px;border-radius:10px;border:1px solid #eef7f3;flex:1;min-width:140px}
+  .kpi .num{font-weight:800;color:var(--accent);font-size:22px}
+  .kpi .label{color:var(--muted);font-size:13px}
+
+  /* mid area */
+  .mid-grid{display:grid;grid-template-columns:1fr 420px;gap:18px;margin-bottom:18px}
+  .table-wrap{background:white;padding:12px;border-radius:10px;border:1px solid #eef7f3;overflow:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:10px;border-bottom:1px solid #f1f7f5;text-align:left}
+  th{background:#fcfff;position:sticky;top:0;font-weight:700;color:#084}
+  tr.clickable:hover{background:#f8fff9;cursor:pointer}
+
+  .small{font-size:12px;color:var(--muted)}
+
+  /* right column controls */
+  .right-stack{display:flex;flex-direction:column;gap:12px}
+  .small-card{background:white;padding:12px;border-radius:10px;border:1px solid #eef7f3}
+  .btn{background:var(--accent);color:white;padding:10px 12px;border-radius:9px;border:0;cursor:pointer;font-weight:700}
+  .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(6,115,88,0.12)}
+
+  /* footer */
+  footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+  @media (max-width:980px){
+    .top-grid{grid-template-columns:1fr}
+    .mid-grid{grid-template-columns:1fr}
+    .right-stack{order:3}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">TDT</div>
+    <div>
+      <h1>Web-Based TDT Optimization — Dashboard</h1>
+      <div class="sub">Overview • quick actions • recent items</div>
+    </div>
+    <nav class="nav">
+      <button title="Enter Data" id="nav-enter">Enter Data</button>
+      <button title="History" id="nav-history">History</button>
+      <button title="Config" id="nav-config">Config</button>
+    </nav>
+  </header>
+
+  <!-- Top -->
+  <div class="top-grid">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:800;font-size:16px;color:#083">Quick Actions</div>
+          <div class="small" style="margin-top:6px">Start an operation or create a dataset</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:var(--muted)">User</div>
+          <div style="font-weight:700">Operator01</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="actions-grid">
+        <div class="action-card" id="card-enter">
+          <h3>Enter Data</h3>
+          <p>Add a new dataset via Excel or manual entry.</p>
+          <div style="margin-top:auto"><button class="btn" onclick="simulateNav('enter')">Go</button></div>
+        </div>
+
+        <div class="action-card" id="card-run">
+          <h3>Run Optimization</h3>
+          <p>Select a dataset and run the optimizer.</p>
+          <div style="margin-top:auto"><button class="btn ghost" onclick="simulateNav('run')">Run</button></div>
+        </div>
+
+        <div class="action-card" id="card-history">
+          <h3>History</h3>
+          <p>Browse previous datasets and results.</p>
+          <div style="margin-top:auto"><button class="btn ghost" onclick="simulateNav('history')">Open</button></div>
+        </div>
+
+        <div class="action-card" id="card-config">
+          <h3>Configurations</h3>
+          <p>Manage derivadores, repartidores and parameters.</p>
+          <div style="margin-top:auto"><button class="btn ghost" onclick="simulateNav('config')">Open</button></div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px" class="kpi-row">
+        <div class="kpi">
+          <div class="num" id="kpi-datasets">128</div>
+          <div class="label">Datasets (total)</div>
+        </div>
+        <div class="kpi">
+          <div class="num" id="kpi-pending">7</div>
+          <div class="label">Pending validation</div>
+        </div>
+        <div class="kpi">
+          <div class="num" id="kpi-optimized">95</div>
+          <div class="label">Optimized runs</div>
+        </div>
+        <div class="kpi">
+          <div class="num" id="kpi-last">2025-11-08</div>
+          <div class="label">Last run date</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card right-stack">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-weight:800;color:#083">Quick Upload</div>
+        <div class="small">Dropbox / local</div>
+      </div>
+
+      <div style="margin-top:10px">
+        <input id="quick-file" type="file" accept=".xlsx" style="width:100%;padding:8px;border-radius:8px;border:1px solid #edf7f3;background:#fff" />
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn" id="quick-upload">Upload</button>
+          <button class="btn ghost" id="quick-manual">New Manual</button>
+        </div>
+        <div id="quick-msg" class="small" style="margin-top:8px;color:var(--muted)">No file selected</div>
+      </div>
+
+      <div style="margin-top:12px" class="small-card">
+        <div style="font-weight:700">Status</div>
+        <div id="status-text" class="small" style="margin-top:6px">System healthy — last backup 2 days ago</div>
+      </div>
+
+      <div style="margin-top:12px" class="small-card">
+        <div style="font-weight:700">Shortcuts</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <button class="btn ghost" onclick="simulateNav('history')">Open History</button>
+          <button class="btn ghost" onclick="simulateNav('config')">Open Config</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Middle area: Recent Datasets + Recent Optimizations -->
+  <div class="mid-grid">
+    <div class="table-wrap card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:800;color:#083">Recent Datasets</div>
+        <div style="font-size:13px;color:var(--muted)">Sorted by date</div>
+      </div>
+      <table style="margin-top:12px">
+        <thead>
+          <tr><th>ID</th><th>Date</th><th>Uploader</th><th>Floors/Apts</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="datasets-tbody">
+          <!-- filled by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="table-wrap card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:800;color:#083">Recent Optimizations</div>
+          <div class="small">Last 10 runs</div>
+        </div>
+        <table style="margin-top:12px">
+          <thead><tr><th>Opt ID</th><th>Dataset</th><th>Started</th><th>Time</th><th>Result</th></tr></thead>
+          <tbody id="opts-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="card small-card">
+        <div style="font-weight:800;color:#083">Notes</div>
+        <div class="small" style="margin-top:8px">This is a prototype dashboard — buttons simulate navigation. Connect to your LAMP backend to enable CRUD and real tasks.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Mockup • Save as HTML • Use this with your UI team</footer>
+</div>
+
+<script>
+/* Demo data for tables */
+const sampleDatasets = [
+  {id:122, date:'2025-11-08', user:'Operator01', floors:'3/9', status:'processed'},
+  {id:121, date:'2025-11-06', user:'Operator02', floors:'4/16', status:'validated'},
+  {id:120, date:'2025-10-29', user:'Operator01', floors:'2/6', status:'pending'},
+  {id:118, date:'2025-10-21', user:'Operator03', floors:'5/20', status:'processed'},
+  {id:101, date:'2025-09-11', user:'Operator01', floors:'3/9', status:'processed'}
+];
+
+const sampleOpts = [
+  {opt:501, ds:122, started:'2025-11-08 14:08', duration:'0m 18s', result:'OK'},
+  {opt:498, ds:121, started:'2025-11-06 10:22', duration:'0m 24s', result:'OK'},
+  {opt:480, ds:120, started:'2025-10-29 08:05', duration:'0m 45s', result:'WARN'}
+];
+
+function renderTables(){
+  const dt = document.getElementById('datasets-tbody');
+  dt.innerHTML = '';
+  for(const d of sampleDatasets){
+    const tr = document.createElement('tr');
+    tr.className = 'clickable';
+    tr.innerHTML = `<td>${d.id}</td>
+                    <td>${d.date}</td>
+                    <td>${d.user}</td>
+                    <td>${d.floors}</td>
+                    <td>${d.status}</td>
+                    <td><button class="btn ghost" onclick="loadDataset(${d.id})">Load</button></td>`;
+    dt.appendChild(tr);
+  }
+
+  const ot = document.getElementById('opts-tbody');
+  ot.innerHTML = '';
+  for(const o of sampleOpts){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${o.opt}</td>
+                    <td>${o.ds}</td>
+                    <td>${o.started}</td>
+                    <td>${o.duration}</td>
+                    <td>${o.result}</td>`;
+    ot.appendChild(tr);
+  }
+}
+renderTables();
+
+/* Quick actions */
+document.getElementById('quick-file').addEventListener('change', (e)=>{
+  const f = e.target.files[0];
+  document.getElementById('quick-msg').textContent = f ? `Selected: ${f.name}` : 'No file selected';
+});
+document.getElementById('quick-upload').addEventListener('click', ()=>{
+  const f = document.getElementById('quick-file').files[0];
+  if(!f){ alert('Select a file first.'); return; }
+  alert('Uploading (prototype) — file will be parsed by backend in production.');
+});
+
+document.getElementById('quick-manual').addEventListener('click', ()=> simulateNav('enter'));
+
+/* Simulate navigation (prototype) */
+function simulateNav(page){
+  if(page === 'enter'){
+    alert('Open Enter Data screen (prototype). Use enter-data-mockup.html');
+  } else if(page === 'history'){
+    alert('Open History screen (prototype).');
+  } else if(page === 'run'){
+    alert('Open Run Optimization panel (prototype).');
+  } else if(page === 'config'){
+    alert('Open Configurations (prototype).');
+  }
+}
+
+function loadDataset(id){
+  alert('Loading dataset #' + id + ' (prototype). This would open Enter Data with the dataset prefilled.');
+}
+
+/* Navbar buttons */
+document.getElementById('nav-enter').addEventListener('click', ()=> simulateNav('enter'));
+document.getElementById('nav-history').addEventListener('click', ()=> simulateNav('history'));
+document.getElementById('nav-config').addEventListener('click', ()=> simulateNav('config'));
+
+</script>
+</body>
+</html>
+
