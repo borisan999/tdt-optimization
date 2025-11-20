@@ -207,3 +207,8 @@ body {
     display: flex;
     gap: 15px;
 }
+
+.is-invalid {
+    border: 2px solid red !important;
+    background: #ffe5e5;
+}
