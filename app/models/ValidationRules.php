@@ -6,9 +6,9 @@ class ValidationRules
 {
     private $pdo;
 
-    public function __construct()
-    {
-        $this->pdo = Database::getInstance()->getConnection();
+    public function __construct() {
+        $db = new Database();
+        $this->pdo = $db->getConnection();   // correct property
     }
 
     public function getRulesForField($field_name)
@@ -55,26 +55,3 @@ class ValidationRules
         return $messages;
     }
 }
-/*
-require_once __DIR__ . '/../config/db.php';
-
-class ValidationRules
-{
-    private $pdo;
-
-    public function __construct()
-    {
-        $this->pdo = Database::getInstance()->getConnection();
-    }
-
-    public function getRulesForField($field_name)
-    {
-        $sql = "SELECT * FROM validation_rules 
-                WHERE field_name = :f AND active = 1";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':f' => $field_name]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    
-}*/

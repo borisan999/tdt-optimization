@@ -5,8 +5,8 @@ $opt_id = $_GET["opt_id"] ?? null;
 if (!$opt_id) {
     die("Missing opt_id.");
 }
-
-$pdo = Database::getInstance()->getConnection();
+        $db = new Database();
+        $pdo = $db->getConnection(); 
 
 // Fetch all rows for this optimization
 $stmt = $pdo->prepare("

@@ -274,7 +274,8 @@ class DatasetController
             }
         }
 
-        $pdo = Database::getInstance()->getConnection();
+        $pdo = (new Database())->getConnection();
+
         try {
             $pdo->beginTransaction();
 
@@ -458,12 +459,17 @@ class DatasetController
      */
     private function logEvent($type, $msg, $userId = null)
     {
-        try {
-            $pdo = Database::getInstance()->getConnection();
-            $sql = "INSERT INTO logs (event_type, description, user_id) VALUES (:t, :d, :u)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([':t' => $type, ':d' => $msg, ':u' => $userId]);
-        } catch (\Throwable $ignore) {
+    try {
+        $db = new Database();
+        $pdo = $db->getConnection();
+
+        if (!$pdo) {
+            die("DEBUG: PDO is NULL inside logEvent()");
+        }
+
+        $sql = "INSERT INTO logs (event_type, description, user_id) VALUES (:t, :d, :u)";
+        $stmt = $pdo->prepare($sql);
+    } catch (\Throwable $ignore) {
             // don't break the flow if logging fails
         }
     }

@@ -5,9 +5,9 @@ class Result
 {
     private $pdo;
 
-    public function __construct()
-    {
-        $this->pdo = Database::getInstance()->getConnection();
+    public function __construct() {
+        $db = new Database();
+        $this->pdo = $db->getConnection();   // correct property
     }
 
     public function insert($opt_id, $parameter, $value, $unit, $deviation, $meta_json)

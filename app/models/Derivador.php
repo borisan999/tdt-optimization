@@ -7,7 +7,7 @@ class Derivador
 
     public function __construct()
     {
-        $this->pdo = Database::getInstance()->getConnection();
+        $this->pdo = (new Database())->getConnection();
     }
 
     /**

@@ -80,7 +80,7 @@ endif; ?>
 
     <!-- TAB BUTTONS -->
     <div class="d-flex">
-        <button class="btn btn-primary tab-btn" onclick="showTab('upload_tab')">Upload Excel</button>
+        <button class="btn btn-primary tab-btn" onclick="showTab('upload_tab');">Upload Excel</button>
         <button class="btn btn-secondary tab-btn" onclick="showTab('manual_tab')">Manual Entry</button>
         <button class="btn btn-info tab-btn" onclick="showTab('history_tab')">Load From History</button>
     </div>

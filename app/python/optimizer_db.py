@@ -3,6 +3,7 @@ import sys
 import os
 import json
 import math
+from pathlib import Path
 import numpy as np
 from datetime import datetime
 
@@ -22,20 +23,32 @@ except Exception as e:
     print(json.dumps({"status": "error", "message": f"PuLP import failed: {e}"}))
     sys.exit(1)
 
+env_path = Path(__file__).resolve().parents[2] / ".env"
+
+if env_path.exists():
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+else:
+    print(json.dumps({"status": "error", "message": ".env file not found"}))
+    sys.exit(1)
 
 # ------------------------------------------------------
-# CONFIG
+# USE ENV VARIABLES
 # ------------------------------------------------------
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "tdt_user",
-    "password": "00N80r!B7032B",
-    "database": "tdt_optimization",
-    "port": 3306
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", ""),            # MUST MATCH PHP
+    "password": os.getenv("DB_PASS", ""),        # MUST MATCH PHP
+    "database": os.getenv("DB_NAME", "tdt_optimization"),
+    "port": int(os.getenv("DB_PORT", "3306")),
 }
 
-OUTPUT_DIR_BASE = os.path.join(os.path.dirname(__file__), "output")
-
+OUTPUT_DIR_BASE = os.getenv("OUTPUT_DIR", os.path.join(os.path.dirname(__file__), "output"))
 
 # ======================================================
 # DB Utilities

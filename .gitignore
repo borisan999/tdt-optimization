@@ -14,7 +14,10 @@ storage/logs/
 storage/temp/
 public/assets/
 *.pyc
-__pycache__/
+.env
+/app/python/__pycache__/
+/app/python/output/
+/app/python/*.json
 
 # IDE files
 .idea/
