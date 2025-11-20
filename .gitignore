@@ -1,0 +1,30 @@
+# PHP / Composer / Node / OS
+/vendor/
+node_modules/
+.env
+.env.local
+.env.*.local
+*.log
+*.sql
+*.sqlite
+*.py
+/storage/
+storage/cache/
+storage/logs/
+storage/temp/
+public/assets/
+*.pyc
+__pycache__/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Generated reports / uploads
+storage/temp/generated_reports/
+storage/temp/uploaded_excels/
+
+# Any local-only backups
+backup_*.sql
