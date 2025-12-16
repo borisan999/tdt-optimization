@@ -17,7 +17,7 @@
             <p>See optimization outcomes.</p>
         </a>
 
-        <a href="history.php" class="dash-card">
+        <a href="results_history.php" class="dash-card">
             <h2>History</h2>
             <p>Browse past datasets and runs.</p>
         </a>

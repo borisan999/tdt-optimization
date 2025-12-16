@@ -1,17 +1,32 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once __DIR__ . "/../config/db.php";
-require_once __DIR__ . "/../models/Dataset.php";
-require_once __DIR__ . "/../models/DatasetRow.php";
-require_once __DIR__ . "/../config/env.php";
-require_once __DIR__ . "/../models/GeneralParams.php";
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+
+// prefer composer autoload and include helper for robust loading
+$autoload = __DIR__ . '/../../vendor/autoload.php';
+if (is_file($autoload)) require_once $autoload;
+
+$incHelper = __DIR__ . '/../helpers/IncludeHelper.php';
+if (is_file($incHelper)) require_once $incHelper;
+
+// replace these requires to use helper pattern
+require_one_of([__DIR__ . "/../config/db.php"]);
+require_one_of([__DIR__ . "/../models/Dataset.php"]);
+require_one_of([__DIR__ . "/../models/DatasetRow.php"]);
+require_one_of([__DIR__ . "/../config/env.php"]);
+require_one_of([__DIR__ . "/../models/GeneralParams.php"]);
+require_one_of([__DIR__ . "/../models/Result.php"]);
+require_one_of([__DIR__ . "/../models/ResultsDetail.php"]);
+
+
+
 $_SESSION['upload_warnings'] = [];
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -38,7 +53,13 @@ class DatasetController
                 break;
 
             case "run_python":
-                $this->runPython();
+                $opt_id = $_GET["dataset_id"] ?? null;
+
+                if (!$opt_id) {
+                    throw new Exception("Missing dataset_id for run_python()");
+                }
+
+                $this->runPython($opt_id);
                 break;
 
             default:
@@ -469,102 +490,163 @@ class DatasetController
 
         $sql = "INSERT INTO logs (event_type, description, user_id) VALUES (:t, :d, :u)";
         $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            't' => $type,
+            'd' => $msg,
+            'u' => $userId
+        ]);
     } catch (\Throwable $ignore) {
             // don't break the flow if logging fails
         }
     }
 
-    private function runPython()
-    {
-        $dataset_id = $_GET['dataset_id'] ?? null;
+    public function runPython($dataset_id)
+{
+    $DB = new Database();
+    $pdo = $DB->getConnection();
 
-        if (!$dataset_id) {
-            die("Dataset ID missing.");
-        }
+    /* ---------------------------------------------------------
+       1) Python executable + script path
+    --------------------------------------------------------- */
+    $python_bin = "/usr/bin/python3";
+    $python_script = realpath(__DIR__ . "/../python/10/optimizer_db.py");
 
-        // Load dataset rows
-        $rowModel = new DatasetRow();
-        $rows = $rowModel->getRowsByDataset($dataset_id);
-
-        // Load general params
-        require_once __DIR__ . "/../models/GeneralParams.php";
-        $paramsModel = new GeneralParams();
-        $general = $paramsModel->getByDataset($dataset_id);
-
-        // Convert rows into structured JSON
-        $structured = [
-            "general_params" => $general,
-            "apartments" => [],
-            "tus" => []
-        ];
-
-        foreach ($rows as $row) {
-            if ($row["record_index"] < 10000) {
-                // Apartment row
-                $idx = $row["record_index"];
-                if (!isset($structured["apartments"][$idx])) {
-                    $structured["apartments"][$idx] = [];
-                }
-                $structured["apartments"][$idx][$row["field_name"]] = $row["field_value"];
-            } else {
-                // TU row
-                $idx = $row["record_index"];
-                if (!isset($structured["tus"][$idx])) {
-                    $structured["tus"][$idx] = [];
-                }
-                $structured["tus"][$idx][$row["field_name"]] = $row["field_value"];
-            }
-        }
-
-        // Reindex arrays
-        $structured["apartments"] = array_values($structured["apartments"]);
-        $structured["tus"] = array_values($structured["tus"]);
-
-        // Encode JSON
-        $json = json_encode($structured);
-
-        // RUN PYTHON
-        $cmd = sprintf("python3 %s/optimizer_db.py %d 2>&1", realpath(__DIR__ . "/../python"), $dataset_id);
-        $out = shell_exec($cmd);
-
-        if (!$out) {
-            die("Python returned no output.");
-        }
-
-        // Decode Python response
-        $result_json = json_decode($out, true);
-
-        if (!$result_json) {
-            echo "<h2>Python RAW Output:</h2><pre>$out</pre>";
-            die("Python output is not valid JSON.");
-        }
-        
-        if ($result_json['status'] === "infeasible") {
-            $_SESSION['python_error'] = "The optimization problem is infeasible for this dataset.";
-            return;
-        }
-
-        // Save each result item
-        require_once __DIR__ . "/../models/Result.php";
-        $resultModel = new Result();
-
-        $opt_id = $result_json["opt_id"];
-
-        // Save results
-        foreach ($result_json as $param => $value) {
-            $resultModel->insert(
-                $opt_id,
-                $param,
-                is_array($value) ? json_encode($value) : $value,
-                null,
-                null,
-                json_encode($result_json)
-            );
-        }
-
-        header("Location: ../../public/results.php?opt_id=$opt_id");
-        exit();
+    if (!$python_script || !is_file($python_script)) {
+        $this->logEvent('error', "Python script not found: {$python_script}", $_SESSION['user_id'] ?? null);
+        throw new Exception("Python script not found.");
     }
+
+    /* ---------------------------------------------------------
+       2) Ensure output dir (Python side) exists
+    --------------------------------------------------------- */
+    putenv("OUTPUT_DIR=/var/tdt_outputs");
+
+    /* ---------------------------------------------------------
+       3) Build safe exec command
+    --------------------------------------------------------- */
+    $cmd = escapeshellcmd($python_bin) . " " .
+           escapeshellarg($python_script) . " " .
+           escapeshellarg((string)$dataset_id) . " 2>&1";
+
+    $output = [];
+    $return_var = 0;
+    exec($cmd, $output, $return_var);
+
+    /* ---------------------------------------------------------
+       4) Execution error?
+    --------------------------------------------------------- */
+    if ($return_var !== 0) {
+        $this->logEvent('error',
+            "Python failed (rc={$return_var}) Output: " . implode("\n", array_slice($output, -20)),
+            $_SESSION['user_id'] ?? null
+        );
+        throw new Exception("Python script failed with return code {$return_var}");
+    }
+
+    /* ---------------------------------------------------------
+       5) Extract JSON from final stdout
+    --------------------------------------------------------- */
+    $stdout = implode("\n", $output);
+
+    $jsonStart = strpos($stdout, "{");
+    if ($jsonStart === false) {
+        $this->logEvent('error',
+            "No JSON from python. Raw output: " . substr($stdout, 0, 4000),
+            $_SESSION['user_id'] ?? null
+        );
+        throw new Exception("Python did not return JSON.");
+    }
+
+    $jsonStr = substr($stdout, $jsonStart);
+    $data = json_decode($jsonStr, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        $this->logEvent('error',
+            "JSON decode error: " . json_last_error_msg() . " Payload: " . substr($jsonStr, 0, 4000),
+            $_SESSION['user_id'] ?? null
+        );
+        throw new Exception("Malformed JSON returned by Python: " . json_last_error_msg());
+    }
+
+    /* ---------------------------------------------------------
+       6) Validate python result
+    --------------------------------------------------------- */
+    $py_status = strtolower(trim($data['status'] ?? ''));
+
+    // Mapping Python -> DB enum
+    $map = [
+        'success'    => 'completed',   // Successful optimization
+        'optimal'    => 'completed',   // MILP found optimal solution
+        'infeasible' => 'infeasible',  // MILP infeasible
+        'failed'     => 'failed'       // Explicit fails
+    ];
+
+    // Fallback to failed if unknown
+    $status = $map[$py_status] ?? 'failed';
+    
+
+    if (empty($data['opt_id'])) {
+        throw new Exception("Python did not return opt_id.");
+    }
+
+    $opt_id = intval($data['opt_id']);
+
+    /* ---------------------------------------------------------
+       7) Ensure optimization row exists or update state
+    --------------------------------------------------------- */
+    $st = $pdo->prepare("SELECT 1 FROM optimizations WHERE opt_id = :id");
+    $st->execute(['id' => $opt_id]);
+
+    if ($st->rowCount() === 0) {
+        $insert = $pdo->prepare("
+            INSERT INTO optimizations (opt_id, dataset_id, status, created_at)
+            VALUES (:opt_id, :dataset_id, :status, NOW())
+        ");
+        $insert->execute([
+            'opt_id' => $opt_id,
+            'dataset_id' => $dataset_id,
+            'status' => $status
+        ]);
+    } else {
+        $update = $pdo->prepare("UPDATE optimizations SET status = :status WHERE opt_id = :opt_id");
+        $update->execute([
+            'status' => $status,
+            'opt_id' => $opt_id
+        ]);
+    }
+
+    /* ---------------------------------------------------------
+       8) Clear previous detailed results for re-runs
+    --------------------------------------------------------- */
+   /* $pdo->prepare("DELETE FROM results_detail WHERE opt_id = :opt_id")
+        ->execute(['opt_id' => $opt_id]);
+*/
+    /* ---------------------------------------------------------
+       9) Store per-TU results
+    --------------------------------------------------------- */
+    
+    $pdo->prepare("
+        INSERT INTO results (opt_id, summary_json, detail_json)
+        VALUES (:opt_id, :summary, :detail)
+        ON DUPLICATE KEY UPDATE
+            summary_json = VALUES(summary_json),
+            detail_json  = VALUES(detail_json)
+    ")->execute([
+        'opt_id'  => $opt_id,
+        'summary' => json_encode($data['summary'], JSON_UNESCAPED_UNICODE),
+        'detail'  => json_encode($data['detalle'], JSON_UNESCAPED_UNICODE),
+    ]);
+
+
+    /* ---------------------------------------------------------
+       10) Redirect to results UI
+    --------------------------------------------------------- */
+    header("Location: ../../public/results.php?opt_id=" . intval($opt_id));
+    exit();
+}
+
+
+
     
 
 }

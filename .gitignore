@@ -8,6 +8,10 @@ node_modules/
 *.sql
 *.sqlite
 *.py
+app/python/
+*.xlsx
+*.png
+*.dot
 /storage/
 storage/cache/
 storage/logs/
