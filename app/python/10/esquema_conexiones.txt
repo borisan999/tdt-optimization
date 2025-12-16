@@ -1,0 +1,145 @@
+
+Esquema de conexiones del edificio (de superior a inferior)
+================================================================================
+Antena/Amplificador -> Troncal (p8): 31.00 m
+Repartidor troncal seleccionado: TLV519503
+--------------------------------------------------------------------------------
+Bloque 1: pisos 15..11 | Entrada riser: p11 | Direccion: up | Feeder: 12.00 m
+Bloque 2: pisos 10..6 | Entrada riser: p10 | Direccion: down | Feeder: 9.00 m
+Bloque 3: pisos 5..1 | Entrada riser: p5 | Direccion: down | Feeder: 12.00 m
+--------------------------------------------------------------------------------
+PISO 15
+  Pertenece al Bloque 1 (Entrada riser p11, dir up)
+  Derivador seleccionado: TLV519342
+  Apt 1: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 2: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 3: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 4: Repartidor TLV519504 | TUs: 1,2,3,4
+  Distancia riser desde entrada (p11): 12.00 m
+--------------------------------------------------------------------------------
+PISO 14
+  Pertenece al Bloque 1 (Entrada riser p11, dir up)
+  Derivador seleccionado: TLV519342
+  Apt 1: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 2: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 3: Repartidor TLV519503 | TUs: 1,2
+  Apt 4: Repartidor TLV519502 | TUs: 1,2
+  Distancia riser desde entrada (p11): 9.00 m
+--------------------------------------------------------------------------------
+PISO 13
+  Pertenece al Bloque 1 (Entrada riser p11, dir up)
+  Derivador seleccionado: TLV519342
+  Apt 1: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 2: Repartidor TLV519505 | TUs: 1,2,3,4
+  Apt 3: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 4: Repartidor TLV519504 | TUs: 1,2
+  Distancia riser desde entrada (p11): 6.00 m
+--------------------------------------------------------------------------------
+PISO 12
+  Pertenece al Bloque 1 (Entrada riser p11, dir up)
+  Derivador seleccionado: TLV519365
+  Apt 1: Repartidor N/A | TUs: 1
+  Apt 2: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 3: Repartidor TLV519503 | TUs: 1,2,3
+  Apt 4: Repartidor TLV453003 | TUs: 1,2
+  Distancia riser desde entrada (p11): 3.00 m
+--------------------------------------------------------------------------------
+PISO 11
+  Pertenece al Bloque 1 (Entrada riser p11, dir up)
+  Derivador seleccionado: TLV519344
+  Apt 1: Repartidor N/A | TUs: 1
+  Apt 2: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 3: Repartidor N/A | TUs: 1
+  Apt 4: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Distancia riser desde entrada (p11): 0.00 m
+--------------------------------------------------------------------------------
+PISO 10
+  Pertenece al Bloque 2 (Entrada riser p10, dir down)
+  Derivador seleccionado: TLV519344
+  Apt 1: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 2: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 3: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 4: Repartidor TLV519504 | TUs: 1,2
+  Distancia riser desde entrada (p10): 0.00 m
+--------------------------------------------------------------------------------
+PISO 09
+  Pertenece al Bloque 2 (Entrada riser p10, dir down)
+  Derivador seleccionado: TLV519343
+  Apt 1: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 2: Repartidor N/A | TUs: 1
+  Apt 3: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 4: Repartidor N/A | TUs: 1
+  Distancia riser desde entrada (p10): 3.00 m
+--------------------------------------------------------------------------------
+PISO 08
+  Pertenece al Bloque 2 (Entrada riser p10, dir down)
+  Derivador seleccionado: TLV519344
+  Apt 1: Repartidor N/A | TUs: 1
+  Apt 2: Repartidor N/A | TUs: 1
+  Apt 3: Repartidor TLV453003 | TUs: 1,2
+  Apt 4: Repartidor TLV453003 | TUs: 1,2
+  Distancia riser desde entrada (p10): 6.00 m
+--------------------------------------------------------------------------------
+PISO 07
+  Pertenece al Bloque 2 (Entrada riser p10, dir down)
+  Derivador seleccionado: TLV519342
+  Apt 1: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 2: Repartidor N/A | TUs: 1
+  Apt 3: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 4: Repartidor TLV519503 | TUs: 1,2,3
+  Distancia riser desde entrada (p10): 9.00 m
+--------------------------------------------------------------------------------
+PISO 06
+  Pertenece al Bloque 2 (Entrada riser p10, dir down)
+  Derivador seleccionado: TLV519342
+  Apt 1: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 2: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 3: Repartidor TLV453003 | TUs: 1,2
+  Apt 4: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Distancia riser desde entrada (p10): 12.00 m
+--------------------------------------------------------------------------------
+PISO 05
+  Pertenece al Bloque 3 (Entrada riser p5, dir down)
+  Derivador seleccionado: TLV519344
+  Apt 1: Repartidor TLV519503 | TUs: 1,2
+  Apt 2: Repartidor TLV519503 | TUs: 1,2,3
+  Apt 3: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 4: Repartidor N/A | TUs: 1
+  Distancia riser desde entrada (p5): 0.00 m
+--------------------------------------------------------------------------------
+PISO 04
+  Pertenece al Bloque 3 (Entrada riser p5, dir down)
+  Derivador seleccionado: TLV519344
+  Apt 1: Repartidor N/A | TUs: 1
+  Apt 2: Repartidor TLV519504 | TUs: 1,2,3,4
+  Apt 3: Repartidor TLV519503 | TUs: 1,2,3
+  Apt 4: Repartidor TLV519504 | TUs: 1,2,3,4
+  Distancia riser desde entrada (p5): 3.00 m
+--------------------------------------------------------------------------------
+PISO 03
+  Pertenece al Bloque 3 (Entrada riser p5, dir down)
+  Derivador seleccionado: TLV519342
+  Apt 1: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 2: Repartidor N/A | TUs: 1
+  Apt 3: Repartidor TLV519503 | TUs: 1,2,3
+  Apt 4: Repartidor TLV519503 | TUs: 1,2,3
+  Distancia riser desde entrada (p5): 6.00 m
+--------------------------------------------------------------------------------
+PISO 02
+  Pertenece al Bloque 3 (Entrada riser p5, dir down)
+  Derivador seleccionado: TLV519342
+  Apt 1: Repartidor TLV519502 | TUs: 1,2
+  Apt 2: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 3: Repartidor TLV519503 | TUs: 1,2,3
+  Apt 4: Repartidor N/A | TUs: 1
+  Distancia riser desde entrada (p5): 9.00 m
+--------------------------------------------------------------------------------
+PISO 01
+  Pertenece al Bloque 3 (Entrada riser p5, dir down)
+  Derivador seleccionado: TLV519342
+  Apt 1: Repartidor N/A | TUs: 1
+  Apt 2: Repartidor TLV519505 | TUs: 1,2,3,4,5
+  Apt 3: Repartidor N/A | TUs: 1
+  Apt 4: Repartidor TLV519504 | TUs: 1,2,3,4
+  Distancia riser desde entrada (p5): 12.00 m
+--------------------------------------------------------------------------------

@@ -1,0 +1,4692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Topología TDT Detallada</title>
+    <!-- Importación de la librería vis-network para la visualización -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        /* Estilos CSS para la apariencia de la página y la red */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #d3d3d3; margin: 0; overflow: hidden; }
+        #mynetwork { width: 100%; height: 100vh; background-color: #ffffff; }
+        .controls { position: absolute; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 8px; z-index: 999; }
+        .btn { background: white; border: 1px solid #ddd; width: 40px; height: 40px; border-radius: 8px; font-size: 18px; cursor: pointer; color: #555; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .btn:hover { background: #f8f8f8; color: #000; }
+        .legend-box { position: absolute; top: 20px; left: 20px; background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); font-size: 13px; pointer-events: none; color: #333; }
+        .dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .line-sample { display: inline-block; width: 30px; height: 2px; background: #aaa; vertical-align: middle; margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <!-- Leyenda de colores -->
+    <div class="legend-box">
+        <h3 style="margin:0 0 10px 0; color:#2C3E50;">Red TDT</h3>
+        <div style="margin-bottom:4px;"><span class="dot" style="background:#E74C3C"></span> Cabecera</div>
+        <div style="margin-bottom:4px;"><span class="dot" style="background:#8C8C8C"></span> Troncal</div>
+        <div style="margin-bottom:4px;"><span class="dot" style="background:#8E44AD"></span> Bloque</div>
+        <div style="margin-bottom:4px;"><span class="dot" style="background:#2980B9"></span> Piso</div>
+        <div style="margin-bottom:4px;"><span class="dot" style="background:#F39C12"></span> Apto</div>
+        <div style="margin-top:10px; border-top:1px solid #eee; padding-top:8px;">
+            <span class="line-sample"></span> <b>Datos en Rama:</b><br/>Distancia (m) | Atenuación (dB)
+        </div>
+    </div>
+    <!-- Contenedor para la red -->
+    <div id="mynetwork"></div>
+    <!-- Controles de zoom y ajuste -->
+    <div class="controls">
+        <button class="btn" onclick="zoomIn()" title="Acercar">+</button>
+        <button class="btn" onclick="zoomOut()" title="Alejar">-</button>
+        <button class="btn" onclick="fitAnimated()" title="Ajuste Automático">⛶</button>
+    </div>
+    <script type="text/javascript">
+        // --- INICIALIZACIÓN DE DATOS PARA VIS.JS ---
+        var nodesArray = [
+  {
+    "id": "Cabecera_Master",
+    "label": "CABECERA \n (Piso 15)\n110 dB\u00b5V ",
+    "title": "Origen Se\u00f1al TDT",
+    "color": "#E74C3C",
+    "level": 0,
+    "shape": "diamond",
+    "size": 55,
+    "font": {
+      "color": "black",
+      "face": "arial",
+      "size": 12,
+      "vadjust": -75
+    }
+  },
+  {
+    "id": "Troncal",
+    "label": "TRONCAL\n(Piso 8)",
+    "title": "Repartidor Troncal, Modelo: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+    "color": "#8C8C8C",
+    "level": 1,
+    "shape": "box",
+    "font": {
+      "color": "black"
+    }
+  },
+  {
+    "id": "Bloque_1",
+    "label": "BLOQUE 1\nPiso 11",
+    "title": "Entrada Riser: P11",
+    "color": "#8E44AD",
+    "level": 2,
+    "shape": "box",
+    "font": {
+      "color": "black"
+    }
+  },
+  {
+    "id": "Bloque_2",
+    "label": "BLOQUE 2\nPiso 10",
+    "title": "Entrada Riser: P10",
+    "color": "#8E44AD",
+    "level": 2,
+    "shape": "box",
+    "font": {
+      "color": "black"
+    }
+  },
+  {
+    "id": "Bloque_3",
+    "label": "BLOQUE 3\nPiso 5",
+    "title": "Entrada Riser: P5",
+    "color": "#8E44AD",
+    "level": 2,
+    "shape": "box",
+    "font": {
+      "color": "black"
+    }
+  }
+];
+        var edgesArray = [
+  {
+    "from": "Cabecera_Master",
+    "to": "Troncal",
+    "label": "31m\n-6.6dB"
+  },
+  {
+    "from": "Troncal",
+    "to": "Bloque_1",
+    "label": "12m\n-2.8dB"
+  },
+  {
+    "from": "Troncal",
+    "to": "Bloque_2",
+    "label": "9m\n-2.2dB"
+  },
+  {
+    "from": "Troncal",
+    "to": "Bloque_3",
+    "label": "12m\n-2.8dB"
+  }
+];
+        var hierarchyMap = {
+  "Cabecera_Master": [
+    {
+      "node": {
+        "id": "Troncal",
+        "label": "TRONCAL\n(Piso 8)",
+        "title": "Repartidor Troncal, Modelo: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#8C8C8C",
+        "level": 1,
+        "shape": "box",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Cabecera_Master",
+        "to": "Troncal",
+        "label": "31m\n-6.6dB"
+      }
+    }
+  ],
+  "Troncal": [
+    {
+      "node": {
+        "id": "Bloque_1",
+        "label": "BLOQUE 1\nPiso 11",
+        "title": "Entrada Riser: P11",
+        "color": "#8E44AD",
+        "level": 2,
+        "shape": "box",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Troncal",
+        "to": "Bloque_1",
+        "label": "12m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "Bloque_2",
+        "label": "BLOQUE 2\nPiso 10",
+        "title": "Entrada Riser: P10",
+        "color": "#8E44AD",
+        "level": 2,
+        "shape": "box",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Troncal",
+        "to": "Bloque_2",
+        "label": "9m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "Bloque_3",
+        "label": "BLOQUE 3\nPiso 5",
+        "title": "Entrada Riser: P5",
+        "color": "#8E44AD",
+        "level": 2,
+        "shape": "box",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Troncal",
+        "to": "Bloque_3",
+        "label": "12m\n-2.8dB"
+      }
+    }
+  ],
+  "Bloque_1": [
+    {
+      "node": {
+        "id": "B1_P15",
+        "label": "Piso 15",
+        "title": "Piso 15, Derivador: TLV519342, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 13.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_1",
+        "to": "B1_P15",
+        "label": "12m\n-13.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P14",
+        "label": "Piso 14",
+        "title": "Piso 14, Derivador: TLV519342, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 13.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_1",
+        "to": "B1_P14",
+        "label": "9m\n-9.7dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P13",
+        "label": "Piso 13",
+        "title": "Piso 13, Derivador: TLV519342, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 13.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_1",
+        "to": "B1_P13",
+        "label": "6m\n-6.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P12",
+        "label": "Piso 12",
+        "title": "Piso 12, Derivador: TLV519365, P\u00e9rdida Paso: 2.0 dB, P\u00e9rdida Derivaci\u00f3n: 24.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_1",
+        "to": "B1_P12",
+        "label": "3m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P11",
+        "label": "Piso 11",
+        "title": "Piso 11, Derivador: TLV519344, P\u00e9rdida Paso: 2.2 dB, P\u00e9rdida Derivaci\u00f3n: 20.5 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_1",
+        "to": "B1_P11",
+        "label": "0m\n-0.0dB"
+      }
+    }
+  ],
+  "B1_P15": [
+    {
+      "node": {
+        "id": "B1_P15_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P15",
+        "to": "B1_P15_A4",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P15_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P15",
+        "to": "B1_P15_A3",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P15_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P15",
+        "to": "B1_P15_A2",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P15_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P15",
+        "to": "B1_P15_A1",
+        "label": "6.0m\n-1.6dB"
+      }
+    }
+  ],
+  "B1_P15_A4": [
+    {
+      "node": {
+        "id": "P15A4TU4",
+        "label": "TU4\n51.2dB",
+        "title": "Toma: P15A4TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A4",
+        "to": "P15A4TU4",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A4TU3",
+        "label": "TU3\n53.4dB",
+        "title": "Toma: P15A4TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A4",
+        "to": "P15A4TU3",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A4TU2",
+        "label": "TU2\n52.0dB",
+        "title": "Toma: P15A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A4",
+        "to": "P15A4TU2",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A4TU1",
+        "label": "TU1\n52.2dB",
+        "title": "Toma: P15A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A4",
+        "to": "P15A4TU1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B1_P15_A3": [
+    {
+      "node": {
+        "id": "P15A3TU4",
+        "label": "TU4\n52.0dB",
+        "title": "Toma: P15A3TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A3",
+        "to": "P15A3TU4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A3TU3",
+        "label": "TU3\n52.0dB",
+        "title": "Toma: P15A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A3",
+        "to": "P15A3TU3",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A3TU2",
+        "label": "TU2\n52.0dB",
+        "title": "Toma: P15A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A3",
+        "to": "P15A3TU2",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A3TU1",
+        "label": "TU1\n50.0dB",
+        "title": "Toma: P15A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A3",
+        "to": "P15A3TU1",
+        "label": "17.0m\n-3.8dB"
+      }
+    }
+  ],
+  "B1_P15_A2": [
+    {
+      "node": {
+        "id": "P15A2TU5",
+        "label": "TU5\n49.0dB",
+        "title": "Toma: P15A2TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A2",
+        "to": "P15A2TU5",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A2TU4",
+        "label": "TU4\n48.8dB",
+        "title": "Toma: P15A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A2",
+        "to": "P15A2TU4",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A2TU3",
+        "label": "TU3\n50.8dB",
+        "title": "Toma: P15A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A2",
+        "to": "P15A2TU3",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A2TU2",
+        "label": "TU2\n49.2dB",
+        "title": "Toma: P15A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A2",
+        "to": "P15A2TU2",
+        "label": "13.0m\n-3dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A2TU1",
+        "label": "TU1\n48.0dB",
+        "title": "Toma: P15A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A2",
+        "to": "P15A2TU1",
+        "label": "19.0m\n-4.2dB"
+      }
+    }
+  ],
+  "B1_P15_A1": [
+    {
+      "node": {
+        "id": "P15A1TU4",
+        "label": "TU4\n52.2dB",
+        "title": "Toma: P15A1TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A1",
+        "to": "P15A1TU4",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A1TU3",
+        "label": "TU3\n52.6dB",
+        "title": "Toma: P15A1TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A1",
+        "to": "P15A1TU3",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A1TU2",
+        "label": "TU2\n53.2dB",
+        "title": "Toma: P15A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A1",
+        "to": "P15A1TU2",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P15A1TU1",
+        "label": "TU1\n52.8dB",
+        "title": "Toma: P15A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P15_A1",
+        "to": "P15A1TU1",
+        "label": "8.0m\n-2dB"
+      }
+    }
+  ],
+  "B1_P14": [
+    {
+      "node": {
+        "id": "B1_P14_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519502, P\u00e9rdida Inserci\u00f3n: 5 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P14",
+        "to": "B1_P14_A4",
+        "label": "8.0m\n-2.0dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P14_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P14",
+        "to": "B1_P14_A3",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P14_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P14",
+        "to": "B1_P14_A2",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P14_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P14",
+        "to": "B1_P14_A1",
+        "label": "5.0m\n-1.4dB"
+      }
+    }
+  ],
+  "B1_P14_A4": [
+    {
+      "node": {
+        "id": "P14A4TU2",
+        "label": "TU2\n59.3dB",
+        "title": "Toma: P14A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A4",
+        "to": "P14A4TU2",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A4TU1",
+        "label": "TU1\n59.5dB",
+        "title": "Toma: P14A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A4",
+        "to": "P14A4TU1",
+        "label": "10.0m\n-2.4dB"
+      }
+    }
+  ],
+  "B1_P14_A3": [
+    {
+      "node": {
+        "id": "P14A3TU2",
+        "label": "TU2\n56.9dB",
+        "title": "Toma: P14A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A3",
+        "to": "P14A3TU2",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A3TU1",
+        "label": "TU1\n56.7dB",
+        "title": "Toma: P14A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A3",
+        "to": "P14A3TU1",
+        "label": "12.0m\n-2.8dB"
+      }
+    }
+  ],
+  "B1_P14_A2": [
+    {
+      "node": {
+        "id": "P14A2TU5",
+        "label": "TU5\n51.7dB",
+        "title": "Toma: P14A2TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A2",
+        "to": "P14A2TU5",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A2TU4",
+        "label": "TU4\n51.3dB",
+        "title": "Toma: P14A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A2",
+        "to": "P14A2TU4",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A2TU3",
+        "label": "TU3\n52.3dB",
+        "title": "Toma: P14A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A2",
+        "to": "P14A2TU3",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A2TU2",
+        "label": "TU2\n52.1dB",
+        "title": "Toma: P14A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A2",
+        "to": "P14A2TU2",
+        "label": "10.0m\n-2.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A2TU1",
+        "label": "TU1\n50.7dB",
+        "title": "Toma: P14A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A2",
+        "to": "P14A2TU1",
+        "label": "17.0m\n-3.8dB"
+      }
+    }
+  ],
+  "B1_P14_A1": [
+    {
+      "node": {
+        "id": "P14A1TU5",
+        "label": "TU5\n54.3dB",
+        "title": "Toma: P14A1TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A1",
+        "to": "P14A1TU5",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A1TU4",
+        "label": "TU4\n52.1dB",
+        "title": "Toma: P14A1TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A1",
+        "to": "P14A1TU4",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A1TU3",
+        "label": "TU3\n54.3dB",
+        "title": "Toma: P14A1TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A1",
+        "to": "P14A1TU3",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A1TU2",
+        "label": "TU2\n52.3dB",
+        "title": "Toma: P14A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A1",
+        "to": "P14A1TU2",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P14A1TU1",
+        "label": "TU1\n52.9dB",
+        "title": "Toma: P14A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P14_A1",
+        "to": "P14A1TU1",
+        "label": "16.0m\n-3.6dB"
+      }
+    }
+  ],
+  "B1_P13": [
+    {
+      "node": {
+        "id": "B1_P13_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P13",
+        "to": "B1_P13_A4",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P13_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P13",
+        "to": "B1_P13_A3",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P13_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P13",
+        "to": "B1_P13_A2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P13_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P13",
+        "to": "B1_P13_A1",
+        "label": "8.0m\n-2.0dB"
+      }
+    }
+  ],
+  "B1_P13_A4": [
+    {
+      "node": {
+        "id": "P13A4TU2",
+        "label": "TU2\n58.4dB",
+        "title": "Toma: P13A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A4",
+        "to": "P13A4TU2",
+        "label": "10.0m\n-2.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A4TU1",
+        "label": "TU1\n57.6dB",
+        "title": "Toma: P13A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A4",
+        "to": "P13A4TU1",
+        "label": "14.0m\n-3.2dB"
+      }
+    }
+  ],
+  "B1_P13_A3": [
+    {
+      "node": {
+        "id": "P13A3TU5",
+        "label": "TU5\n54.2dB",
+        "title": "Toma: P13A3TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A3",
+        "to": "P13A3TU5",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A3TU4",
+        "label": "TU4\n54.6dB",
+        "title": "Toma: P13A3TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A3",
+        "to": "P13A3TU4",
+        "label": "18.0m\n-4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A3TU3",
+        "label": "TU3\n55.6dB",
+        "title": "Toma: P13A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A3",
+        "to": "P13A3TU3",
+        "label": "13.0m\n-3dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A3TU2",
+        "label": "TU2\n54.8dB",
+        "title": "Toma: P13A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A3",
+        "to": "P13A3TU2",
+        "label": "17.0m\n-3.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A3TU1",
+        "label": "TU1\n55.8dB",
+        "title": "Toma: P13A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A3",
+        "to": "P13A3TU1",
+        "label": "12.0m\n-2.8dB"
+      }
+    }
+  ],
+  "B1_P13_A2": [
+    {
+      "node": {
+        "id": "P13A2TU4",
+        "label": "TU4\n57.0dB",
+        "title": "Toma: P13A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A2",
+        "to": "P13A2TU4",
+        "label": "13.0m\n-3dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A2TU3",
+        "label": "TU3\n58.4dB",
+        "title": "Toma: P13A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A2",
+        "to": "P13A2TU3",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A2TU2",
+        "label": "TU2\n58.0dB",
+        "title": "Toma: P13A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A2",
+        "to": "P13A2TU2",
+        "label": "8.0m\n-2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A2TU1",
+        "label": "TU1\n58.0dB",
+        "title": "Toma: P13A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A2",
+        "to": "P13A2TU1",
+        "label": "8.0m\n-2dB"
+      }
+    }
+  ],
+  "B1_P13_A1": [
+    {
+      "node": {
+        "id": "P13A1TU5",
+        "label": "TU5\n57.8dB",
+        "title": "Toma: P13A1TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A1",
+        "to": "P13A1TU5",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A1TU4",
+        "label": "TU4\n55.4dB",
+        "title": "Toma: P13A1TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A1",
+        "to": "P13A1TU4",
+        "label": "18.0m\n-4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A1TU3",
+        "label": "TU3\n57.6dB",
+        "title": "Toma: P13A1TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A1",
+        "to": "P13A1TU3",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A1TU2",
+        "label": "TU2\n55.0dB",
+        "title": "Toma: P13A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A1",
+        "to": "P13A1TU2",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P13A1TU1",
+        "label": "TU1\n55.6dB",
+        "title": "Toma: P13A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P13_A1",
+        "to": "P13A1TU1",
+        "label": "17.0m\n-3.8dB"
+      }
+    }
+  ],
+  "B1_P12": [
+    {
+      "node": {
+        "id": "B1_P12_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV453003, P\u00e9rdida Inserci\u00f3n: 4 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P12",
+        "to": "B1_P12_A4",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P12_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P12",
+        "to": "B1_P12_A3",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P12_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P12",
+        "to": "B1_P12_A2",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P12_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P12",
+        "to": "B1_P12_A1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B1_P12_A4": [
+    {
+      "node": {
+        "id": "P12A4TU2",
+        "label": "TU2\n55.4dB",
+        "title": "Toma: P12A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A4",
+        "to": "P12A4TU2",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P12A4TU1",
+        "label": "TU1\n55.8dB",
+        "title": "Toma: P12A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A4",
+        "to": "P12A4TU1",
+        "label": "5.0m\n-1.4dB"
+      }
+    }
+  ],
+  "B1_P12_A3": [
+    {
+      "node": {
+        "id": "P12A3TU3",
+        "label": "TU3\n52.2dB",
+        "title": "Toma: P12A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A3",
+        "to": "P12A3TU3",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P12A3TU2",
+        "label": "TU2\n52.2dB",
+        "title": "Toma: P12A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A3",
+        "to": "P12A3TU2",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P12A3TU1",
+        "label": "TU1\n51.8dB",
+        "title": "Toma: P12A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A3",
+        "to": "P12A3TU1",
+        "label": "13.0m\n-3dB"
+      }
+    }
+  ],
+  "B1_P12_A2": [
+    {
+      "node": {
+        "id": "P12A2TU4",
+        "label": "TU4\n51.0dB",
+        "title": "Toma: P12A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A2",
+        "to": "P12A2TU4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P12A2TU3",
+        "label": "TU3\n48.4dB",
+        "title": "Toma: P12A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A2",
+        "to": "P12A2TU3",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P12A2TU2",
+        "label": "TU2\n50.0dB",
+        "title": "Toma: P12A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A2",
+        "to": "P12A2TU2",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P12A2TU1",
+        "label": "TU1\n50.6dB",
+        "title": "Toma: P12A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A2",
+        "to": "P12A2TU1",
+        "label": "9.0m\n-2.2dB"
+      }
+    }
+  ],
+  "B1_P12_A1": [
+    {
+      "node": {
+        "id": "P12A1TU1",
+        "label": "TU1\n60.0dB",
+        "title": "Toma: P12A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P12_A1",
+        "to": "P12A1TU1",
+        "label": "7.0m\n-1.8dB"
+      }
+    }
+  ],
+  "B1_P11": [
+    {
+      "node": {
+        "id": "B1_P11_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P11",
+        "to": "B1_P11_A4",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P11_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P11",
+        "to": "B1_P11_A3",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P11_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P11",
+        "to": "B1_P11_A2",
+        "label": "8.0m\n-2.0dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B1_P11_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B1_P11",
+        "to": "B1_P11_A1",
+        "label": "15.0m\n-3.4dB"
+      }
+    }
+  ],
+  "B1_P11_A4": [
+    {
+      "node": {
+        "id": "P11A4TU5",
+        "label": "TU5\n54.3dB",
+        "title": "Toma: P11A4TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A4",
+        "to": "P11A4TU5",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P11A4TU4",
+        "label": "TU4\n56.1dB",
+        "title": "Toma: P11A4TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A4",
+        "to": "P11A4TU4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P11A4TU3",
+        "label": "TU3\n55.7dB",
+        "title": "Toma: P11A4TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A4",
+        "to": "P11A4TU3",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P11A4TU2",
+        "label": "TU2\n54.3dB",
+        "title": "Toma: P11A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A4",
+        "to": "P11A4TU2",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P11A4TU1",
+        "label": "TU1\n54.7dB",
+        "title": "Toma: P11A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A4",
+        "to": "P11A4TU1",
+        "label": "14.0m\n-3.2dB"
+      }
+    }
+  ],
+  "B1_P11_A3": [
+    {
+      "node": {
+        "id": "P11A3TU1",
+        "label": "TU1\n65.3dB",
+        "title": "Toma: P11A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A3",
+        "to": "P11A3TU1",
+        "label": "10.0m\n-2.4dB"
+      }
+    }
+  ],
+  "B1_P11_A2": [
+    {
+      "node": {
+        "id": "P11A2TU5",
+        "label": "TU5\n56.5dB",
+        "title": "Toma: P11A2TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A2",
+        "to": "P11A2TU5",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P11A2TU4",
+        "label": "TU4\n56.5dB",
+        "title": "Toma: P11A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A2",
+        "to": "P11A2TU4",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P11A2TU3",
+        "label": "TU3\n55.3dB",
+        "title": "Toma: P11A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A2",
+        "to": "P11A2TU3",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P11A2TU2",
+        "label": "TU2\n53.9dB",
+        "title": "Toma: P11A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A2",
+        "to": "P11A2TU2",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P11A2TU1",
+        "label": "TU1\n54.1dB",
+        "title": "Toma: P11A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A2",
+        "to": "P11A2TU1",
+        "label": "18.0m\n-4dB"
+      }
+    }
+  ],
+  "B1_P11_A1": [
+    {
+      "node": {
+        "id": "P11A1TU1",
+        "label": "TU1\n64.7dB",
+        "title": "Toma: P11A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B1_P11_A1",
+        "to": "P11A1TU1",
+        "label": "13.0m\n-3dB"
+      }
+    }
+  ],
+  "Bloque_2": [
+    {
+      "node": {
+        "id": "B2_P10",
+        "label": "Piso 10",
+        "title": "Piso 10, Derivador: TLV519344, P\u00e9rdida Paso: 2.2 dB, P\u00e9rdida Derivaci\u00f3n: 20.5 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_2",
+        "to": "B2_P10",
+        "label": "0m\n-0.0dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P09",
+        "label": "Piso 09",
+        "title": "Piso 09, Derivador: TLV519343, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 17.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_2",
+        "to": "B2_P09",
+        "label": "3m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P08",
+        "label": "Piso 08",
+        "title": "Piso 08, Derivador: TLV519344, P\u00e9rdida Paso: 2.2 dB, P\u00e9rdida Derivaci\u00f3n: 20.5 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_2",
+        "to": "B2_P08",
+        "label": "6m\n-6.7dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P07",
+        "label": "Piso 07",
+        "title": "Piso 07, Derivador: TLV519342, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 13.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_2",
+        "to": "B2_P07",
+        "label": "9m\n-9.9dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P06",
+        "label": "Piso 06",
+        "title": "Piso 06, Derivador: TLV519342, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 13.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_2",
+        "to": "B2_P06",
+        "label": "12m\n-13.4dB"
+      }
+    }
+  ],
+  "B2_P10": [
+    {
+      "node": {
+        "id": "B2_P10_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P10",
+        "to": "B2_P10_A4",
+        "label": "10.0m\n-2.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P10_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P10",
+        "to": "B2_P10_A3",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P10_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P10",
+        "to": "B2_P10_A2",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P10_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P10",
+        "to": "B2_P10_A1",
+        "label": "10.0m\n-2.4dB"
+      }
+    }
+  ],
+  "B2_P10_A4": [
+    {
+      "node": {
+        "id": "P10A4TU2",
+        "label": "TU2\n57.1dB",
+        "title": "Toma: P10A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A4",
+        "to": "P10A4TU2",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A4TU1",
+        "label": "TU1\n58.5dB",
+        "title": "Toma: P10A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A4",
+        "to": "P10A4TU1",
+        "label": "7.0m\n-1.8dB"
+      }
+    }
+  ],
+  "B2_P10_A3": [
+    {
+      "node": {
+        "id": "P10A3TU5",
+        "label": "TU5\n54.1dB",
+        "title": "Toma: P10A3TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A3",
+        "to": "P10A3TU5",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A3TU4",
+        "label": "TU4\n56.7dB",
+        "title": "Toma: P10A3TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A3",
+        "to": "P10A3TU4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A3TU3",
+        "label": "TU3\n57.1dB",
+        "title": "Toma: P10A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A3",
+        "to": "P10A3TU3",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A3TU2",
+        "label": "TU2\n56.9dB",
+        "title": "Toma: P10A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A3",
+        "to": "P10A3TU2",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A3TU1",
+        "label": "TU1\n55.3dB",
+        "title": "Toma: P10A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A3",
+        "to": "P10A3TU1",
+        "label": "14.0m\n-3.2dB"
+      }
+    }
+  ],
+  "B2_P10_A2": [
+    {
+      "node": {
+        "id": "P10A2TU4",
+        "label": "TU4\n57.5dB",
+        "title": "Toma: P10A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A2",
+        "to": "P10A2TU4",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A2TU3",
+        "label": "TU3\n56.7dB",
+        "title": "Toma: P10A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A2",
+        "to": "P10A2TU3",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A2TU2",
+        "label": "TU2\n59.7dB",
+        "title": "Toma: P10A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A2",
+        "to": "P10A2TU2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A2TU1",
+        "label": "TU1\n59.5dB",
+        "title": "Toma: P10A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A2",
+        "to": "P10A2TU1",
+        "label": "6.0m\n-1.6dB"
+      }
+    }
+  ],
+  "B2_P10_A1": [
+    {
+      "node": {
+        "id": "P10A1TU4",
+        "label": "TU4\n58.1dB",
+        "title": "Toma: P10A1TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A1",
+        "to": "P10A1TU4",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A1TU3",
+        "label": "TU3\n56.9dB",
+        "title": "Toma: P10A1TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A1",
+        "to": "P10A1TU3",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A1TU2",
+        "label": "TU2\n56.1dB",
+        "title": "Toma: P10A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A1",
+        "to": "P10A1TU2",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P10A1TU1",
+        "label": "TU1\n58.1dB",
+        "title": "Toma: P10A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P10_A1",
+        "to": "P10A1TU1",
+        "label": "9.0m\n-2.2dB"
+      }
+    }
+  ],
+  "B2_P09": [
+    {
+      "node": {
+        "id": "B2_P09_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P09",
+        "to": "B2_P09_A4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P09_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P09",
+        "to": "B2_P09_A3",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P09_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P09",
+        "to": "B2_P09_A2",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P09_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P09",
+        "to": "B2_P09_A1",
+        "label": "5.0m\n-1.4dB"
+      }
+    }
+  ],
+  "B2_P09_A4": [
+    {
+      "node": {
+        "id": "P09A4TU1",
+        "label": "TU1\n65.8dB",
+        "title": "Toma: P09A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A4",
+        "to": "P09A4TU1",
+        "label": "20.0m\n-4.4dB"
+      }
+    }
+  ],
+  "B2_P09_A3": [
+    {
+      "node": {
+        "id": "P09A3TU5",
+        "label": "TU5\n57.6dB",
+        "title": "Toma: P09A3TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A3",
+        "to": "P09A3TU5",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P09A3TU4",
+        "label": "TU4\n55.8dB",
+        "title": "Toma: P09A3TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A3",
+        "to": "P09A3TU4",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P09A3TU3",
+        "label": "TU3\n56.0dB",
+        "title": "Toma: P09A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A3",
+        "to": "P09A3TU3",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P09A3TU2",
+        "label": "TU2\n57.2dB",
+        "title": "Toma: P09A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A3",
+        "to": "P09A3TU2",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P09A3TU1",
+        "label": "TU1\n57.8dB",
+        "title": "Toma: P09A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A3",
+        "to": "P09A3TU1",
+        "label": "6.0m\n-1.6dB"
+      }
+    }
+  ],
+  "B2_P09_A2": [
+    {
+      "node": {
+        "id": "P09A2TU1",
+        "label": "TU1\n65.8dB",
+        "title": "Toma: P09A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A2",
+        "to": "P09A2TU1",
+        "label": "16.0m\n-3.6dB"
+      }
+    }
+  ],
+  "B2_P09_A1": [
+    {
+      "node": {
+        "id": "P09A1TU5",
+        "label": "TU5\n55.4dB",
+        "title": "Toma: P09A1TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A1",
+        "to": "P09A1TU5",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P09A1TU4",
+        "label": "TU4\n57.8dB",
+        "title": "Toma: P09A1TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A1",
+        "to": "P09A1TU4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P09A1TU3",
+        "label": "TU3\n57.8dB",
+        "title": "Toma: P09A1TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A1",
+        "to": "P09A1TU3",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P09A1TU2",
+        "label": "TU2\n57.4dB",
+        "title": "Toma: P09A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A1",
+        "to": "P09A1TU2",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P09A1TU1",
+        "label": "TU1\n56.2dB",
+        "title": "Toma: P09A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P09_A1",
+        "to": "P09A1TU1",
+        "label": "15.0m\n-3.4dB"
+      }
+    }
+  ],
+  "B2_P08": [
+    {
+      "node": {
+        "id": "B2_P08_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV453003, P\u00e9rdida Inserci\u00f3n: 4 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P08",
+        "to": "B2_P08_A4",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P08_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV453003, P\u00e9rdida Inserci\u00f3n: 4 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P08",
+        "to": "B2_P08_A3",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P08_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P08",
+        "to": "B2_P08_A2",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P08_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P08",
+        "to": "B2_P08_A1",
+        "label": "8.0m\n-2.0dB"
+      }
+    }
+  ],
+  "B2_P08_A4": [
+    {
+      "node": {
+        "id": "P08A4TU2",
+        "label": "TU2\n55.8dB",
+        "title": "Toma: P08A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P08_A4",
+        "to": "P08A4TU2",
+        "label": "17.0m\n-3.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P08A4TU1",
+        "label": "TU1\n58.2dB",
+        "title": "Toma: P08A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P08_A4",
+        "to": "P08A4TU1",
+        "label": "5.0m\n-1.4dB"
+      }
+    }
+  ],
+  "B2_P08_A3": [
+    {
+      "node": {
+        "id": "P08A3TU2",
+        "label": "TU2\n55.2dB",
+        "title": "Toma: P08A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P08_A3",
+        "to": "P08A3TU2",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P08A3TU1",
+        "label": "TU1\n58.2dB",
+        "title": "Toma: P08A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P08_A3",
+        "to": "P08A3TU1",
+        "label": "5.0m\n-1.4dB"
+      }
+    }
+  ],
+  "B2_P08_A2": [
+    {
+      "node": {
+        "id": "P08A2TU1",
+        "label": "TU1\n59.4dB",
+        "title": "Toma: P08A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P08_A2",
+        "to": "P08A2TU1",
+        "label": "18.0m\n-4dB"
+      }
+    }
+  ],
+  "B2_P08_A1": [
+    {
+      "node": {
+        "id": "P08A1TU1",
+        "label": "TU1\n61.2dB",
+        "title": "Toma: P08A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P08_A1",
+        "to": "P08A1TU1",
+        "label": "7.0m\n-1.8dB"
+      }
+    }
+  ],
+  "B2_P07": [
+    {
+      "node": {
+        "id": "B2_P07_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P07",
+        "to": "B2_P07_A4",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P07_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P07",
+        "to": "B2_P07_A3",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P07_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P07",
+        "to": "B2_P07_A2",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P07_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P07",
+        "to": "B2_P07_A1",
+        "label": "12.0m\n-2.8dB"
+      }
+    }
+  ],
+  "B2_P07_A4": [
+    {
+      "node": {
+        "id": "P07A4TU3",
+        "label": "TU3\n53.7dB",
+        "title": "Toma: P07A4TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A4",
+        "to": "P07A4TU3",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A4TU2",
+        "label": "TU2\n53.7dB",
+        "title": "Toma: P07A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A4",
+        "to": "P07A4TU2",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A4TU1",
+        "label": "TU1\n53.7dB",
+        "title": "Toma: P07A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A4",
+        "to": "P07A4TU1",
+        "label": "19.0m\n-4.2dB"
+      }
+    }
+  ],
+  "B2_P07_A3": [
+    {
+      "node": {
+        "id": "P07A3TU4",
+        "label": "TU4\n54.7dB",
+        "title": "Toma: P07A3TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A3",
+        "to": "P07A3TU4",
+        "label": "17.0m\n-3.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A3TU3",
+        "label": "TU3\n55.1dB",
+        "title": "Toma: P07A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A3",
+        "to": "P07A3TU3",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A3TU2",
+        "label": "TU2\n54.5dB",
+        "title": "Toma: P07A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A3",
+        "to": "P07A3TU2",
+        "label": "18.0m\n-4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A3TU1",
+        "label": "TU1\n55.5dB",
+        "title": "Toma: P07A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A3",
+        "to": "P07A3TU1",
+        "label": "13.0m\n-3dB"
+      }
+    }
+  ],
+  "B2_P07_A2": [
+    {
+      "node": {
+        "id": "P07A2TU1",
+        "label": "TU1\n64.5dB",
+        "title": "Toma: P07A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A2",
+        "to": "P07A2TU1",
+        "label": "8.0m\n-2dB"
+      }
+    }
+  ],
+  "B2_P07_A1": [
+    {
+      "node": {
+        "id": "P07A1TU5",
+        "label": "TU5\n53.7dB",
+        "title": "Toma: P07A1TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A1",
+        "to": "P07A1TU5",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A1TU4",
+        "label": "TU4\n53.7dB",
+        "title": "Toma: P07A1TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A1",
+        "to": "P07A1TU4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A1TU3",
+        "label": "TU3\n53.7dB",
+        "title": "Toma: P07A1TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A1",
+        "to": "P07A1TU3",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A1TU2",
+        "label": "TU2\n54.1dB",
+        "title": "Toma: P07A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A1",
+        "to": "P07A1TU2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P07A1TU1",
+        "label": "TU1\n51.7dB",
+        "title": "Toma: P07A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P07_A1",
+        "to": "P07A1TU1",
+        "label": "17.0m\n-3.8dB"
+      }
+    }
+  ],
+  "B2_P06": [
+    {
+      "node": {
+        "id": "B2_P06_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P06",
+        "to": "B2_P06_A4",
+        "label": "13.0m\n-3.0dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P06_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV453003, P\u00e9rdida Inserci\u00f3n: 4 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P06",
+        "to": "B2_P06_A3",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P06_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P06",
+        "to": "B2_P06_A2",
+        "label": "8.0m\n-2.0dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B2_P06_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B2_P06",
+        "to": "B2_P06_A1",
+        "label": "13.0m\n-3.0dB"
+      }
+    }
+  ],
+  "B2_P06_A4": [
+    {
+      "node": {
+        "id": "P06A4TU5",
+        "label": "TU5\n49.2dB",
+        "title": "Toma: P06A4TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A4",
+        "to": "P06A4TU5",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A4TU4",
+        "label": "TU4\n49.6dB",
+        "title": "Toma: P06A4TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A4",
+        "to": "P06A4TU4",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A4TU3",
+        "label": "TU3\n48.6dB",
+        "title": "Toma: P06A4TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A4",
+        "to": "P06A4TU3",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A4TU2",
+        "label": "TU2\n48.2dB",
+        "title": "Toma: P06A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A4",
+        "to": "P06A4TU2",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A4TU1",
+        "label": "TU1\n50.4dB",
+        "title": "Toma: P06A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A4",
+        "to": "P06A4TU1",
+        "label": "5.0m\n-1.4dB"
+      }
+    }
+  ],
+  "B2_P06_A3": [
+    {
+      "node": {
+        "id": "P06A3TU2",
+        "label": "TU2\n56.0dB",
+        "title": "Toma: P06A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A3",
+        "to": "P06A3TU2",
+        "label": "13.0m\n-3dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A3TU1",
+        "label": "TU1\n54.6dB",
+        "title": "Toma: P06A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A3",
+        "to": "P06A3TU1",
+        "label": "20.0m\n-4.4dB"
+      }
+    }
+  ],
+  "B2_P06_A2": [
+    {
+      "node": {
+        "id": "P06A2TU5",
+        "label": "TU5\n48.4dB",
+        "title": "Toma: P06A2TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A2",
+        "to": "P06A2TU5",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A2TU4",
+        "label": "TU4\n50.8dB",
+        "title": "Toma: P06A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A2",
+        "to": "P06A2TU4",
+        "label": "8.0m\n-2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A2TU3",
+        "label": "TU3\n50.0dB",
+        "title": "Toma: P06A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A2",
+        "to": "P06A2TU3",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A2TU2",
+        "label": "TU2\n51.4dB",
+        "title": "Toma: P06A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A2",
+        "to": "P06A2TU2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A2TU1",
+        "label": "TU1\n48.4dB",
+        "title": "Toma: P06A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A2",
+        "to": "P06A2TU1",
+        "label": "20.0m\n-4.4dB"
+      }
+    }
+  ],
+  "B2_P06_A1": [
+    {
+      "node": {
+        "id": "P06A1TU4",
+        "label": "TU4\n52.0dB",
+        "title": "Toma: P06A1TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A1",
+        "to": "P06A1TU4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A1TU3",
+        "label": "TU3\n50.6dB",
+        "title": "Toma: P06A1TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A1",
+        "to": "P06A1TU3",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A1TU2",
+        "label": "TU2\n52.4dB",
+        "title": "Toma: P06A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A1",
+        "to": "P06A1TU2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P06A1TU1",
+        "label": "TU1\n52.0dB",
+        "title": "Toma: P06A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B2_P06_A1",
+        "to": "P06A1TU1",
+        "label": "7.0m\n-1.8dB"
+      }
+    }
+  ],
+  "Bloque_3": [
+    {
+      "node": {
+        "id": "B3_P05",
+        "label": "Piso 05",
+        "title": "Piso 05, Derivador: TLV519344, P\u00e9rdida Paso: 2.2 dB, P\u00e9rdida Derivaci\u00f3n: 20.5 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_3",
+        "to": "B3_P05",
+        "label": "0m\n-0.0dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P04",
+        "label": "Piso 04",
+        "title": "Piso 04, Derivador: TLV519344, P\u00e9rdida Paso: 2.2 dB, P\u00e9rdida Derivaci\u00f3n: 20.5 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_3",
+        "to": "B3_P04",
+        "label": "3m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P03",
+        "label": "Piso 03",
+        "title": "Piso 03, Derivador: TLV519342, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 13.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_3",
+        "to": "B3_P03",
+        "label": "6m\n-6.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P02",
+        "label": "Piso 02",
+        "title": "Piso 02, Derivador: TLV519342, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 13.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_3",
+        "to": "B3_P02",
+        "label": "9m\n-9.9dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P01",
+        "label": "Piso 01",
+        "title": "Piso 01, Derivador: TLV519342, P\u00e9rdida Paso: 2.5 dB, P\u00e9rdida Derivaci\u00f3n: 13.0 dB",
+        "color": "#2980B9",
+        "level": 3,
+        "shape": "ellipse",
+        "font": {
+          "color": "black"
+        }
+      },
+      "edge": {
+        "from": "Bloque_3",
+        "to": "B3_P01",
+        "label": "12m\n-13.4dB"
+      }
+    }
+  ],
+  "B3_P05": [
+    {
+      "node": {
+        "id": "B3_P05_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P05",
+        "to": "B3_P05_A4",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P05_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P05",
+        "to": "B3_P05_A3",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P05_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P05",
+        "to": "B3_P05_A2",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P05_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P05",
+        "to": "B3_P05_A1",
+        "label": "8.0m\n-2.0dB"
+      }
+    }
+  ],
+  "B3_P05_A4": [
+    {
+      "node": {
+        "id": "P05A4TU1",
+        "label": "TU1\n63.7dB",
+        "title": "Toma: P05A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A4",
+        "to": "P05A4TU1",
+        "label": "18.0m\n-4dB"
+      }
+    }
+  ],
+  "B3_P05_A3": [
+    {
+      "node": {
+        "id": "P05A3TU4",
+        "label": "TU4\n56.9dB",
+        "title": "Toma: P05A3TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A3",
+        "to": "P05A3TU4",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P05A3TU3",
+        "label": "TU3\n56.5dB",
+        "title": "Toma: P05A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A3",
+        "to": "P05A3TU3",
+        "label": "13.0m\n-3dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P05A3TU2",
+        "label": "TU2\n55.7dB",
+        "title": "Toma: P05A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A3",
+        "to": "P05A3TU2",
+        "label": "17.0m\n-3.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P05A3TU1",
+        "label": "TU1\n56.1dB",
+        "title": "Toma: P05A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A3",
+        "to": "P05A3TU1",
+        "label": "15.0m\n-3.4dB"
+      }
+    }
+  ],
+  "B3_P05_A2": [
+    {
+      "node": {
+        "id": "P05A2TU3",
+        "label": "TU3\n58.5dB",
+        "title": "Toma: P05A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A2",
+        "to": "P05A2TU3",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P05A2TU2",
+        "label": "TU2\n56.9dB",
+        "title": "Toma: P05A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A2",
+        "to": "P05A2TU2",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P05A2TU1",
+        "label": "TU1\n57.1dB",
+        "title": "Toma: P05A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A2",
+        "to": "P05A2TU1",
+        "label": "19.0m\n-4.2dB"
+      }
+    }
+  ],
+  "B3_P05_A1": [
+    {
+      "node": {
+        "id": "P05A1TU2",
+        "label": "TU2\n57.7dB",
+        "title": "Toma: P05A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A1",
+        "to": "P05A1TU2",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P05A1TU1",
+        "label": "TU1\n58.7dB",
+        "title": "Toma: P05A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P05_A1",
+        "to": "P05A1TU1",
+        "label": "10.0m\n-2.4dB"
+      }
+    }
+  ],
+  "B3_P04": [
+    {
+      "node": {
+        "id": "B3_P04_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P04",
+        "to": "B3_P04_A4",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P04_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P04",
+        "to": "B3_P04_A3",
+        "label": "11.0m\n-2.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P04_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P04",
+        "to": "B3_P04_A2",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P04_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P04",
+        "to": "B3_P04_A1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B3_P04_A4": [
+    {
+      "node": {
+        "id": "P04A4TU4",
+        "label": "TU4\n54.5dB",
+        "title": "Toma: P04A4TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A4",
+        "to": "P04A4TU4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P04A4TU3",
+        "label": "TU3\n54.7dB",
+        "title": "Toma: P04A4TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A4",
+        "to": "P04A4TU3",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P04A4TU2",
+        "label": "TU2\n52.7dB",
+        "title": "Toma: P04A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A4",
+        "to": "P04A4TU2",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P04A4TU1",
+        "label": "TU1\n51.9dB",
+        "title": "Toma: P04A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A4",
+        "to": "P04A4TU1",
+        "label": "20.0m\n-4.4dB"
+      }
+    }
+  ],
+  "B3_P04_A3": [
+    {
+      "node": {
+        "id": "P04A3TU3",
+        "label": "TU3\n55.1dB",
+        "title": "Toma: P04A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A3",
+        "to": "P04A3TU3",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P04A3TU2",
+        "label": "TU2\n55.1dB",
+        "title": "Toma: P04A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A3",
+        "to": "P04A3TU2",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P04A3TU1",
+        "label": "TU1\n54.7dB",
+        "title": "Toma: P04A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A3",
+        "to": "P04A3TU1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B3_P04_A2": [
+    {
+      "node": {
+        "id": "P04A2TU4",
+        "label": "TU4\n53.9dB",
+        "title": "Toma: P04A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A2",
+        "to": "P04A2TU4",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P04A2TU3",
+        "label": "TU3\n54.5dB",
+        "title": "Toma: P04A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A2",
+        "to": "P04A2TU3",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P04A2TU2",
+        "label": "TU2\n53.5dB",
+        "title": "Toma: P04A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A2",
+        "to": "P04A2TU2",
+        "label": "17.0m\n-3.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P04A2TU1",
+        "label": "TU1\n54.7dB",
+        "title": "Toma: P04A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A2",
+        "to": "P04A2TU1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B3_P04_A1": [
+    {
+      "node": {
+        "id": "P04A1TU1",
+        "label": "TU1\n62.7dB",
+        "title": "Toma: P04A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P04_A1",
+        "to": "P04A1TU1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B3_P03": [
+    {
+      "node": {
+        "id": "B3_P03_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P03",
+        "to": "B3_P03_A4",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P03_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P03",
+        "to": "B3_P03_A3",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P03_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P03",
+        "to": "B3_P03_A2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P03_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P03",
+        "to": "B3_P03_A1",
+        "label": "8.0m\n-2.0dB"
+      }
+    }
+  ],
+  "B3_P03_A4": [
+    {
+      "node": {
+        "id": "P03A4TU3",
+        "label": "TU3\n56.8dB",
+        "title": "Toma: P03A4TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A4",
+        "to": "P03A4TU3",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P03A4TU2",
+        "label": "TU2\n57.6dB",
+        "title": "Toma: P03A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A4",
+        "to": "P03A4TU2",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P03A4TU1",
+        "label": "TU1\n56.6dB",
+        "title": "Toma: P03A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A4",
+        "to": "P03A4TU1",
+        "label": "20.0m\n-4.4dB"
+      }
+    }
+  ],
+  "B3_P03_A3": [
+    {
+      "node": {
+        "id": "P03A3TU3",
+        "label": "TU3\n58.2dB",
+        "title": "Toma: P03A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A3",
+        "to": "P03A3TU3",
+        "label": "17.0m\n-3.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P03A3TU2",
+        "label": "TU2\n58.0dB",
+        "title": "Toma: P03A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A3",
+        "to": "P03A3TU2",
+        "label": "18.0m\n-4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P03A3TU1",
+        "label": "TU1\n59.4dB",
+        "title": "Toma: P03A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A3",
+        "to": "P03A3TU1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B3_P03_A2": [
+    {
+      "node": {
+        "id": "P03A2TU1",
+        "label": "TU1\n67.8dB",
+        "title": "Toma: P03A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A2",
+        "to": "P03A2TU1",
+        "label": "13.0m\n-3dB"
+      }
+    }
+  ],
+  "B3_P03_A1": [
+    {
+      "node": {
+        "id": "P03A1TU5",
+        "label": "TU5\n54.8dB",
+        "title": "Toma: P03A1TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A1",
+        "to": "P03A1TU5",
+        "label": "20.0m\n-4.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P03A1TU4",
+        "label": "TU4\n55.0dB",
+        "title": "Toma: P03A1TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A1",
+        "to": "P03A1TU4",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P03A1TU3",
+        "label": "TU3\n57.2dB",
+        "title": "Toma: P03A1TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A1",
+        "to": "P03A1TU3",
+        "label": "8.0m\n-2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P03A1TU2",
+        "label": "TU2\n56.8dB",
+        "title": "Toma: P03A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A1",
+        "to": "P03A1TU2",
+        "label": "10.0m\n-2.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P03A1TU1",
+        "label": "TU1\n56.2dB",
+        "title": "Toma: P03A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P03_A1",
+        "to": "P03A1TU1",
+        "label": "13.0m\n-3dB"
+      }
+    }
+  ],
+  "B3_P02": [
+    {
+      "node": {
+        "id": "B3_P02_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P02",
+        "to": "B3_P02_A4",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P02_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: TLV519503, P\u00e9rdida Inserci\u00f3n: 8 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P02",
+        "to": "B3_P02_A3",
+        "label": "8.0m\n-2.0dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P02_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P02",
+        "to": "B3_P02_A2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P02_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: TLV519502, P\u00e9rdida Inserci\u00f3n: 5 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P02",
+        "to": "B3_P02_A1",
+        "label": "9.0m\n-2.2dB"
+      }
+    }
+  ],
+  "B3_P02_A4": [
+    {
+      "node": {
+        "id": "P02A4TU1",
+        "label": "TU1\n63.1dB",
+        "title": "Toma: P02A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A4",
+        "to": "P02A4TU1",
+        "label": "17.0m\n-3.8dB"
+      }
+    }
+  ],
+  "B3_P02_A3": [
+    {
+      "node": {
+        "id": "P02A3TU3",
+        "label": "TU3\n56.5dB",
+        "title": "Toma: P02A3TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A3",
+        "to": "P02A3TU3",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P02A3TU2",
+        "label": "TU2\n57.3dB",
+        "title": "Toma: P02A3TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A3",
+        "to": "P02A3TU2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P02A3TU1",
+        "label": "TU1\n55.5dB",
+        "title": "Toma: P02A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A3",
+        "to": "P02A3TU1",
+        "label": "14.0m\n-3.2dB"
+      }
+    }
+  ],
+  "B3_P02_A2": [
+    {
+      "node": {
+        "id": "P02A2TU5",
+        "label": "TU5\n52.7dB",
+        "title": "Toma: P02A2TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A2",
+        "to": "P02A2TU5",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P02A2TU4",
+        "label": "TU4\n53.3dB",
+        "title": "Toma: P02A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A2",
+        "to": "P02A2TU4",
+        "label": "13.0m\n-3dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P02A2TU3",
+        "label": "TU3\n54.7dB",
+        "title": "Toma: P02A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A2",
+        "to": "P02A2TU3",
+        "label": "6.0m\n-1.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P02A2TU2",
+        "label": "TU2\n53.3dB",
+        "title": "Toma: P02A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A2",
+        "to": "P02A2TU2",
+        "label": "13.0m\n-3dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P02A2TU1",
+        "label": "TU1\n54.7dB",
+        "title": "Toma: P02A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A2",
+        "to": "P02A2TU1",
+        "label": "6.0m\n-1.6dB"
+      }
+    }
+  ],
+  "B3_P02_A1": [
+    {
+      "node": {
+        "id": "P02A1TU2",
+        "label": "TU2\n59.7dB",
+        "title": "Toma: P02A1TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A1",
+        "to": "P02A1TU2",
+        "label": "7.0m\n-1.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P02A1TU1",
+        "label": "TU1\n58.1dB",
+        "title": "Toma: P02A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P02_A1",
+        "to": "P02A1TU1",
+        "label": "15.0m\n-3.4dB"
+      }
+    }
+  ],
+  "B3_P01": [
+    {
+      "node": {
+        "id": "B3_P01_A4",
+        "label": "Apto 4",
+        "title": "Apto 4, Repartidor: TLV519504, P\u00e9rdida Inserci\u00f3n: 9 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P01",
+        "to": "B3_P01_A4",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P01_A3",
+        "label": "Apto 3",
+        "title": "Apto 3, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P01",
+        "to": "B3_P01_A3",
+        "label": "15.0m\n-3.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P01_A2",
+        "label": "Apto 2",
+        "title": "Apto 2, Repartidor: TLV519505, P\u00e9rdida Inserci\u00f3n: 11 dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P01",
+        "to": "B3_P01_A2",
+        "label": "14.0m\n-3.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "B3_P01_A1",
+        "label": "Apto 1",
+        "title": "Apto 1, Repartidor: nan, P\u00e9rdida Inserci\u00f3n: ? dB",
+        "color": "#F39C12",
+        "level": 4,
+        "shape": "dot",
+        "size": 15
+      },
+      "edge": {
+        "from": "B3_P01",
+        "to": "B3_P01_A1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B3_P01_A4": [
+    {
+      "node": {
+        "id": "P01A4TU4",
+        "label": "TU4\n49.4dB",
+        "title": "Toma: P01A4TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A4",
+        "to": "P01A4TU4",
+        "label": "16.0m\n-3.6dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P01A4TU3",
+        "label": "TU3\n51.0dB",
+        "title": "Toma: P01A4TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A4",
+        "to": "P01A4TU3",
+        "label": "8.0m\n-2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P01A4TU2",
+        "label": "TU2\n48.8dB",
+        "title": "Toma: P01A4TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A4",
+        "to": "P01A4TU2",
+        "label": "19.0m\n-4.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P01A4TU1",
+        "label": "TU1\n51.0dB",
+        "title": "Toma: P01A4TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A4",
+        "to": "P01A4TU1",
+        "label": "8.0m\n-2dB"
+      }
+    }
+  ],
+  "B3_P01_A3": [
+    {
+      "node": {
+        "id": "P01A3TU1",
+        "label": "TU1\n60.2dB",
+        "title": "Toma: P01A3TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A3",
+        "to": "P01A3TU1",
+        "label": "6.0m\n-1.6dB"
+      }
+    }
+  ],
+  "B3_P01_A2": [
+    {
+      "node": {
+        "id": "P01A2TU5",
+        "label": "TU5\n48.8dB",
+        "title": "Toma: P01A2TU5, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A2",
+        "to": "P01A2TU5",
+        "label": "9.0m\n-2.2dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P01A2TU4",
+        "label": "TU4\n48.2dB",
+        "title": "Toma: P01A2TU4, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A2",
+        "to": "P01A2TU4",
+        "label": "12.0m\n-2.8dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P01A2TU3",
+        "label": "TU3\n48.0dB",
+        "title": "Toma: P01A2TU3, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A2",
+        "to": "P01A2TU3",
+        "label": "13.0m\n-3dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P01A2TU2",
+        "label": "TU2\n49.6dB",
+        "title": "Toma: P01A2TU2, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A2",
+        "to": "P01A2TU2",
+        "label": "5.0m\n-1.4dB"
+      }
+    },
+    {
+      "node": {
+        "id": "P01A2TU1",
+        "label": "TU1\n48.4dB",
+        "title": "Toma: P01A2TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A2",
+        "to": "P01A2TU1",
+        "label": "11.0m\n-2.6dB"
+      }
+    }
+  ],
+  "B3_P01_A1": [
+    {
+      "node": {
+        "id": "P01A1TU1",
+        "label": "TU1\n58.4dB",
+        "title": "Toma: P01A1TU1, P\u00e9rdida TU: 1 dB\u00b5V",
+        "color": "#27AE60",
+        "level": 5,
+        "shape": "dot",
+        "size": 10
+      },
+      "edge": {
+        "from": "B3_P01_A1",
+        "to": "P01A1TU1",
+        "label": "19.0m\n-4.2dB"
+      }
+    }
+  ]
+};
+        
+        // Creación de los DataSets de vis.js
+        var nodes = new vis.DataSet(nodesArray);
+        var edges = new vis.DataSet(edgesArray);
+        
+        var container = document.getElementById('mynetwork');
+        var data = { nodes: nodes, edges: edges };
+        
+        // --- OPCIONES DE CONFIGURACIÓN DE LA RED ---
+        var options = {
+            layout: {
+                hierarchical: {
+                    direction: "UD", // Dirección de arriba hacia abajo
+                    sortMethod: "directed",
+                    levelSeparation: 170,
+                    nodeSpacing: 180,
+                    treeSpacing: 250,
+                }
+            },
+            physics: { // Opciones de físicas para la estabilización inicial
+                hierarchicalRepulsion: {
+                    nodeDistance: 180,
+                    springLength: 120,
+                    damping: 0.2
+                },
+                stabilization: { iterations: 250 }
+            },
+            interaction: { // Interactividad del usuario
+                hover: true,
+                tooltipDelay: 200,
+                zoomView: true
+            },
+            edges: { // Estilo de las conexiones
+                arrows: 'to',
+                smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.5 },
+                font: { color: '#333', size: 10, face: 'arial', background: '#ffffff', strokeWidth: 0, align: 'horizontal', multi: 'html' },
+                color: { color: '#aaa', highlight: '#555' }
+            },
+            nodes: { // Estilo de los nodos
+                borderWidth: 1,
+                shadow: true,
+                font: { color: 'black' }
+            }
+        };
+        
+        // Creación de la red
+        var network = new vis.Network(container, data, options);
+        
+        // --- FUNCIONES DE INTERACTIVIDAD ---
+        function zoomIn() { network.moveTo({ scale: network.getScale() + 0.3, animation: true }); }
+        function zoomOut() { network.moveTo({ scale: network.getScale() - 0.3, animation: true }); }
+        function fitAnimated() { network.fit({ animation: { duration: 800, easingFunction: 'easeInOutQuad' } }); }
+        
+        // Evento de clic en un nodo para expandir o colapsar
+        network.on("click", function (params) {
+            if (params.nodes.length === 0) return; // Si no se hace clic en un nodo, no hacer nada.
+            var nodeId = params.nodes[0];
+            if (hierarchyMap.hasOwnProperty(nodeId)) {
+                var children = hierarchyMap[nodeId];
+                if (children.length === 0) return;
+                
+                // Comprobar si el nodo está expandido o colapsado.
+                var firstChildId = children[0].node.id;
+                var isExpanded = nodes.get(firstChildId);
+                
+                if (isExpanded) {
+                    collapseNode(nodeId);
+                } else {
+                    expandNode(nodeId);
+                }
+            }
+        });
+        
+        // Función para añadir los hijos de un nodo al grafo.
+        function expandNode(parentId) {
+            if (!hierarchyMap[parentId]) return;
+            var newNodes = []; 
+            var newEdges = [];
+            hierarchyMap[parentId].forEach(function(child) { 
+                newNodes.push(child.node); 
+                newEdges.push(child.edge); 
+            });
+            nodes.add(newNodes); 
+            edges.add(newEdges);
+            setTimeout(fitAnimated, 300); // Ajustar la vista después de expandir
+        }
+        
+        // Función para eliminar todos los descendientes de un nodo del grafo.
+        function collapseNode(parentId) {
+            var descendants = getAllDescendants(parentId);
+            nodes.remove(descendants);
+            setTimeout(fitAnimated, 300); // Ajustar la vista después de colapsar
+        }
+        
+        // Función recursiva para obtener todos los IDs de los descendientes de un nodo.
+        function getAllDescendants(parentId) {
+            var found = [];
+            if (hierarchyMap[parentId]) {
+                hierarchyMap[parentId].forEach(function(child) {
+                    var childId = child.node.id;
+                    if (nodes.get(childId)) {
+                        found.push(childId);
+                        found = found.concat(getAllDescendants(childId));
+                    }
+                });
+            }
+            return found;
+        }
+    </script>
+</body>
+</html>

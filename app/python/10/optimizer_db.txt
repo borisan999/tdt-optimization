@@ -1,0 +1,60 @@
+Notes & caveats (what I changed / assumptions)
+
+Adapter mapping: DB field names differ from the Excel-driven functions. I created build_params_for_modules() to translate DB values (and apartments/tus rows) into the params structure your brother’s modules expect. It:
+
+builds (p,a) → largo_cable_derivador_repartidor from the DB apartment rows (sum of derivador + repartidor lengths when both present),
+
+builds (p,a,tu) → largo_cable_tu from DB TU rows,
+
+builds tus_requeridos_por_apartamento from apartment rows.
+If your DB schema uses different column names, some adjustments may be necessary.
+
+Outputs: Excel/plots are written into OUTPUT_DIR (by default ./output). The filename includes the dataset id.
+
+Inserted results: per-TU entries use the 'Nivel TU Final (dBµV)' column from the generated df_detalle. If your brother’s functions change column names, the DB inserts will need adjustment.
+
+Visual HTML: _generar_arbol_completo_con_specs() was called but archivo_specs argument is passed as None — the visualization module loads specs from the Excel file when provided. If you want it to use the same DB sources, we should extend the visual module to accept the derivadores / repartidores dicts.
+
+Failure handling: If solver is infeasible the script marks the optimization infeasible and prints a minimal JSON. Export failures (Excel/plots) are non-fatal and logged.
+
+Testing: Please test on one dataset. If there are mismatched column names in df_detalle (e.g., different header languages / names), send me the exact df_detalle columns output or a sample Excel result and I’ll adapt the DB insert stage.
+
+What I changed — concise changelog
+
+Style & readability
+
+Reformatted to PEP8-like layout, added typing hints for many functions.
+
+Replaced ad-hoc prints with logging for better observability.
+
+Grouped imports and removed unused ones (e.g., removed pandas top-level import; imported it lazily where required).
+
+Robustness
+
+Hardening of conversions (_to_int, _to_float, safe_val) to avoid exceptions from odd DB values.
+
+Cursor close() calls preserved; create_optimization_run() uses try/finally to ensure cursor closed.
+
+Avoid repeated work
+
+Compute bloques_de_pisos once per model creation instead of repeated calls.
+
+Reduced side effects
+
+Excel export, plotting and ASCII schema are wrapped in try/except with warnings — export failures won't abort the optimization writeback.
+
+Logging and errors
+
+Added INFO/DEBUG logs for helpful diagnostics.
+
+On fatal exceptions the script updates the optimization status to "failed" if an opt_id exists.
+
+Output location
+
+Exports are written inside OUTPUT_DIR_BASE (created at startup).
+
+Misc
+
+Kept compatible DB insert names (nivel_p{p}_a{a}_t{t}) and result metadata structure.
+
+Consolidated parameter mapping in build_params_for_modules() with clearer defaulting rules.

@@ -1,0 +1,52 @@
+digraph G {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fillcolor=lightgrey];
+
+    subgraph cluster_input {
+        label="Input";
+        style="rounded";
+        datos_entrada [label="datos_entrada.xlsx", shape=folder, fillcolor=lightblue];
+    }
+
+    subgraph cluster_process {
+        label="Processing";
+        style="rounded";
+
+        optimizacion_ritel [label="Optimizacion_RITEL_10.py", fillcolor=lightgreen];
+        
+        subgraph cluster_funciones {
+            label="Supporting Functions";
+            style="rounded,dashed";
+            datos_entrada_py [label="Funciones_apoyo_datos_entrada.py"];
+            optimizacion_py [label="Funciones_apoyo_optimizacion.py"];
+            salida_py [label="Funciones_apoyo_salida.py"];
+            visualizacion_py [label="Funciones_apoyo_visualizacion.py"];
+        }
+    }
+
+    subgraph cluster_output {
+        label="Output";
+        style="rounded";
+        resultados_excel [label="Resultados_Optimizacion_TDT_Troncal.xlsx", shape=folder, fillcolor=lightblue];
+        plots [label="histograma_niveles.png
+niveles_por_tu.png", shape=folder, fillcolor=lightblue];
+        esquema_txt [label="esquema_conexiones.txt", shape=folder, fillcolor=lightblue];
+        arbol_html [label="Arbol_TDT_Specs.html", shape=folder, fillcolor=lightblue];
+    }
+
+    datos_entrada -> optimizacion_ritel;
+    optimizacion_ritel -> datos_entrada_py [style=invis];
+    optimizacion_ritel -> optimizacion_py [style=invis];
+    optimizacion_ritel -> salida_py [style=invis];
+    optimizacion_ritel -> visualizacion_py [style=invis];
+    
+    datos_entrada_py -> optimizacion_ritel [label="Load Data"];
+    optimizacion_py -> optimizacion_ritel [label="Build & Solve MILP"];
+    salida_py -> optimizacion_ritel [label="Export Results"];
+    visualizacion_py -> optimizacion_ritel [label="Generate Visualization"];
+
+    optimizacion_ritel -> resultados_excel;
+    optimizacion_ritel -> plots;
+    optimizacion_ritel -> esquema_txt;
+    optimizacion_ritel -> arbol_html;
+}

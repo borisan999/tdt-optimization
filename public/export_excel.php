@@ -7,8 +7,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 $opt_id = $_GET["opt_id"] ?? null;
 if (!$opt_id) die("Missing opt_id");
-
-$pdo = Database::getInstance()->getConnection();
+$db = new Database();
+$pdo = $db->getConnection(); 
 
 /* ---------------------------
    LOAD RESULTS META
@@ -60,7 +60,6 @@ foreach ($general as $param => $data) {
 
 $sheet2 = $spreadsheet->createSheet();
 $sheet2->setTitle("Apartments");
-
 $headers = [
     "piso", "apartamento", "tus_requeridos",
     "largo_cable_derivador", "largo_cable_repartidor"
