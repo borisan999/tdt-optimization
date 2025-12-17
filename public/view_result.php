@@ -225,6 +225,7 @@ foreach ($details as $tu) {
         $violations[] = $tu;
     }
 }
+$excel_enabled = !empty($summary) && !empty($details);
 
 /* ---------------------------------------------------------
    HTML Output
@@ -258,6 +259,13 @@ foreach ($details as $tu) {
             <a class="btn btn-outline-secondary btn-sm"
             href="export_csv.php?opt_id=<?= intval($opt_id) ?>&type=inventory">
                 Export Inventory (CSV)
+            </a>
+            <a
+                href="<?= $excel_enabled ? "export_excel.php?opt_id=" . intval($opt_id) : "#" ?>"
+                class="btn btn-outline-primary btn-sm <?= $excel_enabled ? "" : "disabled" ?>"
+                title="<?= $excel_enabled ? "Engineering-validated Excel export" : "Missing summary or detail data" ?>"
+            >
+                Export Excel (Engineering)
             </a>
         </div>
     <table class="table table-bordered table-sm">
