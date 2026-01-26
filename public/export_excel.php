@@ -43,7 +43,8 @@ if (isset($summary['input_level'])) {
     $P_IN = (float)$summary['P_in (entrada) (dBµV)'];
 } elseif (isset($detail[0]['P_in (entrada) (dBµV)'])) {
     // Fallback: derive from first TU (must be identical for all TUs)
-    $P_IN = (float)$detail[0]['P_in (entrada) (dBµV)'];
+    $P_IN = (float)$detail[0]['P_in (e$db  = new Database();
+$pdo = $db->getConnection();ntrada) (dBµV)'];
 } else {
     die('Missing global P_in (entrada) in summary_json and detail_json');
 }

@@ -79,6 +79,10 @@ class DatasetController
         require_once __DIR__ . "/../models/ValidationRules.php";
 
         $validator = new ValidationEngine(new ValidationRules());
+
+        require_once __DIR__ . '/../models/GeneralParams.php';
+        $gpModel = new GeneralParams();
+
         $_SESSION['upload_warnings'] = [];
 
         // Validate APARTMENT rows
@@ -170,6 +174,22 @@ class DatasetController
             // Normal behavior: create a new dataset
             $dataset_id = $dataset->create($_SESSION['user_id'], "pending");
         }
+        // ----------------------------------
+        // Save General Parameters (manual)
+        // ----------------------------------
+        $generalParams = [];
+
+        foreach ($_POST as $key => $value) {
+            if (str_starts_with($key, 'param_')) {
+                $paramName = substr($key, 6); // remove 'param_'
+                $generalParams[$paramName] = $value;
+            }
+        }
+
+        if (!empty($generalParams)) {
+            $gpModel->saveForDataset($dataset_id, $generalParams);
+        }
+
         $rowModel = new DatasetRow();
 
         /**
@@ -200,10 +220,45 @@ class DatasetController
 
             $record_index++;
         }
-        unset($_SESSION['loaded_dataset']);
-        unset($_SESSION['loaded_dataset_id']);
-        unset($_SESSION['loaded_general_params']);
-        unset($_SESSION['loaded_params']);
+        // Rehydrate UI state from submitted form
+        //$_SESSION['loaded_params'] = array_filter($_POST, fn($k) => str_starts_with($k, 'param_'), ARRAY_FILTER_USE_KEY);
+        $_SESSION['loaded_params'] = [];
+
+        foreach ($_POST as $key => $value) {
+            if (str_starts_with($key, 'param_')) {
+                $paramName = substr($key, 6); // remove 'param_'
+                $_SESSION['loaded_params'][$paramName] = $value;
+            }
+        }
+
+        // Rebuild dataset-style buffer for UI
+        $_SESSION['loaded_dataset'] = [];
+        $_SESSION['loaded_dataset_id'] = $dataset_id;
+
+        // Apartments
+        for ($i = 0; $i < count($_POST['piso']); $i++) {
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'piso','field_value'=>$_POST['piso'][$i]];
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'apartamento','field_value'=>$_POST['apartamento'][$i]];
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'tus_requeridos','field_value'=>$_POST['tus_requeridos'][$i]];
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'largo_cable_derivador','field_value'=>$_POST['cable_derivador'][$i]];
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'largo_cable_repartidor','field_value'=>$_POST['cable_repartidor'][$i]];
+        }
+
+        // TUs
+        $offset = count($_POST['piso']);
+        for ($i = 0; $i < count($_POST['tu_piso']); $i++) {
+            $idx = $offset + $i;
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$idx,'field_name'=>'piso','field_value'=>$_POST['tu_piso'][$i]];
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$idx,'field_name'=>'apartamento','field_value'=>$_POST['tu_apartamento'][$i]];
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$idx,'field_name'=>'tu_index','field_value'=>$_POST['tu_index'][$i]];
+            $_SESSION['loaded_dataset'][] = ['record_index'=>$idx,'field_name'=>'largo_cable_tu','field_value'=>$_POST['largo_tu'][$i]];
+        }
+
+        if (empty($_POST['tu_index']) || count($_POST['tu_index']) === 0) {
+            throw new RuntimeException(
+                "Manual entry produced zero TUs — dataset is invalid for optimization"
+            );
+        }
         header("Location: ../../public/enter_data.php?saved=1&dataset_id={$dataset_id}");
         exit;
     }
@@ -616,11 +671,25 @@ class DatasetController
     }
 
     /* ---------------------------------------------------------
-       8) Clear previous detailed results for re-runs
+       8)  Normalize Python payload to canonical EPIC-2 keys
     --------------------------------------------------------- */
-   /* $pdo->prepare("DELETE FROM results_detail WHERE opt_id = :opt_id")
-        ->execute(['opt_id' => $opt_id]);
-*/
+    
+    if (isset($data['detalle']) && !isset($data['detail'])) {
+        $data['detail'] = $data['detalle'];
+    }
+    if (
+        !isset($data['detail']) ||
+        !is_array($data['detail']) ||
+        count($data['detail']) === 0
+    ) {
+        $data['summary']['warning'] = 'No valid TUs generated for given parameters';
+    }
+
+    $detailRows = $data['detail'] ?? [];
+
+    $summaryJson = json_encode($data['summary'], JSON_UNESCAPED_UNICODE);
+    $detailJson  = json_encode($detailRows, JSON_UNESCAPED_UNICODE);
+
     /* ---------------------------------------------------------
        9) Store per-TU results
     --------------------------------------------------------- */
@@ -633,8 +702,8 @@ class DatasetController
             detail_json  = VALUES(detail_json)
     ")->execute([
         'opt_id'  => $opt_id,
-        'summary' => json_encode($data['summary'], JSON_UNESCAPED_UNICODE),
-        'detail'  => json_encode($data['detalle'], JSON_UNESCAPED_UNICODE),
+        'summary' => $summaryJson,
+        'detail'  => $detailJson,
     ]);
 
 

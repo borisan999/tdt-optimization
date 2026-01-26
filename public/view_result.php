@@ -127,9 +127,26 @@ if (!empty($row['inputs_json'])) {
         $inputs = [];
     }
 }
-$niveles = array_column($details, 'Nivel TU Final (dBµV)');
-$summary['min_level'] = min($niveles);
-$summary['max_level'] = max($niveles);
+if (empty($details) || !is_array($details)) {
+    if (!is_array($details)) {
+        throw new RuntimeException(
+            'Result detail_json malformed for opt_id=' . $opt_id
+        );
+    }
+
+    if (count($details) === 0) {
+        $warnings[] = 'No valid TU rows for this optimization (engineering infeasible case)';
+    }
+}
+if (!empty($details)) {
+    $niveles = array_column($details, 'Nivel TU Final (dBµV)');
+    $summary['min_level'] = min($niveles);
+    $summary['max_level'] = max($niveles);
+} else {
+    // Preserve stored summary; do not recompute
+    $summary['min_level'] = null;
+    $summary['max_level'] = null;
+}
 
 /* ---------------------------------------------------------
    Derived values
@@ -266,6 +283,10 @@ $excel_enabled = !empty($summary) && !empty($details);
                 title="<?= $excel_enabled ? "Engineering-validated Excel export" : "Missing summary or detail data" ?>"
             >
                 Export Excel (Engineering)
+            </a>
+            <a href="export_docx_18.php?opt_id=<?= $opt_id ?>"
+                class="btn btn-primary">
+                Export Memoria de Diseño (DOCX)
             </a>
         </div>
     <table class="table table-bordered table-sm">

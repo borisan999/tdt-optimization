@@ -10,10 +10,9 @@ class GeneralParams
         $this->pdo = (new Database())->getConnection();
     }
 
-    /**
+   /**
      * Save all general parameters for a dataset
-     * Receives an associative array:
-     *   ["Piso_Maximo" => "15", "Apartamentos_Piso" => "4", ...]
+     * Overwrites existing parameters for that dataset
      */
     public function saveForDataset($dataset_id, $params)
     {
@@ -21,9 +20,15 @@ class GeneralParams
             return false;
         }
 
+        // 1. Clear existing parameters for this dataset
+        $delete = $this->pdo->prepare(
+            "DELETE FROM parametros_generales WHERE dataset_id = :dataset_id"
+        );
+        $delete->execute([':dataset_id' => $dataset_id]);
+
+        // 2. Insert fresh values
         $sql = "INSERT INTO parametros_generales (dataset_id, param_name, param_value)
                 VALUES (:dataset_id, :param_name, :param_value)";
-
         $stmt = $this->pdo->prepare($sql);
 
         foreach ($params as $name => $value) {
@@ -36,7 +41,6 @@ class GeneralParams
 
         return true;
     }
-
     /**
      * Get associative array of all parameters for a dataset
      * Returns:
