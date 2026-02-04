@@ -7,15 +7,15 @@
  * No backward compatibility with legacy schemas
  */
 
-ini_set('display_errors', 1);
+/*ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+error_reporting(E_ALL);*/
+require_once __DIR__ . '/../app/auth/require_login.php';
+include __DIR__ . '/templates/header.php';
+include __DIR__ . '/templates/navbar.php';
 
 require_once __DIR__ . '/../app/config/db.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 $opt_id = intval($_GET['opt_id'] ?? 0);
 if ($opt_id <= 0) {
@@ -248,17 +248,6 @@ $excel_enabled = !empty($summary) && !empty($details);
    HTML Output
 --------------------------------------------------------- */
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Optimization Result <?= htmlspecialchars($opt_id) ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
-
-</head>
-<body class="bg-light">
 <div class="container my-4">
 
     <h2 class="mb-3">Optimization Result Details</h2>
@@ -637,56 +626,55 @@ if (labels.length > 0 && summaryCanvas instanceof HTMLCanvasElement) {
 
 </div>
 <script>
-const detailRows = <?= json_encode($details, JSON_UNESCAPED_UNICODE) ?>;
-const nivelValues = [];
+    const detailRows = <?= json_encode($details, JSON_UNESCAPED_UNICODE) ?>;
+    const nivelValues = [];
 
-detailRows.forEach(r => {
-    const v = r['Nivel TU Final (dBµV)'];
-    if (typeof v === 'number') nivelValues.push(v);
-});
-
-function buildDetailHistogram(values, bins = 10) {
-    if (values.length === 0) return { labels: [], counts: [] };
-
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const step = (max - min) / bins || 1;
-
-    const counts = Array(bins).fill(0);
-
-    values.forEach(v => {
-        const idx = Math.min(bins - 1, Math.floor((v - min) / step));
-        counts[idx]++;
+    detailRows.forEach(r => {
+        const v = r['Nivel TU Final (dBµV)'];
+        if (typeof v === 'number') nivelValues.push(v);
     });
 
-    const labels = counts.map((_, i) =>
-        `${(min + i * step).toFixed(1)}–${(min + (i + 1) * step).toFixed(1)}`
-    );
+    function buildDetailHistogram(values, bins = 10) {
+        if (values.length === 0) return { labels: [], counts: [] };
 
-    return { labels, counts };
-}
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const step = (max - min) / bins || 1;
 
-const detailHist = buildDetailHistogram(nivelValues, 10);
+        const counts = Array(bins).fill(0);
 
-if (detailHist.labels.length > 0) {
-    new Chart(document.getElementById('detailHistogram'), {
-        type: 'bar',
-        data: {
-            labels: detailHist.labels,
-            datasets: [{
-                label: 'Nivel TU Final (dBµV)',
-                data: detailHist.counts
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: { title: { display: true, text: 'Nivel TU Final (dBµV)' } },
-                y: { beginAtZero: true, title: { display: true, text: 'Cantidad de TUs' } }
+        values.forEach(v => {
+            const idx = Math.min(bins - 1, Math.floor((v - min) / step));
+            counts[idx]++;
+        });
+
+        const labels = counts.map((_, i) =>
+            `${(min + i * step).toFixed(1)}–${(min + (i + 1) * step).toFixed(1)}`
+        );
+
+        return { labels, counts };
+    }
+
+    const detailHist = buildDetailHistogram(nivelValues, 10);
+
+    if (detailHist.labels.length > 0) {
+        new Chart(document.getElementById('detailHistogram'), {
+            type: 'bar',
+            data: {
+                labels: detailHist.labels,
+                datasets: [{
+                    label: 'Nivel TU Final (dBµV)',
+                    data: detailHist.counts
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { title: { display: true, text: 'Nivel TU Final (dBµV)' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Cantidad de TUs' } }
+                }
             }
-        }
-    });
-}
+        });
+    }
 </script>
-</body>
-</html>
+<?php include __DIR__ . '/templates/footer.php'; ?>

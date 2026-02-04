@@ -1,18 +1,17 @@
 <?php
 // public/history.php
-// This file loads dataset history directly (no controller include).
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
-// bootstrap / models
-require_once __DIR__ . "/../app/config/db.php";
-require_once __DIR__ . "/../app/models/Dataset.php";
+require_once __DIR__ . '/../app/auth/require_login.php';
+
+// Bootstrap / models
+require_once __DIR__ . '/../app/config/db.php';
+require_once __DIR__ . '/../app/models/Dataset.php';
+
+include __DIR__ . '/templates/header.php';
+include __DIR__ . '/templates/navbar.php';
 
 $datasetModel = new Dataset();
 $history = $datasetModel->getHistory(); // returns array (may be empty)
-
-include __DIR__ . "/templates/header.php";
 ?>
 
 <div class="container mt-4">
@@ -49,4 +48,4 @@ include __DIR__ . "/templates/header.php";
     <?php endif; ?>
 </div>
 
-<?php include __DIR__ . "/templates/footer.php"; ?>
+<?php include __DIR__ . '/templates/footer.php'; ?>
