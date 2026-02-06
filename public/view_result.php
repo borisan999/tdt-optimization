@@ -273,7 +273,7 @@ $excel_enabled = !empty($summary) && !empty($details);
             >
                 Export Excel (Engineering)
             </a>
-            <a href="export_docx_18.php?opt_id=<?= $opt_id ?>"
+            <a href="export_docx.php?opt_id=<?= $opt_id ?>"
                 class="btn btn-primary">
                 Export Memoria de Diseño (DOCX)
             </a>

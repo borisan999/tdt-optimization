@@ -28,7 +28,7 @@ $pdo = $db->getConnection();
 // Load results
 // --------------------------------------------------
 $stmt = $pdo->prepare("
-    SELECT summary_json, detail_json
+    SELECT summary_json, detail_json, inputs_json
     FROM results
     WHERE opt_id = :id
 ");
@@ -41,19 +41,13 @@ if (!$result) {
 
 $summary = json_decode($result['summary_json'], true);
 $detail  = json_decode($result['detail_json'], true);
+$inputs  = json_decode($result['inputs_json'], true);
 
 if (!is_array($detail) || empty($detail)) {
     die('Invalid or empty detail_json');
 }
 
-// --------------------------------------------------
-// Load optimization (for dataset_id)
-// --------------------------------------------------
-$st = $pdo->prepare("SELECT dataset_id FROM optimizations WHERE opt_id = :id");
-$st->execute(['id' => $opt_id]);
-$optimization = $st->fetch(PDO::FETCH_ASSOC);
 
-$dataset_id = $optimization['dataset_id'] ?? 0;
 
 // --------------------------------------------------
 // Resolve global P_in (display only)
@@ -63,23 +57,6 @@ if (isset($summary['input_level'])) {
     $GLOBAL_P_IN = (float)$summary['input_level'];
 } elseif (isset($summary['P_in (entrada) (dBµV)'])) {
     $GLOBAL_P_IN = (float)$summary['P_in (entrada) (dBµV)'];
-}
-
-// --------------------------------------------------
-// Fetch parametros_generales
-// --------------------------------------------------
-$stmt = $pdo->prepare("
-    SELECT param_name, param_value , unit
-    FROM parametros_generales
-    WHERE dataset_id = :id
-    ORDER BY param_name
-");
-$stmt->execute([':id' => $dataset_id]);
-$parametros = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$paramMap = [];
-
-foreach ($parametros as $p) {
-    $paramMap[$p['param_name']] = (float)$p['param_value'];
 }
 
 // --------------------------------------------------
@@ -132,32 +109,6 @@ $titleTable->addCell()->addText(
 );
 
 $section->addTextBreak(2);
-// --------------------------------------------------
-// Parámetros Generales
-// --------------------------------------------------
-$section->addText(
-    '2. Parámetros Generales',
-    ['bold' => true, 'size' => 12]
-);
-
-$table = $section->addTable([
-    'borderSize' => 6,
-    'borderColor' => '000000'
-]);
-
-$table->addRow();
-$table->addCell()->addText('Parámetro', ['bold' => true]);
-$table->addCell()->addText('Valor', ['bold' => true]);
-$table->addCell()->addText('Unidad', ['bold' => true]);
-
-foreach ($parametros as $p) {
-    $table->addRow();
-    $table->addCell()->addText($p['param_name']);
-    $table->addCell()->addText((string)$p['param_value']);
-    $table->addCell()->addText((string)$p['unit']);
-}
-
-$section->addTextBreak(1);
 
 // --------------------------------------------------
 // TU Results (engineering-critical subset)
@@ -176,11 +127,7 @@ $tuTable->addRow();
 $tuTable->addCell()->addText('Toma', ['bold' => true]);
 $tuTable->addCell()->addText('Piso', ['bold' => true]);
 $tuTable->addCell()->addText('Apto', ['bold' => true]);
-$tuTable->addCell()->addText('Bloque', ['bold' => true]);
-$tuTable->addCell()->addText('Pérdida Total (dB)', ['bold' => true]);
-$tuTable->addCell()->addText('P_in (dBµV)', ['bold' => true]);
 $tuTable->addCell()->addText('Nivel TU Final (dBµV)', ['bold' => true]);
-$tuTable->addCell()->addText('Margen (dB)', ['bold' => true]);
 $tuTable->addCell()->addText('Estado', ['bold' => true]);
 
 foreach ($detail as $tu) {
@@ -188,42 +135,14 @@ foreach ($detail as $tu) {
     $tuTable->addCell()->addText($tu['Toma'] ?? 'N/A');
     $tuTable->addCell()->addText($tu['Piso'] ?? 'N/A');
     $tuTable->addCell()->addText($tu['Apto'] ?? 'N/A');
-    $tuTable->addCell()->addText($tu['Bloque'] ?? 'N/A');
-
-    $tuTable->addCell()->addText(
-        isset($tu['Pérdida Total (dB)'])
-            ? number_format((float)$tu['Pérdida Total (dB)'], 2)
-            : 'N/A'
-    );
-
-    $tuTable->addCell()->addText(
-        isset($tu['P_in (entrada) (dBµV)'])
-            ? number_format((float)$tu['P_in (entrada) (dBµV)'], 2)
-            : ($GLOBAL_P_IN !== null ? number_format($GLOBAL_P_IN, 2) : 'N/A')
-    );
-
     $tuTable->addCell()->addText(
         isset($tu['Nivel TU Final (dBµV)'])
             ? number_format((float)$tu['Nivel TU Final (dBµV)'], 2)
             : 'N/A'
     );
-    $finalLevel = isset($tu['Nivel TU Final (dBµV)'])
-    ? (float)$tu['Nivel TU Final (dBµV)']
-    : null;
-
-    $potenciaObjetivo = $paramMap['Potencia_Objetivo_TU_dBuV'];
-    $nivelMinimo      = $paramMap['Nivel_Minimo_dBuV'];
-    $nivelMaximo      = $paramMap['Nivel_Maximo_dBuV'];
-
-    $margin = $finalLevel - $potenciaObjetivo;
-    
-    $tuTable->addCell()->addText($margin);
-
-    $status = (
-        $finalLevel >= $nivelMinimo &&
-        $finalLevel <= $nivelMaximo
-    ) ? 'OK' : 'FAIL';
-    $tuTable->addCell()->addText($status);
+    $tuTable->addCell()->addText(
+        $tu['Estado'] ?? ($tu['OK'] ?? 'N/A')
+    );
 }
 
 // --------------------------------------------------

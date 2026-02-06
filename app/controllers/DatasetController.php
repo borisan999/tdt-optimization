@@ -580,8 +580,8 @@ class DatasetController
        3) Build safe exec command
     --------------------------------------------------------- */
     $cmd = escapeshellcmd($python_bin) . " " .
-           escapeshellarg($python_script) . " " .
-           escapeshellarg((string)$dataset_id) . " 2>&1";
+       escapeshellarg($python_script) . " " .
+       escapeshellarg((string)$dataset_id);
 
     $output = [];
     $return_var = 0;
@@ -598,9 +598,18 @@ class DatasetController
         throw new Exception("Python script failed with return code {$return_var}");
     }
 
+    if ($output === null) {
+        file_put_contents(
+            __DIR__ . '/python_raw.txt',
+            implode("\n", $output)
+        );
+        throw new Exception("Malformed JSON returned by Python");
+    }
+
     /* ---------------------------------------------------------
        5) Extract JSON from final stdout
     --------------------------------------------------------- */
+    
     $stdout = implode("\n", $output);
 
     $jsonStart = strpos($stdout, "{");
@@ -689,22 +698,29 @@ class DatasetController
 
     $summaryJson = json_encode($data['summary'], JSON_UNESCAPED_UNICODE);
     $detailJson  = json_encode($detailRows, JSON_UNESCAPED_UNICODE);
+    $inputsJson = json_encode(
+    $data['inputs'],
+    JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+
 
     /* ---------------------------------------------------------
        9) Store per-TU results
     --------------------------------------------------------- */
     
     $pdo->prepare("
-        INSERT INTO results (opt_id, summary_json, detail_json)
-        VALUES (:opt_id, :summary, :detail)
+        INSERT INTO results (opt_id, summary_json, detail_json, inputs_json)
+        VALUES (:opt_id, :summary, :detail, CAST(:inputs AS JSON))
         ON DUPLICATE KEY UPDATE
             summary_json = VALUES(summary_json),
-            detail_json  = VALUES(detail_json)
+            detail_json  = VALUES(detail_json),
+            inputs_json  = CAST(VALUES(inputs_json) AS JSON)
     ")->execute([
         'opt_id'  => $opt_id,
         'summary' => $summaryJson,
         'detail'  => $detailJson,
+        'inputs'  => $inputsJson,
     ]);
+
 
 
     /* ---------------------------------------------------------
