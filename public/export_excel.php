@@ -1,12 +1,14 @@
 <?php
 require_once __DIR__ . "/../app/config/db.php";
 require_once __DIR__ . "/../vendor/autoload.php";
+require_once __DIR__ . "/../app/helpers/InventoryAggregator.php";
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use app\helpers\InventoryAggregator;
 
 
 $opt_id = $_GET['opt_id'] ?? null;
@@ -90,21 +92,21 @@ $DETALLE_TOMAS_COLUMNS = [
 ];
 
 // --------------------------------------------------
+// Prepare Categorized Inventory
+// --------------------------------------------------
+$aggregator = new InventoryAggregator($detail);
+$aggregatedData = $aggregator->aggregate();
+$categorizedInventory = $aggregatedData['inventory'];
+$allTotals = $aggregatedData['totals'];
+
+// --------------------------------------------------
 // 4. Spreadsheet initialization
 // --------------------------------------------------
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
 $sheet->setTitle('Detalle_Tomas');
 
-// --------------------------------------------------
-// 4b. Prepare Inventario aggregations (EPIC 3.2)
-// --------------------------------------------------
-$inventario = [
-    'Cable' => [ 'Cable Coaxial' => 0.0 ],
-    'Conectores' => [ 'Conector F' => 0 ],
-    'Tomas' => [ 'Toma de Usuario (TU)' => 0 ],
-    'Equipos' => []
-];
+
 
 // Headers
 $col = 'A';
@@ -134,24 +136,7 @@ foreach ($detail as $tu) {
         die('Level mismatch on Toma ' . ($tu['Toma'] ?? 'UNKNOWN'));
     }
 
-    // --- Inventario aggregation ---
-    $inventario['Cable']['Cable Coaxial'] += (float)$tu['Distancia total hasta la toma (m)'];
-    $inventario['Conectores']['Conector F'] +=
-        ($tu['Riser Conectores (uds)'] ?? 0) + 2; // entrada + TU
-    $inventario['Tomas']['Toma de Usuario (TU)']++;
 
-    if (!empty($tu['Repartidor Troncal'])) {
-        $inventario['Equipos'][$tu['Repartidor Troncal']] =
-            ($inventario['Equipos'][$tu['Repartidor Troncal']] ?? 0) + 1;
-    }
-    if (!empty($tu['Derivador Piso'])) {
-        $inventario['Equipos'][$tu['Derivador Piso']] =
-            ($inventario['Equipos'][$tu['Derivador Piso']] ?? 0) + 1;
-    }
-    if (!empty($tu['Repartidor Apt']) && $tu['Repartidor Apt'] !== 'N/A') {
-        $inventario['Equipos'][$tu['Repartidor Apt']] =
-            ($inventario['Equipos'][$tu['Repartidor Apt']] ?? 0) + 1;
-    }
 
     // --- Write Detalle_Tomas row ---
     $col = 'A';
@@ -174,31 +159,168 @@ foreach ($detail as $tu) {
     $rowNum++;
 }
 
-// --------------------------------------------------
-// 7. Inventario Sheet (EPIC 3.2)
-// --------------------------------------------------
-$invSheet = $spreadsheet->createSheet();
-$invSheet->setTitle('Inventario');
 
-$invSheet->fromArray(['Tipo', 'Componente', 'Cantidad'], null, 'A1');
+// --------------------------------------------------
+// 7. Categorized Inventory Sheets
+// --------------------------------------------------
+
+// --- Vertical Distribution ---
+$verticalSheet = $spreadsheet->createSheet();
+$verticalSheet->setTitle('Inventario Vertical');
+// Headers: Scope, Tipo, Componente, Unidad, Cantidad, Observación
+$verticalSheet->fromArray(['Alcance', 'Tipo', 'Componente', 'Unidad', 'Cantidad', 'Observación'], null, 'A1');
 $row = 2;
+foreach ($categorizedInventory['Vertical Distribution'] as $item) {
+    $verticalSheet->setCellValue('A' . $row, $item['Scope']);
+    $verticalSheet->setCellValue('B' . $row, $item['Tipo']);
+    $verticalSheet->setCellValue('C' . $row, $item['Componente']);
+    $verticalSheet->setCellValue('D' . $row, $item['Unidad']);
+    $verticalSheet->setCellValue('E' . $row, $item['Cantidad']);
+    $verticalSheet->setCellValue('F' . $row, $item['Observación']);
+    $row++;
+}
+// Add total row for Vertical Distribution
+$row++; // blank line
+$totalRowStart = $row;
+foreach ($allTotals['Vertical Distribution'] as $totalItem) {
+    $verticalSheet->setCellValue('A' . $row, 'TOTAL');
+    $verticalSheet->setCellValue('B' . $row, 'DISTRIBUCIÓN VERTICAL');
+    $verticalSheet->setCellValue('C' . $row, $totalItem['Tipo']); // Tipo for consistency
+    $verticalSheet->setCellValue('D' . $row, $totalItem['Componente']);
+    $verticalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
+    $verticalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
+    $row++;
+}
+$verticalSheet->getStyle('A' . $totalRowStart . ':F' . ($row - 1))->getFont()->setBold(true);
+foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $col) {
+    $verticalSheet->getColumnDimension($col)->setAutoSize(true);
+}
 
-foreach ($inventario as $tipo => $items) {
-    foreach ($items as $comp => $qty) {
-        $invSheet->setCellValue('A' . $row, $tipo);
-        $invSheet->setCellValue('B' . $row, $comp);
-        $invSheet->setCellValue('C' . $row, is_float($qty) ? round($qty, 2) . ' m' : $qty . ' uds.');
+
+// --- Horizontal Distribution ---
+$horizontalSheet = $spreadsheet->createSheet();
+$horizontalSheet->setTitle('Inventario Horizontal');
+// Headers: Piso, Scope, Tipo, Componente, Unidad, Cantidad, Observación
+$horizontalSheet->fromArray(['Piso', 'Alcance', 'Tipo', 'Componente', 'Unidad', 'Cantidad', 'Observación'], null, 'A1');
+$row = 2;
+// Sort floors for consistent output
+ksort($categorizedInventory['Horizontal Distribution']);
+foreach ($categorizedInventory['Horizontal Distribution'] as $piso => $items) {
+    foreach ($items as $item) {
+        $horizontalSheet->setCellValue('A' . $row, $piso);
+        $horizontalSheet->setCellValue('B' . $row, $item['Scope']);
+        $horizontalSheet->setCellValue('C' . $row, $item['Tipo']);
+        $horizontalSheet->setCellValue('D' . $row, $item['Componente']);
+        $horizontalSheet->setCellValue('E' . $row, $item['Unidad']);
+        $horizontalSheet->setCellValue('F' . $row, $item['Cantidad']);
+        $horizontalSheet->setCellValue('G' . $row, $item['Observación']);
         $row++;
     }
+    // Add per-floor subtotal
+    $row++; // blank line
+    $subtotalRowStart = $row;
+    if (isset($allTotals['Horizontal Floor Subtotals'][$piso]) && is_array($allTotals['Horizontal Floor Subtotals'][$piso])) {
+        foreach ($allTotals['Horizontal Floor Subtotals'][$piso] as $totalItem) {
+            $horizontalSheet->setCellValue('A' . $row, 'SUBTOTAL PISO ' . $piso);
+            $horizontalSheet->setCellValue('B' . $row, $totalItem['Scope']); // Scope for consistency
+            $horizontalSheet->setCellValue('C' . $row, $totalItem['Tipo']); // Tipo for consistency
+            $horizontalSheet->setCellValue('D' . $row, $totalItem['Componente']);
+            $horizontalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
+            $horizontalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
+            $row++;
+        }
+    }
+    $horizontalSheet->getStyle('A' . $subtotalRowStart . ':G' . ($row - 1))->getFont()->setBold(true);
+    $row++; // blank line after subtotal
 }
+// Add global total row for Horizontal Distribution
+$row++; // blank line
+$globalTotalRowStart = $row;
+foreach ($allTotals['Horizontal Distribution'] as $totalItem) {
+    $horizontalSheet->setCellValue('A' . $row, 'TOTAL');
+    $horizontalSheet->setCellValue('B' . $row, 'DISTRIBUCIÓN HORIZONTAL');
+    $horizontalSheet->setCellValue('C' . $row, $totalItem['Tipo']); // Tipo for consistency
+    $horizontalSheet->setCellValue('D' . $row, $totalItem['Componente']);
+    $horizontalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
+    $horizontalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
+    $row++;
+}
+$horizontalSheet->getStyle('A' . $globalTotalRowStart . ':G' . ($row - 1))->getFont()->setBold(true);
+
+foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G'] as $col) {
+    $horizontalSheet->getColumnDimension($col)->setAutoSize(true);
+}
+
+
+// --- Apartment Interior ---
+$apartmentSheet = $spreadsheet->createSheet();
+$apartmentSheet->setTitle('Inventario Apartamento');
+// Headers: Piso, Apto, Scope, Tipo, Componente, Unidad, Cantidad, Observación
+$apartmentSheet->fromArray(['Piso', 'Apto', 'Alcance', 'Tipo', 'Componente', 'Unidad', 'Cantidad', 'Observación'], null, 'A1');
+$row = 2;
+// Sort floors and then apartments for consistent output
+ksort($categorizedInventory['Apartment Interior']);
+foreach ($categorizedInventory['Apartment Interior'] as $piso => $apts) {
+    ksort($apts);
+    foreach ($apts as $apto => $items) {
+        foreach ($items as $item) {
+            $apartmentSheet->setCellValue('A' . $row, $piso);
+            $apartmentSheet->setCellValue('B' . $row, $apto);
+            $apartmentSheet->setCellValue('C' . $row, $item['Scope']);
+            $apartmentSheet->setCellValue('D' . $row, $item['Tipo']);
+            $apartmentSheet->setCellValue('E' . $row, $item['Componente']);
+            $apartmentSheet->setCellValue('F' . $row, $item['Unidad']);
+            $apartmentSheet->setCellValue('G' . $row, $item['Cantidad']);
+            $apartmentSheet->setCellValue('H' . $row, $item['Observación']);
+            $row++;
+        }
+    }
+}
+// Add global total row for Apartment Interior
+$row++; // blank line
+$globalTotalRowStart = $row;
+foreach ($allTotals['Apartment Interior'] as $totalItem) {
+    $apartmentSheet->setCellValue('A' . $row, 'TOTAL');
+    $apartmentSheet->setCellValue('B' . $row, 'INTERIOR APARTAMENTO');
+    $apartmentSheet->setCellValue('C' . $row, $totalItem['Tipo']); // Tipo for consistency
+    $apartmentSheet->setCellValue('D' . $row, $totalItem['Componente']);
+    $apartmentSheet->setCellValue('E' . $row, $totalItem['Unidad']);
+    $apartmentSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
+    $row++;
+}
+$apartmentSheet->getStyle('A' . $globalTotalRowStart . ':H' . ($row - 1))->getFont()->setBold(true);
+
+foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as $col) {
+    $apartmentSheet->getColumnDimension($col)->setAutoSize(true);
+}
+
+// --- Grand Total (Proyecto) ---
+$grandTotalSheet = $spreadsheet->createSheet();
+$grandTotalSheet->setTitle('Inventario Total Proyecto');
+// Headers: Alcance, Tipo, Componente, Unidad, Cantidad
+$grandTotalSheet->fromArray(['Alcance', 'Tipo', 'Componente', 'Unidad', 'Cantidad'], null, 'A1');
+$row = 2;
+$totalRowStart = $row;
+foreach ($allTotals['Grand Total'] as $totalItem) {
+    $grandTotalSheet->setCellValue('A' . $row, $totalItem['Scope']);
+    $grandTotalSheet->setCellValue('B' . $row, $totalItem['Tipo']);
+    $grandTotalSheet->setCellValue('C' . $row, $totalItem['Componente']);
+    $grandTotalSheet->setCellValue('D' . $row, $totalItem['Unidad']);
+    $grandTotalSheet->setCellValue('E' . $row, $totalItem['Cantidad']);
+    $row++;
+}
+$grandTotalSheet->getStyle('A' . $totalRowStart . ':E' . ($row - 1))->getFont()->setBold(true);
+foreach (['A', 'B', 'C', 'D', 'E'] as $col) {
+    $grandTotalSheet->getColumnDimension($col)->setAutoSize(true);
+}
+
 // --------------------------------------------------
 // 8. Resumen_Ingenieria Sheet (EPIC 3.3)
 // --------------------------------------------------
 $summarySheet = $spreadsheet->createSheet();
 $summarySheet->setTitle("Resumen_Ingenieria");
 
-$summary = json_decode($result["summary_json"], true);
-$detail  = json_decode($result["detail_json"], true);
+
 
 // P_in is global — take from first TU
 $pin = isset($detail[0]["P_in (entrada) (dBµV)"])
