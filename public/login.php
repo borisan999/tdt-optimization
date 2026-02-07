@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
-<h2>Login</h2>
+<h2>Login TDT - Optimization</h2>
 
 <?php if ($error): ?>
     <p style="color:red"><?= htmlspecialchars($error) ?></p>

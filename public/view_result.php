@@ -252,9 +252,14 @@ $excel_enabled = !empty($summary) && !empty($details);
 
     <h2 class="mb-3">Optimization Result Details</h2>
         <div class="mb-3 d-flex gap-2">
-            <a class="btn btn-outline-primary btn-sm"
+            <!-- <a class="btn btn-outline-primary btn-sm"
             href="export_csv.php?opt_id=<?= intval($opt_id) ?>&type=inputs">
                 Export Inputs (CSV)
+            </a> -->
+
+            <a class="btn btn-success btn-sm"
+            href="export_input_excel.php?opt_id=<?= intval($opt_id) ?>">
+                <i class="fas fa-file-excel"></i> Export Inputs (XLSX)
             </a>
 
             <a class="btn btn-outline-success btn-sm"
@@ -266,13 +271,13 @@ $excel_enabled = !empty($summary) && !empty($details);
             href="export_csv.php?opt_id=<?= intval($opt_id) ?>&type=inventory">
                 Export Inventory (CSV)
             </a>
-            <a
+           <!--  <a
                 href="<?= $excel_enabled ? "export_excel.php?opt_id=" . intval($opt_id) : "#" ?>"
                 class="btn btn-outline-primary btn-sm <?= $excel_enabled ? "" : "disabled" ?>"
                 title="<?= $excel_enabled ? "Engineering-validated Excel export" : "Missing summary or detail data" ?>"
             >
                 Export Excel (Engineering)
-            </a>
+            </a> -->
             <a href="export_docx.php?opt_id=<?= $opt_id ?>"
                 class="btn btn-primary">
                 Export Memoria de Diseño (DOCX)
@@ -282,9 +287,7 @@ $excel_enabled = !empty($summary) && !empty($details);
         <tr><th>Optimization ID</th><td><?= htmlspecialchars($row['opt_id']) ?></td></tr>
         <tr><th>Status</th><td><?= htmlspecialchars($status) ?></td></tr>
         <tr><th>Dataset ID</th><td><?= htmlspecialchars($row['dataset_id']) ?></td></tr>
-        <tr><th>Start Time</th><td><?= htmlspecialchars($row['start_time'] ?? 'N/A') ?></td></tr>
-        <tr><th>End Time</th><td><?= htmlspecialchars($row['end_time'] ?? 'N/A') ?></td></tr>
-        <tr><th>Runtime (seconds)</th><td><?= $runtime_sec !== null ? $runtime_sec : 'N/A' ?></td></tr>
+        <tr><th>Created</th><td><?= htmlspecialchars($row['end_time'] ?? 'N/A') ?></td></tr>
     </table>
 
     <?php if (!empty($warnings)): ?>

@@ -146,14 +146,36 @@ switch ($type) {
             die('Invalid or empty detail_json');
         }
 
-        // Header from first row keys
-        $headers = array_keys($details[0]);
+        // Collect all unique keys from all rows for a robust header
+        $allKeys = [];
+        foreach ($details as $tu) {
+            if (is_array($tu)) {
+                foreach ($tu as $key => $value) {
+                    $allKeys[$key] = true;
+                }
+            }
+        }
+        $headers = array_keys($allKeys);
         echo implode(',', array_map('csv_escape', $headers)) . "\n";
+
+        // Keywords for formatting numeric values to 2 decimal places
+        $numericFormatKeywords = ['Nivel', 'Perdidas', 'Atenuacion', 'Factor'];
 
         foreach ($details as $tu) {
             $line = [];
             foreach ($headers as $h) {
-                $line[] = csv_escape($tu[$h] ?? '');
+                $value = $tu[$h] ?? '';
+
+                // Check if the value is numeric and the header matches formatting keywords
+                if (is_numeric($value)) {
+                    foreach ($numericFormatKeywords as $keyword) {
+                        if (stripos($h, $keyword) !== false) {
+                            $value = number_format((float)$value, 2, '.', '');
+                            break; 
+                        }
+                    }
+                }
+                $line[] = csv_escape($value);
             }
             echo implode(',', $line) . "\n";
         }
