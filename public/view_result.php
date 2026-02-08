@@ -7,9 +7,9 @@
  * No backward compatibility with legacy schemas
  */
 
-/*ini_set('display_errors', 1);
+ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);*/
+error_reporting(E_ALL);
 require_once __DIR__ . '/../app/auth/require_login.php';
 include __DIR__ . '/templates/header.php';
 include __DIR__ . '/templates/navbar.php';
@@ -87,31 +87,37 @@ if (!$row) {
         return $map;
     }
 
-/* ---------------------------------------------------------
-   Decode JSON safely
---------------------------------------------------------- */
-$warnings = [];
+require_once __DIR__ . '/../app/helpers/ResultParser.php'; // Add this
+require_once __DIR__ . '/../app/services/CanonicalMapperService.php'; // Add this
+use app\helpers\ResultParser; // Add this
 
-$summary = [];
-if (!empty($row['summary_json'])) {
-    $summary = json_decode($row['summary_json'], true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $warnings[] = 'summary_json decode error: ' . json_last_error_msg();
-        $summary = [];
-    }
+/* ---------------------------------------------------------
+   Decode JSON safely using ResultParser
+--------------------------------------------------------- */
+$parser = ResultParser::fromDbRow($row);
+
+$warnings = $parser->warnings();
+// Catch errors from parser as well
+if (!empty($errors)) {
+    // Add errors to warnings to display them
+    $warnings = array_merge($warnings, $errors);
+    // Do not die, allow page to render with partial data and warnings/errors
 }
 
-$details = [];
-if (!empty($row['detail_json'])) {
-    $details = json_decode($row['detail_json'], true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $warnings[] = 'detail_json decode error: ' . json_last_error_msg();
-        $details = [];
-    }
+$summary = $parser->summary();
+$details = $parser->details();
+$inputs  = $parser->inputs();
+$canonical = $parser->canonical();
+
+// Check for canonical dump
+if (isset($_GET['dump_canonical']) && $_GET['dump_canonical'] === 'true') {
+    header('Content-Type: application/json');
+    echo json_encode($canonical, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 $nivelesTU = [];
-if (is_array($details)) {
+if (is_array($details)) { // $details is now from parser
     foreach ($details as $tu) {
         if (isset($tu['Nivel TU Final (dBµV)'])) {
             $nivelesTU[] = (float)$tu['Nivel TU Final (dBµV)'];
@@ -119,14 +125,8 @@ if (is_array($details)) {
     }
 }
 
-$inputs = [];
-if (!empty($row['inputs_json'])) {
-    $inputs = json_decode($row['inputs_json'], true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $warnings[] = 'inputs_json decode error: ' . json_last_error_msg();
-        $inputs = [];
-    }
-}
+// These checks are now handled by ResultParser and CanonicalMapperService
+// but keeping them if $details is unexpectedly empty from the parser
 if (empty($details) || !is_array($details)) {
     if (!is_array($details)) {
         throw new RuntimeException(

@@ -77,7 +77,10 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../app/config/db.php';
 require_once __DIR__ . '/../app/helpers/InventoryAggregator.php';
+require_once __DIR__ . '/../app/helpers/ResultParser.php'; // Include ResultParser
+require_once __DIR__ . '/../app/services/CanonicalMapperService.php'; // Add this
 use app\helpers\InventoryAggregator;
+use app\helpers\ResultParser; // Use ResultParser
 
 $opt_id = intval($_GET['opt_id'] ?? 0);
 $type   = $_GET['type'] ?? '';
@@ -202,12 +205,18 @@ switch ($type) {
    INVENTORY EXPORT (DERIVED FROM DETAIL_JSON)
 ----------------------------------------------------- */
 case 'inventory':
-    $details = json_decode($row['detail_json'], true);
-    if (!is_array($details) || empty($details)) {
-        die('Invalid or empty detail_json');
+    $parser = ResultParser::fromDbRow($row);
+    if ($parser->hasErrors()) {
+        die('Error parsing result: ' . implode(', ', $parser->errors()));
+    }
+    $canonical = $parser->canonical();
+
+    // Check if canonical data is available and valid for inventory aggregation
+    if (empty($canonical) || !isset($canonical['vertical_distribution']) || !isset($canonical['floors'])) {
+        die('Canonical data not available or invalid for inventory export.');
     }
 
-    $aggregator = new InventoryAggregator($details);
+    $aggregator = new InventoryAggregator($canonical); // Pass canonical data
     $aggregatedData = $aggregator->aggregate();
     $categorizedInventory = $aggregatedData['inventory'];
     $allTotals = $aggregatedData['totals'];

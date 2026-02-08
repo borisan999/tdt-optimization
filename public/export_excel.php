@@ -2,6 +2,8 @@
 require_once __DIR__ . "/../app/config/db.php";
 require_once __DIR__ . "/../vendor/autoload.php";
 require_once __DIR__ . "/../app/helpers/InventoryAggregator.php";
+require_once __DIR__ . "/../app/helpers/ResultParser.php"; // Add this
+require_once __DIR__ . "/../app/services/CanonicalMapperService.php"; // Add this
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -9,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use app\helpers\InventoryAggregator;
+use app\helpers\ResultParser; // Add this
 
 
 $opt_id = $_GET['opt_id'] ?? null;
@@ -31,24 +34,31 @@ if (!$result) {
 }
 
 $summary = json_decode($result['summary_json'], true);
-$detail  = json_decode($result['detail_json'], true);
+$parser = ResultParser::fromDbRow($result); // Pass the entire row
+if ($parser->hasErrors()) {
+    die('Error parsing result: ' . implode(', ', $parser->errors()));
+}
+$canonical = $parser->canonical();
+$detail    = $parser->details(); // Keep legacy detail for non-inventory parts of the report for now
+$inputs    = $parser->inputs();   // Keep legacy inputs for other parts
 
-if (!is_array($detail)) {
+
+if (!is_array($detail)) { // Still check legacy detail if used elsewhere
     die('Invalid detail_json format');
 }
 
 // --------------------------------------------------
-// Try to resolve global input level from multiple canonical locations
-if (isset($summary['input_level'])) {
+// Try to resolve global input level from canonical, fallback to legacy summary/detail
+if (isset($canonical['global_parameters']['input_power_dbuv'])) {
+    $P_IN = (float)$canonical['global_parameters']['input_power_dbuv'];
+} elseif (isset($summary['input_level'])) { // Legacy fallback
     $P_IN = (float)$summary['input_level'];
-} elseif (isset($summary['P_in (entrada) (dBµV)'])) {
+} elseif (isset($summary['P_in (entrada) (dBµV)'])) { // Legacy fallback
     $P_IN = (float)$summary['P_in (entrada) (dBµV)'];
-} elseif (isset($detail[0]['P_in (entrada) (dBµV)'])) {
-    // Fallback: derive from first TU (must be identical for all TUs)
-    $P_IN = (float)$detail[0]['P_in (e$db  = new Database();
-$pdo = $db->getConnection();ntrada) (dBµV)'];
+} elseif (isset($detail[0]['P_in (entrada) (dBµV)'])) { // Legacy fallback
+    $P_IN = (float)$detail[0]['P_in (entrada) (dBµV)'];
 } else {
-    die('Missing global P_in (entrada) in summary_json and detail_json');
+    die('Missing global P_in (entrada) in canonical, summary_json, and detail_json');
 }
 
 // --------------------------------------------------
@@ -94,7 +104,11 @@ $DETALLE_TOMAS_COLUMNS = [
 // --------------------------------------------------
 // Prepare Categorized Inventory
 // --------------------------------------------------
-$aggregator = new InventoryAggregator($detail);
+// Check if canonical data is available and valid for inventory aggregation
+if (empty($canonical) || !isset($canonical['vertical_distribution']) || !isset($canonical['floors'])) {
+    die('Canonical data not available or invalid for inventory export.');
+}
+$aggregator = new InventoryAggregator($canonical); // Pass canonical data
 $aggregatedData = $aggregator->aggregate();
 $categorizedInventory = $aggregatedData['inventory'];
 $allTotals = $aggregatedData['totals'];

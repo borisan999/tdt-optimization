@@ -2,15 +2,17 @@
 
 namespace app\helpers;
 
+use Throwable;
+
 class InventoryAggregator
 {
-    private array $detail;
+    private array $canonicalData;
     private array $aggregatedInventory;
     private array $allTotals; // To store global totals and subtotals
 
-    public function __construct(array $detail)
+    public function __construct(array $canonicalData)
     {
-        $this->detail = $detail;
+        $this->canonicalData = $canonicalData;
         $this->aggregatedInventory = [
             'Vertical Distribution' => [],
             'Horizontal Distribution' => [],
@@ -35,6 +37,7 @@ class InventoryAggregator
         ];
     }
 
+    /*
     private function processDetailForAggregation(): void
     {
         $verticalComponents = [];
@@ -115,6 +118,116 @@ class InventoryAggregator
                 $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Repartidor Apartamento', 'uds.', 1, 'Ubicado en el apartamento');
             }
             $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Toma de Usuario (TU)', 'uds.', 1, 'Punto de conexión final');
+        }
+
+        // Finalize aggregation into the main structure and calculate per-floor totals for Horizontal
+        $this->aggregatedInventory['Vertical Distribution'] = $this->flattenAndSumComponents($verticalComponents);
+
+        foreach ($horizontalComponents as $floor => $components) {
+            $flattenedFloor = $this->flattenAndSumComponents($components);
+            $this->aggregatedInventory['Horizontal Distribution'][$floor] = $flattenedFloor;
+            $this->allTotals['Horizontal Floor Subtotals'][$floor] = $this->calculateSectionTotals($flattenedFloor, 'Horizontal');
+        }
+
+        foreach ($apartmentComponents as $floor => $apts) {
+            foreach ($apts as $apto => $components) {
+                $this->aggregatedInventory['Apartment Interior'][$floor][$apto] = $this->flattenAndSumComponents($components);
+            }
+        }
+    }
+    */
+
+    private function processDetailForAggregation(): void
+    {
+        $verticalComponents = [];
+        $horizontalComponents = []; // Keyed by floor
+        $apartmentComponents = []; // Keyed by floor, then apartment
+
+        // --- Vertical Distribution ---
+        $scope = 'Vertical';
+        $vd = $this->canonicalData['vertical_distribution'] ?? [];
+
+        if (($vd['total_antenna_trunk_cable_length_m'] ?? 0) > 0) {
+            $this->addComponent($verticalComponents, $scope, 'Cable Troncal Vertical', 'm', $vd['total_antenna_trunk_cable_length_m'], 'Por bloque');
+        }
+        if (($vd['total_riser_block_cable_length_m'] ?? 0) > 0) {
+            $this->addComponent($verticalComponents, $scope, 'Cable Riser Vertical', 'm', $vd['total_riser_block_cable_length_m'], 'Por piso');
+        }
+        if (($vd['total_riser_connectors_count'] ?? 0) > 0) {
+            $this->addComponent($verticalComponents, $scope, 'Conector F (Riser)', 'uds.', $vd['total_riser_connectors_count'], 'En conexiones de Riser');
+        }
+        if (($vd['total_antenna_trunk_connectors_count'] ?? 0) > 0) {
+            $this->addComponent($verticalComponents, $scope, 'Conector F (Antena-Troncal)', 'uds.', $vd['total_antenna_trunk_connectors_count'], '2 por tramo de cable');
+        }
+        if (!empty($vd['vertical_splitters'])) {
+            foreach ($vd['vertical_splitters'] as $splitter) {
+                $splitterModel = strtolower($splitter['splitter_model'] ?? '');
+                if (str_contains($splitterModel, 'repartidor troncal')) {
+                    $this->addComponent($verticalComponents, $scope, 'Repartidor Troncal', 'uds.', 1, 'Ubicado en el troncal');
+                }
+            }
+        }
+        if (($vd['total_riser_taps_count'] ?? 0) > 0) {
+            $this->addComponent($verticalComponents, $scope, 'Tap de Riser', 'uds.', $vd['total_riser_taps_count'], 'Taps en el Riser');
+        }
+
+
+        // --- Horizontal Distribution and Apartment Interior (per Floor) ---
+        foreach (($this->canonicalData['floors'] ?? []) as $floor) {
+            $piso = $floor['floor_number'];
+            if (!isset($horizontalComponents[$piso])) {
+                $horizontalComponents[$piso] = [];
+            }
+            if (!isset($apartmentComponents[$piso])) {
+                $apartmentComponents[$piso] = [];
+            }
+
+            // Horizontal Distribution for this floor
+            $hd = $floor['horizontal_distribution'] ?? [];
+            $scope = 'Horizontal';
+
+            if (($hd['horizontal_cable_length_m'] ?? 0) > 0) {
+                $this->addComponent($horizontalComponents[$piso], $scope, 'Cable Horizontal por Piso', 'm', $hd['horizontal_cable_length_m'], 'Por piso');
+            }
+            if (($hd['horizontal_connectors_count'] ?? 0) > 0) {
+                $this->addComponent($horizontalComponents[$piso], $scope, 'Conector F (Feeder)', 'uds.', $hd['horizontal_connectors_count'], '2 por tramo de cable');
+            }
+            if (($hd['total_floor_derivadores_count'] ?? 0) > 0) {
+                $this->addComponent($horizontalComponents[$piso], $scope, 'Derivador de Piso', 'uds.', $hd['total_floor_derivadores_count'], 'Ubicado en el piso');
+            }
+
+
+            // Apartment Interior for this floor
+            foreach (($floor['apartments'] ?? []) as $apartment) {
+                $aptoMatch = [];
+                preg_match('/_A(\d+)$/', $apartment['apartment_id'], $aptoMatch);
+                $apto = $aptoMatch[1] ?? 'N/A';
+
+                if (!isset($apartmentComponents[$piso][$apto])) {
+                    $apartmentComponents[$piso][$apto] = [];
+                }
+
+                $apartmentInternals = $apartment['apartment_internals'] ?? [];
+                $scope = 'Apartamento';
+
+                if (($apartmentInternals['calculated_apartment_cable_length_m'] ?? 0) > 0) {
+                    $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Cable Interior Apartamento', 'm', $apartmentInternals['calculated_apartment_cable_length_m'], 'Desde el repartidor hasta la toma');
+                }
+                if (($apartmentInternals['deriv_rep_connectors_count'] ?? 0) > 0) {
+                    $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Conector F (Apto Deriv-Rep)', 'uds.', $apartmentInternals['deriv_rep_connectors_count'], '2 por tramo de cable');
+                }
+                if (($apartmentInternals['rep_tu_connectors_count'] ?? 0) > 0) {
+                    $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Conector F (Apto Rep-TU)', 'uds.', $apartmentInternals['rep_tu_connectors_count'], '2 por tramo de cable');
+                }
+                if (($apartmentInternals['conexion_tu_connectors_count'] ?? 0) > 0) {
+                    $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Conector F (Conexión TU)', 'uds.', $apartmentInternals['conexion_tu_connectors_count'], 'En la conexión final a la Toma de Usuario');
+                }
+                
+                $tomas = $apartmentInternals['tomas'] ?? [];
+                if (!empty($tomas)) {
+                    $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Toma de Usuario (TU)', 'uds.', count($tomas), 'Punto de conexión final');
+                }
+            }
         }
 
         // Finalize aggregation into the main structure and calculate per-floor totals for Horizontal

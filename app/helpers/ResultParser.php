@@ -1,17 +1,22 @@
 <?php
 namespace app\helpers;
 
+use App\Services\CanonicalMapperService;
+use App\Services\CanonicalValidationService;
+require_once __DIR__ . '/../services/CanonicalValidationService.php'; // Add this line
 use DateTime;
 use Throwable;
 
 class ResultParser
 {
     private array $errors = [];
+    private array $warnings = []; // To store warnings from CanonicalMapperService
 
     private array $meta = [];
     private array $summary = [];
     private array $details = [];
     private array $inputs = [];
+    private array $canonical = []; // New property for canonical data
 
     private function __construct() {}
 
@@ -26,6 +31,26 @@ class ResultParser
         $parser->summary = $parser->decodeJson($row['summary_json'] ?? null, 'summary_json');
         $parser->details = $parser->decodeJson($row['detail_json'] ?? null, 'detail_json');
         $parser->inputs  = $parser->decodeJson($row['inputs_json'] ?? null, 'inputs_json');
+
+        // Map to canonical model if inputs and details are available
+        if (!empty($parser->inputs) && !empty($parser->details)) {
+            $mapper = new CanonicalMapperService($parser->inputs, $parser->details);
+            $canonicalData = $mapper->mapToCanonical();
+            if ($canonicalData) {
+                $parser->canonical = $canonicalData;
+            }
+            // Collect errors and warnings from the mapper
+            $parser->errors = array_merge($parser->errors, $mapper->getErrors());
+            $parser->warnings = array_merge($parser->warnings, $mapper->getWarnings());
+
+            // --- Perform Canonical Validation ---
+            if (!empty($parser->canonical)) {
+                $validator = new CanonicalValidationService($parser->canonical, $parser->summary);
+                $validator->validate();
+                $parser->errors = array_merge($parser->errors, $validator->getErrors());
+                $parser->warnings = array_merge($parser->warnings, $validator->getWarnings());
+            }
+        }
 
         return $parser;
     }
@@ -96,14 +121,29 @@ class ResultParser
         return $this->inputs;
     }
 
+    public function canonical(): array
+    {
+        return $this->canonical;
+    }
+
     public function errors(): array
     {
         return $this->errors;
     }
 
+    public function warnings(): array
+    {
+        return $this->warnings;
+    }
+
     public function hasErrors(): bool
     {
         return !empty($this->errors);
+    }
+
+    public function hasWarnings(): bool
+    {
+        return !empty($this->warnings);
     }
 
     /* =====================

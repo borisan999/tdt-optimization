@@ -1,0 +1,11 @@
+﻿# Inventario Export - Distribución Vertical
+Alcance,Tipo,Componente,Unidad,Cantidad,Observación
+
+# Inventario Export - Distribución Horizontal
+Piso,Alcance,Tipo,Componente,Unidad,Cantidad,Observación
+
+# Inventario Export - Interior Apartamento
+Piso,Apto,Alcance,Tipo,Componente,Unidad,Cantidad,Observación
+
+# Inventario Total del Proyecto
+Alcance,Tipo,Componente,Unidad,Cantidad
