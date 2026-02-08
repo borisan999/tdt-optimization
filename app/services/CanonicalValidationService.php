@@ -104,9 +104,14 @@ class CanonicalValidationService
                     $totalTUsInCanonical += count($apartment['apartment_internals']['tomas']);
                 }
 
-                // Internal cable length (error)
+                // Internal cable length (warning)
                 if (!isset($apartment['apartment_internals']['calculated_apartment_cable_length_m']) || $apartment['apartment_internals']['calculated_apartment_cable_length_m'] <= 0) {
-                    $this->addError("Missing required structure: Apartment '{$apartmentId}' on floor '{$currentFloorNumber}' is missing internal cable length or it's zero/negative.");
+                    $this->addWarning("Missing measurements: Apartment '{$apartmentId}' on floor '{$currentFloorNumber}' is missing internal cable length or it's zero/negative (default applied).");
+                }
+
+                // Apartment object exists but empty (warning)
+                if (empty($apartment['apartment_internals'])) {
+                    $this->addWarning("Suspicious data: Apartment '{$apartmentId}' on floor '{$currentFloorNumber}' has an empty 'apartment_internals' object.");
                 }
 
                 // Each TU must have: Final level value (not directly in canonical, but in original detail)
@@ -184,11 +189,11 @@ class CanonicalValidationService
             sort($sortedFloorNumbers);
 
             if ($sortedFloorNumbers[0] !== 1) { // Assuming floors start from 1
-                $this->addError("Physically impossible topology: Floors do not start from 1. First floor is '{$sortedFloorNumbers[0]}'.");
+                $this->addWarning("Unusual layout: Floors do not start from 1. First floor is '{$sortedFloorNumbers[0]}'.");
             }
             for ($i = 0; $i < $numFloors - 1; $i++) {
                 if (($sortedFloorNumbers[$i+1] - $sortedFloorNumbers[$i]) > 1) {
-                    $this->addError("Physically impossible topology: Disconnected floors detected between '{$sortedFloorNumbers[$i]}' and '{$sortedFloorNumbers[$i+1]}'.");
+                    $this->addWarning("Unusual layout: Disconnected floors detected between '{$sortedFloorNumbers[$i]}' and '{$sortedFloorNumbers[$i+1]}'.");
                 }
             }
         }
