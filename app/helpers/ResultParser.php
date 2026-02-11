@@ -1,8 +1,13 @@
 <?php
 namespace app\helpers;
 
-use App\Services\CanonicalMapperService;
-use App\Services\CanonicalValidationService;
+require_once __DIR__ . '/../services/CanonicalRehydrationService.php';
+// REMOVE: require_once __DIR__ . '/../services/CanonicalValidationService.php';
+require_once __DIR__ . '/../services/CanonicalSchemaValidator.php';
+
+use App\Services\CanonicalRehydrationService;
+// REMOVE: use App\Services\CanonicalValidationService;
+use App\Services\CanonicalSchemaValidator;
 use DateTime;
 use Throwable;
 
@@ -28,7 +33,7 @@ class ResultParser
         $summary = $parser->decodeJson($row['summary_json'] ?? null, 'summary_json');
 
         // --- Always map ---
-        $mapper = new CanonicalMapperService($inputs, $details);
+        $mapper = new CanonicalRehydrationService($inputs, $details);
         $canonicalData = $mapper->mapToCanonical();
 
         if (is_array($canonicalData)) {
@@ -37,17 +42,27 @@ class ResultParser
             $parser->errors[] = 'Canonical mapping failed.';
         }
 
+        // --- Validate canonical schema ---
+        $schemaValidator = new CanonicalSchemaValidator();
+        if (!$schemaValidator->validate($parser->canonical)) {
+            throw new \RuntimeException(
+                "Canonical schema validation failed: " .
+                implode("; ", $schemaValidator->getErrors())
+            );
+        }
+
         $parser->errors   = array_merge($parser->errors, $mapper->getErrors());
         $parser->warnings = array_merge($parser->warnings, $mapper->getWarnings());
 
         // --- Validate canonical ---
-        if (!empty($parser->canonical)) {
-            $validator = new CanonicalValidationService($parser->canonical, $summary);
-            $validator->validate();
-
-            $parser->errors   = array_merge($parser->errors, $validator->getErrors());
-            $parser->warnings = array_merge($parser->warnings, $validator->getWarnings());
-        }
+        // REMOVE this entire block:
+        // if (!empty($parser->canonical)) {
+        //     $validator = new CanonicalValidationService($parser->canonical, $summary);
+        //     $validator->validate();
+        //
+        //     $parser->errors   = array_merge($parser->errors, $validator->getErrors());
+        //     $parser->warnings = array_merge($parser->warnings, $validator->getWarnings());
+        // }
 
         return $parser;
     }
