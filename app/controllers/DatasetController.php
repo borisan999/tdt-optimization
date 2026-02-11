@@ -327,7 +327,7 @@ class DatasetController
      * LOAD HISTORY (Retrieve rows + fill session)
      * -----------------------------------------
      */
-    private function loadHistory()
+   private function loadHistory()
     {
         if (!isset($_POST['dataset_id'])) {
             die("No dataset selected.");
@@ -336,30 +336,29 @@ class DatasetController
         $dataset_id = intval($_POST['dataset_id']);
 
         $rowModel = new DatasetRow();
-        $rows = $rowModel->getRowsByDataset($dataset_id);
-
-        // For both UI (to render tables) and CanonicalMapperService (for processing),
-        // we use the structured data directly.
-        // It's assumed the UI JavaScript expects this format, with 'apartments' and 'tus' keys.
-        $structuredDatasetFromDb = $rowModel->buildStructuredData($dataset_id);
-
-        $_SESSION['loaded_dataset'] = [
-            'apartments' => $structuredDatasetFromDb['apartments'],
-            'tus' => $structuredDatasetFromDb['tus']
-        ];
-        $_SESSION['loaded_dataset_id'] = $dataset_id; // Keep this assigned after $_SESSION['loaded_dataset']
-        // Canonical data is the merged version
-        $_SESSION['loaded_canonical_dataset'] = array_merge($structuredDatasetFromDb['apartments'], $structuredDatasetFromDb['tus']);
+        $structuredData = $rowModel->buildStructuredData($dataset_id);
 
         require_once __DIR__ . "/../models/GeneralParams.php";
         $gpModel = new GeneralParams();
-
         $params = $gpModel->getByDataset($dataset_id);
-        $_SESSION['loaded_params'] = $params;
 
-        header("Location: ../../public/enter_data.php?loaded=1");
+        $_SESSION['loaded_dataset_id'] = $dataset_id;
+        $_SESSION['loaded_params']     = $params;
+
+        /**
+         * Canonical editor hydration
+         * Must match Excel upload structure exactly
+         */
+        $_SESSION['loaded_canonical_dataset'] = [
+            'inputs'      => $params ?? [],
+            'apartments'  => $structuredData['apartments'] ?? [],
+            'tus'         => $structuredData['tus'] ?? []
+        ];
+
+        header("Location: ../../public/enter_data.php?loaded=1&dataset_id={$dataset_id}");
         exit;
     }
+
 
     public function manualEntryForm()
     {

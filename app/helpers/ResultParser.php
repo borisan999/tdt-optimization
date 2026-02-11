@@ -3,62 +3,55 @@ namespace app\helpers;
 
 use App\Services\CanonicalMapperService;
 use App\Services\CanonicalValidationService;
-require_once __DIR__ . '/../services/CanonicalValidationService.php'; // Add this line
 use DateTime;
 use Throwable;
 
 class ResultParser
 {
     private array $errors = [];
-    private array $warnings = []; // To store warnings from CanonicalMapperService
+    private array $warnings = [];
 
     private array $meta = [];
-    private array $summary = [];
-    private array $details = [];
-    private array $inputs = [];
-    private array $canonical = []; // New property for canonical data
+    private array $canonical = [];
 
     private function __construct() {}
 
-    /**
-     * Factory: build parser from a single DB row
-     */
     public static function fromDbRow(array $row): self
     {
         $parser = new self();
 
         $parser->parseMeta($row);
-        $parser->summary = $parser->decodeJson($row['summary_json'] ?? null, 'summary_json');
-        $parser->details = $parser->decodeJson($row['detail_json'] ?? null, 'detail_json');
-        $parser->inputs  = $parser->decodeJson($row['inputs_json'] ?? null, 'inputs_json');
 
-        // Map to canonical model if inputs and details are available
-        if (!empty($parser->inputs) && !empty($parser->details)) {
-            $mapper = new CanonicalMapperService($parser->inputs, $parser->details);
-            $canonicalData = $mapper->mapToCanonical();
-            if ($canonicalData) {
-                $parser->canonical = $canonicalData;
-            }
-            // Collect errors and warnings from the mapper unconditionally
-            $parser->errors = array_merge($parser->errors, $mapper->getErrors());
-            $parser->warnings = array_merge($parser->warnings, $mapper->getWarnings());
+        // --- Always decode ---
+        $inputs  = $parser->decodeJson($row['inputs_json'] ?? null, 'inputs_json');
+        $details = $parser->decodeJson($row['detail_json'] ?? null, 'detail_json');
+        $summary = $parser->decodeJson($row['summary_json'] ?? null, 'summary_json');
 
-            // --- Perform Canonical Validation ---
-            if (!empty($parser->canonical)) {
-                $validator = new CanonicalValidationService($parser->canonical, $parser->summary);
-                $validator->validate();
-                // Collect errors and warnings from the validator
-                $parser->errors = array_merge($parser->errors, $validator->getErrors());
-                $parser->warnings = array_merge($parser->warnings, $validator->getWarnings());
-            }
+        // --- Always map ---
+        $mapper = new CanonicalMapperService($inputs, $details);
+        $canonicalData = $mapper->mapToCanonical();
+
+        if (is_array($canonicalData)) {
+            $parser->canonical = $canonicalData;
+        } else {
+            $parser->errors[] = 'Canonical mapping failed.';
+        }
+
+        $parser->errors   = array_merge($parser->errors, $mapper->getErrors());
+        $parser->warnings = array_merge($parser->warnings, $mapper->getWarnings());
+
+        // --- Validate canonical ---
+        if (!empty($parser->canonical)) {
+            $validator = new CanonicalValidationService($parser->canonical, $summary);
+            $validator->validate();
+
+            $parser->errors   = array_merge($parser->errors, $validator->getErrors());
+            $parser->warnings = array_merge($parser->warnings, $validator->getWarnings());
         }
 
         return $parser;
     }
 
-    /**
-     * Decode JSON safely
-     */
     private function decodeJson(?string $json, string $field): array
     {
         if ($json === null || $json === '') {
@@ -76,9 +69,6 @@ class ResultParser
         }
     }
 
-    /**
-     * Extract non-JSON metadata
-     */
     private function parseMeta(array $row): void
     {
         $start = isset($row['start_time']) ? new DateTime($row['start_time']) : null;
@@ -99,27 +89,12 @@ class ResultParser
     }
 
     /* =====================
-       Public Accessors
+       PUBLIC API
        ===================== */
 
     public function meta(): array
     {
         return $this->meta;
-    }
-
-    public function summary(): array
-    {
-        return $this->summary;
-    }
-
-    public function details(): array
-    {
-        return $this->details;
-    }
-
-    public function inputs(): array
-    {
-        return $this->inputs;
     }
 
     public function canonical(): array
@@ -145,29 +120,5 @@ class ResultParser
     public function hasWarnings(): bool
     {
         return !empty($this->warnings);
-    }
-
-    /* =====================
-       Convenience Helpers
-       ===================== */
-
-    public function objectiveValue()
-    {
-        return $this->summary['objective']['value'] ?? null;
-    }
-
-    public function kpis(): array
-    {
-        return $this->summary['kpis'] ?? [];
-    }
-
-    public function tuResults(): array
-    {
-        return $this->details['tu_results'] ?? [];
-    }
-
-    public function parameters(): array
-    {
-        return $this->inputs['parameters'] ?? [];
     }
 }
