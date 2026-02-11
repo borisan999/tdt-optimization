@@ -201,19 +201,14 @@ class CanonicalValidationService
 
     // Helper to get expected derivadores from inputs (not directly available in canonical yet)
     // This part requires access to the original inputs_json
-    private function getExpectedDerivadoresForFloor(int $floorNumber): int
-    {
-        // This is a placeholder. In a real scenario, this would derive from `inputs_json`
-        // possibly counting 'derivadores_data' entries or similar config per floor.
-        // For opt_id 137, each floor has 3 derivadores.
-        // This value should come from inputsJson and mapping in CanonicalMapperService
-        // if it's meant to be a canonical count.
-        // For now, hardcode based on observed inputs_json for opt_id=137
-        // where inputsJson['apartamentos_por_piso'] = 3, and each has a derivador.
-        $apartamentosPorPiso = $this->summaryData['num_tomas'] / count($this->canonicalData['floors']);
-        return (int)$apartamentosPorPiso; // Assuming one derivador per apartment
-
-    }
+        private function getExpectedDerivadoresForFloor(int $floorNumber): int
+        {
+            // This is a placeholder. In a real scenario, this would derive from `inputs_json`
+            // For now, derive from the canonical structure, assuming uniform apartments per floor.
+            $firstFloorApartments = $this->canonicalData['floors'][0]['apartments'] ?? [];
+            $apartamentosPorPiso = count($firstFloorApartments);
+            return (int)$apartamentosPorPiso; // Assuming one derivador per apartment
+        }
 
     public function getErrors(): array
     {

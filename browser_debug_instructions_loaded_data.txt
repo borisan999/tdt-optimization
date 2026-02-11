@@ -1,0 +1,9 @@
+Please perform the following steps carefully and provide the output:
+
+1.  **Load the Excel file and ensure the UI shows the duplicated apartments and TU cables.**
+2.  **Open your web browser's Developer Tools (usually by pressing F12 or right-clicking on the page and selecting "Inspect").**
+3.  **Go to the "Console" tab within the Developer Tools.**
+4.  **Look for a log entry that starts with "DEBUG: window.LOADED_DATA on page load:".**
+5.  **Copy the entire content of that log entry (the object that follows "DEBUG: window.LOADED_DATA on page load:") and paste it here.**
+
+This information is crucial to understand if the data is already duplicated in JavaScript before it's rendered, or if the duplication happens during the rendering process.

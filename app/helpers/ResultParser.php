@@ -39,7 +39,7 @@ class ResultParser
             if ($canonicalData) {
                 $parser->canonical = $canonicalData;
             }
-            // Collect errors and warnings from the mapper
+            // Collect errors and warnings from the mapper unconditionally
             $parser->errors = array_merge($parser->errors, $mapper->getErrors());
             $parser->warnings = array_merge($parser->warnings, $mapper->getWarnings());
 
@@ -47,6 +47,7 @@ class ResultParser
             if (!empty($parser->canonical)) {
                 $validator = new CanonicalValidationService($parser->canonical, $parser->summary);
                 $validator->validate();
+                // Collect errors and warnings from the validator
                 $parser->errors = array_merge($parser->errors, $validator->getErrors());
                 $parser->warnings = array_merge($parser->warnings, $validator->getWarnings());
             }

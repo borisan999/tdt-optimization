@@ -52,34 +52,49 @@ class DatasetRow
     {
         $rows = $this->getRowsByDataset($dataset_id);
 
-        $structured = [
-            "apartments" => [],   // record_index = 0
-            "tus"        => []    // record_index = 1
-        ];
-
+        $records = [];
         foreach ($rows as $row) {
-            $idx = $row["record_index"];
+            $idx = $row['record_index'];
+            $field = $row['field_name'];
+            $value = $row['field_value'];
+            $records[$idx][$field] = $value;
+        }
 
-            if (!isset($structured["apartments"][$idx]) && $idx == 0) {
-                $structured["apartments"][$idx] = [];
-            }
-            if (!isset($structured["tus"][$idx]) && $idx == 1) {
-                $structured["tus"][$idx] = [];
-            }
+        $apartments = [];
+        $tus = [];
+        $apartmentKeys = []; // To ensure unique apartments
 
-            if ($idx == 0) {
-                $structured["apartments"][$idx][$row["field_name"]] = $row["field_value"];
-            } elseif ($idx == 1) {
-                $structured["tus"][$idx][$row["field_name"]] = $row["field_value"];
+        foreach ($records as $record) {
+            if (isset($record['tus_requeridos'])) { // This is an apartment record
+                $key = $record['piso'] . '-' . $record['apartamento'];
+                if (!isset($apartmentKeys[$key])) {
+                    $apartmentKeys[$key] = true;
+                    $apartments[] = [
+                        'piso'                   => (int)$record['piso'],
+                        'apartamento'            => (int)$record['apartamento'],
+                        'tus_requeridos'         => (int)$record['tus_requeridos'],
+                        'largo_cable_derivador'  => (float)$record['largo_cable_derivador'],
+                        'largo_cable_repartidor' => (float)$record['largo_cable_repartidor'],
+                        // Do NOT add 'tus' here if we are returning them separately
+                    ];
+                }
+            } elseif (isset($record['tu_index'])) { // This is a TU record
+                $tus[] = [
+                    'piso'           => (int)$record['piso'],
+                    'apartamento'    => (int)$record['apartamento'],
+                    'tu_index'       => (int)$record['tu_index'],
+                    'largo_cable_tu' => (float)$record['largo_cable_tu'],
+                ];
             }
         }
 
-        // Re-index arrays (remove gaps)
-        $structured["apartments"] = array_values($structured["apartments"]);
-        $structured["tus"]        = array_values($structured["tus"]);
-
-        return $structured;
+        return [
+            'apartments' => $apartments,
+            'tus'        => $tus,
+        ];
     }
+
+
 
     public function deleteRowsByDataset($dataset_id)
     {

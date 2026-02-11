@@ -7,6 +7,8 @@ include __DIR__ . '/templates/navbar.php';
 /*ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);*/
+?>
+<?php
 
 // List of parameters we support
 $paramLabels = [
@@ -21,36 +23,98 @@ $paramLabels = [
 ];
 
 $loaded_params = $_SESSION['loaded_params'] ?? [];
-$loaded_rows   = $_SESSION['loaded_dataset'] ?? null;
 $loaded_id     = $_SESSION['loaded_dataset_id'] ?? null;
 
 $formData = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_repetition'])) {
+    // Inputs
+    $source = (int)$_POST['sourceFloorId'];
+    $start  = (int)$_POST['targetStartFloor'];
+    $end    = (int)$_POST['targetEndFloor'];
 
-    require_once __DIR__ . '/../app/controllers/DatasetController.php';
+    // Validation for repetition fields
+    if (empty($_POST['sourceFloorId']) || empty($_POST['targetStartFloor']) || empty($_POST['targetEndFloor'])) {
+        $_SESSION['manual_errors'][] = 'Debe completar todos los campos para repetir la configuración de pisos.';
+        header("Location: enter_data.php");
+        exit;
+    }
 
-    // Persist changes
-    manual_entry($_POST);
+    // Data from session
+    $dataset =& $_SESSION['loaded_canonical_dataset'];
 
-    // UI must reflect what the user just edited
-    $formData = $_POST;
+    // Validate new canonical structure
+    if (
+        !isset($dataset['apartments']) || !is_array($dataset['apartments']) ||
+        !isset($dataset['tus']) || !is_array($dataset['tus'])
+    ) {
+        // Updated error message for the new structure
+        $_SESSION['manual_errors'][] = 'Estructura del dataset canónico inválida para repetición. Faltan arrays de apartamentos o TUs.';
+        header("Location: enter_data.php");
+        exit;
+    }
 
-} elseif (!empty($loaded_params)) {
+    // Step 1 — Extract source floor data
+    $sourceApartments = array_filter(
+        $dataset['apartments'],
+        fn($a) => (int)$a['piso'] === $source
+    );
 
-    // Initial load from Excel or previous dataset
-    $formData = [
-        'params' => $loaded_params,
-        'rows'   => $loaded_rows
-    ];
-}
-// Normalize flat POST params into structured params
-if (!empty($formData)) {
-    foreach ($paramLabels as $key => $_label) {
-        if (isset($formData['param_' . $key])) {
-            $formData['params'][$key] = $formData['param_' . $key];
+    $sourceTus = array_filter(
+        $dataset['tus'],
+        fn($t) => (int)$t['piso'] === $source
+    );
+
+    // Step 2 — Validate source data
+    if (empty($sourceApartments)) {
+        $_SESSION['manual_errors'][] = "El piso fuente no tiene apartamentos para repetir.";
+        header("Location: enter_data.php");
+        exit;
+    }
+
+    // B. Remove destination floors (overwrite rule) - from both apartments and TUs
+    $dataset['apartments'] = array_values(array_filter(
+        $dataset['apartments'],
+        fn($ap) => (int)$ap['piso'] < $start || (int)$ap['piso'] > $end
+    ));
+
+    $dataset['tus'] = array_values(array_filter(
+        $dataset['tus'],
+        fn($tu) => (int)$tu['piso'] < $start || (int)$tu['piso'] > $end
+    ));
+
+    // C. Duplicate for each destination floor
+    for ($floor = $start; $floor <= $end; $floor++) {
+        // Duplicate apartments
+        foreach ($sourceApartments as $ap) {
+            $clone = $ap;
+            $clone['piso'] = $floor;
+            $dataset['apartments'][] = $clone;
+        }
+
+        // Duplicate TUs
+        foreach ($sourceTus as $tu) {
+            $clone = $tu;
+            $clone['piso'] = $floor;
+            $dataset['tus'][] = $clone;
         }
     }
+
+    // D. Update Piso Máximo
+    $dataset['inputs']['Piso_Maximo'] =
+        max((int)($dataset['inputs']['Piso_Maximo'] ?? 0), $end);
+
+    $_SESSION['loaded_params']['Piso_Maximo'] =
+        $dataset['inputs']['Piso_Maximo'];
+
+    // Clear repetition fields from POST to avoid re-population on reload
+    unset($_POST['sourceFloorId']);
+    unset($_POST['targetStartFloor']);
+    unset($_POST['targetEndFloor']);
+
+    // E. Redirect (PRG pattern)
+    header("Location: enter_data.php?loaded=1");
+    exit;
 }/* 
 echo '<pre>';
 echo "POST:\n";
@@ -62,7 +126,13 @@ exit; */
 
 ?>
 <script>
-    window.LOADED_ROWS = <?= json_encode($loaded_rows, JSON_HEX_TAG) ?>;
+    window.LOADED_DATA = null;
+    console.log('DEBUG: window.LOADED_DATA on page load:', window.LOADED_DATA); // NEW DEBUG LOG
+    //window.CANONICAL_DATA = <?= json_encode($_SESSION['loaded_canonical_dataset'] ?? null, JSON_HEX_TAG) ?>;
+    window.CANONICAL_DATA = <?= json_encode($_SESSION['loaded_canonical_dataset'] ?? null) ?>;
+    console.log('DEBUG: window.CANONICAL_DATA:', window.CANONICAL_DATA);
+
+
 </script>
 <?php if (!empty($_SESSION['manual_errors'])): ?>
 <div class="alert alert-danger">
@@ -155,28 +225,39 @@ endif; ?>
                     
                 <?php endforeach; ?>
             </div>
-            <h4>Repetir configuración de pisos</h4>
+           <h4>Repetir configuración de pisos</h4>
 
             <div class="row g-2 align-items-end mb-3">
                 <div class="col-md-3">
-                    <label class="form-label">Desde piso (X)</label>
-                    <input type="number" id="repeatFromFloor" class="form-control" min="0">
+                    <label class="form-label">Piso Fuente (Template)</label>
+                    <input type="number" name="sourceFloorId" class="form-control" min="1">
                 </div>
+
                 <div class="col-md-3">
-                    <label class="form-label">Hasta piso (Y)</label>
-                    <input type="number" id="repeatToFloor" class="form-control" min="0">
+                    <label class="form-label">Piso Inicio (Destino)</label>
+                    <input type="number" name="targetStartFloor" class="form-control" min="1">
                 </div>
+
                 <div class="col-md-3">
-                    <button type="button"
-                            class="btn btn-outline-primary"
-                            onclick="repeatFloorConfig()">
-                        Repetir configuración
+                    <label class="form-label">Piso Fin (Destino)</label>
+                    <input type="number" name="targetEndFloor" class="form-control" min="1">
+                </div>
+
+                <div class="col-md-3">
+                    <button
+                        type="submit"
+                        name="apply_repetition"
+                        formaction="enter_data.php"
+                        formmethod="POST"
+                        class="btn btn-outline-primary">
+                        Aplicar Configuración
                     </button>
                 </div>
-                <div class="col-md-3">
-                    <div id="repeatInfo" class="text-muted small"></div>
-                </div>
             </div>
+
+
+
+           
             <h4>Apartments</h4>
             <button type="button" class="btn btn-primary" onclick="addApartmentRow()">+ Add Apartment</button>
 
@@ -211,7 +292,7 @@ endif; ?>
                 <tbody id="tuBody"></tbody>
             </table>
 
-            <button id="saveBtn" class="btn btn-success" type="submit">Save Dataset</button>
+            <button id="saveBtn" class="btn btn-success" type="submit" name="action" value="save">Save Dataset</button>
             <?php if (!empty($_GET['dataset_id'])): ?>
                 <a href="../app/controllers/DatasetController.php?action=run_python&dataset_id=<?= $_GET['dataset_id'] ?>"
                 class="btn btn-warning mt-3">

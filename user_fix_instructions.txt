@@ -1,0 +1,68 @@
+To resolve the issue where apartments and TU cables are duplicated in the UI after loading an Excel file, you need to remove a redundant section of JavaScript code from the file `public/assets/js/enter-data.js`.
+
+This section is causing the tables to be rendered a second time without clearing the previous content.
+
+**Please perform the following steps:**
+
+1.  **Open the file `public/assets/js/enter-data.js` in your code editor.**
+2.  **Locate the following block of code:**
+
+    ```javascript
+    /* =========================================================
+       Load Excel / History Data
+       ========================================================= */
+
+    document.addEventListener("DOMContentLoaded", () => {
+        // Ensure window.LOADED_DATA exists and has the expected 'apartments' or 'tus' keys
+        if (!window.LOADED_DATA || (!Array.isArray(window.LOADED_DATA.apartments) && !Array.isArray(window.LOADED_DATA.tus))) return;
+
+        const aptBody = document.getElementById("apartmentsBody");
+        const tuBody = document.getElementById("tuBody");
+
+        // Populate Apartments table
+        if (Array.isArray(window.LOADED_DATA.apartments)) {
+            window.LOADED_DATA.apartments.forEach(row => {
+                aptBody.insertAdjacentHTML("beforeend", `
+                    <tr>
+                        <td><input type="number" class="form-control validate-field"
+                            data-field="piso" data-from-excel="true"
+                            name="piso[]" value="${row.piso}"></td>
+                        <td><input type="number" class="form-control validate-field"
+                            data-field="apartamento" data-from-excel="true"
+                            name="apartamento[]" value="${row.apartamento}"></td>
+                        <td><input type="number" class="form-control validate-field"
+                            data-field="tus_requeridos" data-from-excel="true"
+                            name="tus_requeridos[]" value="${row.tus_requeridos}"></td>
+                        <td><input type="number" step="any" class="form-control validate-field"
+                            data-field="largo_cable_derivador" data-from-excel="true"
+                            name="cable_derivador[]" value="${row.largo_cable_derivador}"></td>
+                        <td><input type="number" step="any" class="form-control validate-field"
+                            data-field="largo_cable_repartidor" data-from-excel="true"
+                            name="cable_repartidor[]" value="${row.largo_cable_repartidor}"></td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm"
+                                    onclick="this.closest('tr').remove(); checkFormValidity();">X</button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        // Populate TUs table
+        if (Array.isArray(window.LOADED_DATA.tus)) {
+            window.LOADED_DATA.tus.forEach(row => {
+                tuBody.insertAdjacentHTML("beforeend", `
+                    <tr>
+                        <td><input type="number" name="tu_piso[]" class="form-control validate-field" data-field="piso" value="${row.piso ?? ''}" required></td>
+                        <td><input type="number" name="tu_apartamento[]" class="form-control validate-field" data-field="apartamento" value="${row.apartamento ?? ''}" required></td>
+                        <td><input type="number" name="tu_index[]" class="form-control validate-field" data-field="tu_index" value="${row.tu_index ?? ''}" required></td>
+                        <td><input type="number" name="largo_tu[]" class="form-control validate-field" data-field="largo_cable_tu" value="${row.largo_cable_tu ?? ''}" required></td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm"
+                                    onclick="this.closest('tr').remove(); checkFormValidity();">X</button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+    });

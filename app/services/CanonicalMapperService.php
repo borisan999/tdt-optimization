@@ -114,8 +114,9 @@ class CanonicalMapperService
         }
 
         foreach ($this->detailJson as $tu) {
-            if (isset($tu['Piso'])) {
-                $floors[$tu['Piso']] = true;
+            $floorNumber = $this->getFloorNumber($tu);
+            if ($floorNumber !== null) {
+                $floors[$floorNumber] = true;
             }
         }
         $uniqueFloors = array_keys($floors);
@@ -128,7 +129,7 @@ class CanonicalMapperService
         $canonicalFloors = [];
         foreach ($uniqueFloors as $floorNumber) {
             $floorApartments = [];
-            $floorTUs = array_filter($this->detailJson, fn($tu) => ($tu['Piso'] ?? null) == $floorNumber);
+            $floorTUs = array_filter($this->detailJson, fn($tu) => $this->getFloorNumber($tu) == $floorNumber);
 
             if (empty($floorTUs)) {
                 $this->addError("Floor $floorNumber has no apartments (TUs).");
@@ -255,5 +256,16 @@ class CanonicalMapperService
     private function addWarning(string $message)
     {
         $this->warnings[] = $message;
+    }
+
+    private function getFloorNumber(array $tu): ?int
+    {
+        if (isset($tu['piso'])) {
+            return (int)$tu['piso'];
+        }
+        if (isset($tu['Piso'])) {
+            return (int)$tu['Piso'];
+        }
+        return null;
     }
 }

@@ -37,6 +37,16 @@ class DatasetController
     public function handleRequest()
     {
         $action = $_GET['action'] ?? null;
+        $loaded = isset($_GET['loaded']) && $loaded === '1';
+        $dataset_id_param = $_GET['dataset_id'] ?? null;
+
+        if ($loaded && $dataset_id_param !== null && $action === null) {
+            // If the page is loaded with a dataset_id but no explicit action,
+            // assume it's meant to load the history for that dataset.
+            // This prevents manualEntryForm from being called directly without data.
+            $this->loadHistoryFromGet($dataset_id_param); // New method to load from GET
+            return; // Exit after loading history and before including the form again
+        }
 
         switch ($action) {
 
@@ -68,6 +78,38 @@ class DatasetController
         }
     }
 
+    // New method to load history from GET parameters
+    private function loadHistoryFromGet($dataset_id)
+    {
+        // This is a simplified version of loadHistory that uses the dataset_id from GET
+        // and sets session variables directly, then redirects back to enter_data.php (without params)
+        // to prevent infinite redirects/reloads.
+
+        $dataset_id = intval($dataset_id); // Ensure it's an integer
+
+        $rowModel = new DatasetRow();
+        $structuredDatasetFromDb = $rowModel->buildStructuredData($dataset_id);
+       // $_SESSION['loaded_canonical_dataset'] = $structuredDatasetFromDb['canonical'];
+        $_SESSION['loaded_canonical_dataset'] = [
+            'inputs'     => $_SESSION['loaded_params'],
+            'apartments' => $structuredDatasetFromDb['apartments'],
+            'tus'        => $structuredDatasetFromDb['tus'],
+        ];
+
+      /*  $_SESSION['loaded_dataset_id'] = $dataset_id;
+        $_SESSION['loaded_canonical_dataset'] = array_merge($structuredDatasetFromDb['apartments'], $structuredDatasetFromDb['tus']);
+
+        */require_once __DIR__ . "/../models/GeneralParams.php";
+        $gpModel = new GeneralParams();
+        $params = $gpModel->getByDataset($dataset_id);
+        $_SESSION['loaded_params'] = $params;
+
+        // Redirect to enter_data.php without the 'loaded' and 'dataset_id' GET parameters
+        // to avoid re-triggering this logic on subsequent form submissions/page reloads.
+        header("Location: enter_data.php");
+        exit;
+    }
+
     /**
      * -----------------------------------------
      * MANUAL ENTRY (Insert dataset + rows)
@@ -75,13 +117,19 @@ class DatasetController
      */
     private function manualEntry()
     {
+        if (empty($_POST['piso']) || !is_array($_POST['piso'])) {
+            error_log("Manual entry called without apartment data");
+            $_SESSION['flash_error'] = "No apartment records submitted.";
+            header("Location: /tdt-optimization/public/enter_data.php");
+            exit;
+        }
+
         require_once __DIR__ . "/../models/ValidationEngine.php";
         require_once __DIR__ . "/../models/ValidationRules.php";
-
-        $validator = new ValidationEngine(new ValidationRules());
-
         require_once __DIR__ . '/../models/GeneralParams.php';
         $gpModel = new GeneralParams();
+
+        $validator = new ValidationEngine(new ValidationRules());
 
         $_SESSION['upload_warnings'] = [];
 
@@ -190,69 +238,80 @@ class DatasetController
             $gpModel->saveForDataset($dataset_id, $generalParams);
         }
 
-        $rowModel = new DatasetRow();
+        // Create a map of submitted TU data for easy lookup
+        $submittedTuMap = [];
+        $numSubmittedTus = count($tu_piso);
+        for ($i = 0; $i < $numSubmittedTus; $i++) {
+            $piso = $tu_piso[$i];
+            $apartamento = $tu_apto[$i];
+            $tuIndex = $tu_index[$i];
+            $largoTu = $tu_length[$i];
+            $submittedTuMap[$piso][$apartamento][$tuIndex] = $largoTu;
+        }
 
-        /**
-         * Insert APARTMENT rows
-         */
-        $record_index = 0;
+        // --- Start of combined APARTMENT and TU insertion ---
+        $record_index = 0; // Initialize record_index for apartment rows
 
         for ($i = 0; $i < count($pisos); $i++) {
-
+            // Save apartment info
             $rowModel->addRow($dataset_id, $record_index, "piso", $pisos[$i], "floor");
             $rowModel->addRow($dataset_id, $record_index, "apartamento", $apartamentos[$i], "apt");
             $rowModel->addRow($dataset_id, $record_index, "tus_requeridos", $tus[$i], "units");
             $rowModel->addRow($dataset_id, $record_index, "largo_cable_derivador", $c_derivador[$i], "m");
             $rowModel->addRow($dataset_id, $record_index, "largo_cable_repartidor", $c_repartidor[$i], "m");
 
+            // Insert TU rows for this apartment based on tus_requeridos
+            $currentPiso = $pisos[$i];
+            $currentApartamento = $apartamentos[$i];
+            $numTusRequired = $tus[$i];
+
+            for ($tu_idx_for_apt = 1; $tu_idx_for_apt <= $numTusRequired; $tu_idx_for_apt++) { // tu_idx should start from 1 based on TU Index in form
+                $tu_record_index = ($record_index + 1) * 100 + $tu_idx_for_apt; // Unique index for TU within its apartment
+
+                // Look up largo_cable_tu from the submitted map
+                // If not found in map (e.g., TU was not explicitly submitted), default to 0
+                $largo_cable_tu = $submittedTuMap[$currentPiso][$currentApartamento][$tu_idx_for_apt] ?? 0;
+
+                $rowModel->addRow($dataset_id, $tu_record_index, "piso", $currentPiso, "floor");
+                $rowModel->addRow($dataset_id, $tu_record_index, "apartamento", $currentApartamento, "apt");
+                $rowModel->addRow($dataset_id, $tu_record_index, "tu_index", $tu_idx_for_apt, null); // Use $tu_idx_for_apt as tu_index
+                $rowModel->addRow($dataset_id, $tu_record_index, "largo_cable_tu", $largo_cable_tu, "m");
+            }
+
             $record_index++;
         }
+        // --- End of combined APARTMENT and TU insertion ---
+
+        // After saving, reload the dataset from DB to ensure session has the latest state
+        $datasetId = $dataset_id; // Use the existing $dataset_id variable from the manual entry process
+
+        $rowModel = new DatasetRow();
 
         /**
-         * Insert TU rows
+         * Rebuild canonical dataset from DB rows
          */
-        for ($i = 0; $i < count($tu_piso); $i++) {
+        // buildStructuredData now returns ['apartments' => [...], 'tus' => [...]]
+        $structuredData = $rowModel->buildStructuredData($datasetId); 
 
-            $rowModel->addRow($dataset_id, $record_index, "piso", $tu_piso[$i], "floor");
-            $rowModel->addRow($dataset_id, $record_index, "apartamento", $tu_apto[$i], "apt");
-            $rowModel->addRow($dataset_id, $record_index, "tu_index", $tu_index[$i], null);
-            $rowModel->addRow($dataset_id, $record_index, "largo_cable_tu", $tu_length[$i], "m");
+        /**
+         * Rehydrate editor state
+         */
+        $_SESSION['loaded_canonical_dataset'] = [
+            'inputs'      => $generalParams,              // already known at save time
+            'apartments'  => $structuredData['apartments'], // Directly use the apartments array
+            'tus'         => $structuredData['tus']       // Directly use the tus array
+        ];
 
-            $record_index++;
-        }
-        // Rehydrate UI state from submitted form
-        //$_SESSION['loaded_params'] = array_filter($_POST, fn($k) => str_starts_with($k, 'param_'), ARRAY_FILTER_USE_KEY);
-        $_SESSION['loaded_params'] = [];
+        $_SESSION['loaded_dataset_id'] = $datasetId;
+        $_SESSION['loaded_params']     = $generalParams;
 
-        foreach ($_POST as $key => $value) {
-            if (str_starts_with($key, 'param_')) {
-                $paramName = substr($key, 6); // remove 'param_'
-                $_SESSION['loaded_params'][$paramName] = $value;
-            }
-        }
+        // Add temporary debug line as requested
+        // This log will be written to the PHP error log.
+        error_log('CANONICAL AFTER SAVE: ' . json_encode($_SESSION['loaded_canonical_dataset']));
 
-        // Rebuild dataset-style buffer for UI
-        $_SESSION['loaded_dataset'] = [];
-        $_SESSION['loaded_dataset_id'] = $dataset_id;
-
-        // Apartments
-        for ($i = 0; $i < count($_POST['piso']); $i++) {
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'piso','field_value'=>$_POST['piso'][$i]];
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'apartamento','field_value'=>$_POST['apartamento'][$i]];
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'tus_requeridos','field_value'=>$_POST['tus_requeridos'][$i]];
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'largo_cable_derivador','field_value'=>$_POST['cable_derivador'][$i]];
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$i,'field_name'=>'largo_cable_repartidor','field_value'=>$_POST['cable_repartidor'][$i]];
-        }
-
-        // TUs
-        $offset = count($_POST['piso']);
-        for ($i = 0; $i < count($_POST['tu_piso']); $i++) {
-            $idx = $offset + $i;
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$idx,'field_name'=>'piso','field_value'=>$_POST['tu_piso'][$i]];
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$idx,'field_name'=>'apartamento','field_value'=>$_POST['tu_apartamento'][$i]];
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$idx,'field_name'=>'tu_index','field_value'=>$_POST['tu_index'][$i]];
-            $_SESSION['loaded_dataset'][] = ['record_index'=>$idx,'field_name'=>'largo_cable_tu','field_value'=>$_POST['largo_tu'][$i]];
-        }
+        // Redirect back to editor with dataset_id and saved status
+        header("Location: /tdt-optimization/public/enter_data.php?dataset_id={$datasetId}&saved=1");
+        exit;
 
         if (empty($_POST['tu_index']) || count($_POST['tu_index']) === 0) {
             throw new RuntimeException(
@@ -279,9 +338,19 @@ class DatasetController
         $rowModel = new DatasetRow();
         $rows = $rowModel->getRowsByDataset($dataset_id);
 
-        // Save in session
-        $_SESSION['loaded_dataset'] = $rows;
-        $_SESSION['loaded_dataset_id'] = $dataset_id;
+        // For both UI (to render tables) and CanonicalMapperService (for processing),
+        // we use the structured data directly.
+        // It's assumed the UI JavaScript expects this format, with 'apartments' and 'tus' keys.
+        $structuredDatasetFromDb = $rowModel->buildStructuredData($dataset_id);
+
+        $_SESSION['loaded_dataset'] = [
+            'apartments' => $structuredDatasetFromDb['apartments'],
+            'tus' => $structuredDatasetFromDb['tus']
+        ];
+        $_SESSION['loaded_dataset_id'] = $dataset_id; // Keep this assigned after $_SESSION['loaded_dataset']
+        // Canonical data is the merged version
+        $_SESSION['loaded_canonical_dataset'] = array_merge($structuredDatasetFromDb['apartments'], $structuredDatasetFromDb['tus']);
+
         require_once __DIR__ . "/../models/GeneralParams.php";
         $gpModel = new GeneralParams();
 
@@ -294,6 +363,27 @@ class DatasetController
 
     public function manualEntryForm()
     {
+        // If a dataset_id is already loaded in session, re-hydrate session data from the DB
+        // This ensures the form re-displays current data after operations like floor repetition
+        if (isset($_SESSION['loaded_dataset_id'])) {
+            $dataset_id = $_SESSION['loaded_dataset_id'];
+
+            $rowModel = new DatasetRow();
+            $structuredDatasetFromDb = $rowModel->buildStructuredData($dataset_id);
+
+            $_SESSION['loaded_dataset'] = [
+                'apartments' => $structuredDatasetFromDb['apartments'],
+                'tus' => $structuredDatasetFromDb['tus']
+            ];
+            // Canonical data is the merged version
+            $_SESSION['loaded_canonical_dataset'] = array_merge($structuredDatasetFromDb['apartments'], $structuredDatasetFromDb['tus']);
+
+            require_once __DIR__ . "/../models/GeneralParams.php";
+            $gpModel = new GeneralParams();
+            $params = $gpModel->getByDataset($dataset_id);
+            $_SESSION['loaded_params'] = $params;
+        }
+
         include __DIR__ . "/../../public/enter_data.php";
     }
 
@@ -338,7 +428,7 @@ class DatasetController
             $spreadsheet = $reader->load($tmp);
         } catch (\Throwable $e) {
             $this->logEvent('error', 'PhpSpreadsheet load error: ' . $e->getMessage(), $_SESSION['user_id'] ?? null);
-            http_response_code(500); die("Failed to read Excel file: " . $e->getMessage());
+            http_response_code(500); die("Failed to read Excel file: " . htmlspecialchars($e->getMessage()));
         }
 
         // required sheet names
@@ -363,17 +453,12 @@ class DatasetController
             $rowModel = new DatasetRow();
             $validator = new ValidationRules();
 
-            // init session buffers for UI auto-fill
-            $_SESSION['loaded_params'] = [];
-            $_SESSION['loaded_dataset'] = [];
-            $_SESSION['loaded_dataset_id'] = $dataset_id;
-
             /*
             * 1) Parse parametros_generales
             */
             $sheet = $spreadsheet->getSheetByName('parametros_generales');
             $rows = $sheet->toArray(null, true, true, true);
-            $params = [];
+            $params = []; // Initialize $params here
             foreach ($rows as $rnum => $r) {
                 $name = trim((string)($r['A'] ?? ''));
                 $val  = trim((string)($r['B'] ?? ''));
@@ -398,96 +483,105 @@ class DatasetController
 
             if (!empty($params)) {
                 $gpModel->saveForDataset($dataset_id, $params);
-                $_SESSION['loaded_params'] = $params;
             }
 
             /*
-            * 2) Parse apartamentos
-            * columns: A=piso, B=apartamento, C=tus_requeridos, D=largo_cable_derivador, E=largo_cable_repartidor
+            * 2) Parse "apartamentos" sheet and insert rows
             */
-            $sheet = $spreadsheet->getSheetByName('apartamentos');
-            $rows = $sheet->toArray(null, true, true, true);
-            $recordIndex = 1;
+            $apartamentosSheet = $spreadsheet->getSheetByName('apartamentos');
+            $apartamentosRows = $apartamentosSheet->toArray(null, true, true, true);
+            
+            // Skip header row
+            $headerSkipped = false;
+            $record_index = 0; // Initialize record_index for apartment rows
 
-            foreach ($rows as $rnum => $r) {
-                $piso = trim((string)($r['A'] ?? ''));
-                $apt  = trim((string)($r['B'] ?? ''));
-                $tus  = trim((string)($r['C'] ?? ''));
-                $der  = trim((string)($r['D'] ?? ''));
-                $rep  = trim((string)($r['E'] ?? ''));
-
-                // skip empty row
-                if ($piso === '' && $apt === '' && $tus === '' && $der === '' && $rep === '') continue;
-
-                // header skip
-                if (strtolower($piso) === 'piso') continue;
-
-                // basic required field check
-                if ($apt === '') {
-                    throw new \Exception("Missing apartment value on apartamentos sheet, row {$rnum}");
+            foreach ($apartamentosRows as $rnum => $r) {
+                if (!$headerSkipped) {
+                    $headerSkipped = true;
+                    continue;
                 }
 
-                // apply validation for each relevant field
-                $this->applyValidation($validator, 'piso', $piso, $rnum);
-                $this->applyValidation($validator, 'apartamento', $apt, $rnum);
-                $this->applyValidation($validator, 'tus_requeridos', $tus, $rnum);
-                $this->applyValidation($validator, 'largo_cable_derivador', $der, $rnum);
-                $this->applyValidation($validator, 'largo_cable_repartidor', $rep, $rnum);
+                $piso                   = trim((string)($r['A'] ?? ''));
+                $apartamento            = trim((string)($r['B'] ?? ''));
+                $tus_requeridos         = trim((string)($r['C'] ?? ''));
+                $largo_cable_derivador  = trim((string)($r['D'] ?? ''));
+                $largo_cable_repartidor = trim((string)($r['E'] ?? ''));
 
-                // save rows
-                $rowModel->addRow($dataset_id, $recordIndex, 'piso', $piso, 'floor');
-                $rowModel->addRow($dataset_id, $recordIndex, 'apartamento', $apt, 'apt');
-                $rowModel->addRow($dataset_id, $recordIndex, 'tus_requeridos', $tus, 'units');
-                $rowModel->addRow($dataset_id, $recordIndex, 'largo_cable_derivador', $der, 'm');
-                $rowModel->addRow($dataset_id, $recordIndex, 'largo_cable_repartidor', $rep, 'm');
+                if ($piso === '' && $apartamento === '') continue; // Skip empty rows
 
-                // session buffer
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'piso','field_value'=>$piso];
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'apartamento','field_value'=>$apt];
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'tus_requeridos','field_value'=>$tus];
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'largo_cable_derivador','field_value'=>$der];
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'largo_cable_repartidor','field_value'=>$rep];
+                // Validate (simplified for now, can be expanded with applyValidation)
+                if (!is_numeric($piso) || !is_numeric($apartamento) || !is_numeric($tus_requeridos) || !is_numeric($largo_cable_derivador) || !is_numeric($largo_cable_repartidor)) {
+                    $_SESSION['upload_warnings'][] = "Row {$rnum} in 'apartamentos' sheet contains non-numeric data. Skipping row.";
+                    continue;
+                }
 
-                $recordIndex++;
+                $rowModel->addRow($dataset_id, $record_index, "piso", $piso, "floor");
+                $rowModel->addRow($dataset_id, $record_index, "apartamento", $apartamento, "apt");
+                $rowModel->addRow($dataset_id, $record_index, "tus_requeridos", $tus_requeridos, "units");
+                $rowModel->addRow($dataset_id, $record_index, "largo_cable_derivador", $largo_cable_derivador, "m");
+                $rowModel->addRow($dataset_id, $record_index, "largo_cable_repartidor", $largo_cable_repartidor, "m");
+                $record_index++;
             }
 
             /*
-            * 3) Parse tu sheet
-            * columns: A=piso, B=apartamento, C=tu_index, D=largo_cable_tu
+            * 3) Parse "tu" sheet and insert rows
             */
-            $sheet = $spreadsheet->getSheetByName('tu');
-            $rows = $sheet->toArray(null, true, true, true);
+            $tuSheet = $spreadsheet->getSheetByName('tu');
+            $tuRows = $tuSheet->toArray(null, true, true, true);
 
-            foreach ($rows as $rnum => $r) {
-                $piso = trim((string)($r['A'] ?? ''));
-                $apt  = trim((string)($r['B'] ?? ''));
-                $idx  = trim((string)($r['C'] ?? ''));
-                $len  = trim((string)($r['D'] ?? ''));
+            // Skip header row
+            $headerSkipped = false;
+            // record_index continues from apartment rows to maintain uniqueness
+            
+            foreach ($tuRows as $rnum => $r) {
+                if (!$headerSkipped) {
+                    $headerSkipped = true;
+                    continue;
+                }
 
-                if ($piso === '' && $apt === '' && $idx === '' && $len === '') continue;
-                if (strtolower($piso) === 'piso') continue;
+                $piso        = trim((string)($r['A'] ?? ''));
+                $apartamento = trim((string)($r['B'] ?? ''));
+                $tu_index    = trim((string)($r['C'] ?? ''));
+                $largo_cable_tu = trim((string)($r['D'] ?? ''));
 
-                if ($apt === '') throw new \Exception("Missing apartment in TU sheet row {$rnum}");
+                if ($piso === '' && $apartamento === '') continue; // Skip empty rows
 
-                // validations
-                $this->applyValidation($validator, 'piso', $piso, $rnum);
-                $this->applyValidation($validator, 'apartamento', $apt, $rnum);
-                $this->applyValidation($validator, 'tu_index', $idx, $rnum);
-                $this->applyValidation($validator, 'largo_cable_tu', $len, $rnum);
+                // Validate (simplified for now)
+                if (!is_numeric($piso) || !is_numeric($apartamento) || !is_numeric($tu_index) || !is_numeric($largo_cable_tu)) {
+                    $_SESSION['upload_warnings'][] = "Row {$rnum} in 'tu' sheet contains non-numeric data. Skipping row.";
+                    continue;
+                }
 
-                // save
-                $rowModel->addRow($dataset_id, $recordIndex, 'piso', $piso, 'floor');
-                $rowModel->addRow($dataset_id, $recordIndex, 'apartamento', $apt, 'apt');
-                $rowModel->addRow($dataset_id, $recordIndex, 'tu_index', $idx, null);
-                $rowModel->addRow($dataset_id, $recordIndex, 'largo_cable_tu', $len, 'm');
-
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'piso','field_value'=>$piso];
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'apartamento','field_value'=>$apt];
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'tu_index','field_value'=>$idx];
-                $_SESSION['loaded_dataset'][] = ['record_index'=>$recordIndex,'field_name'=>'largo_cable_tu','field_value'=>$len];
-
-                $recordIndex++;
+                $rowModel->addRow($dataset_id, $record_index, "piso", $piso, "floor");
+                $rowModel->addRow($dataset_id, $record_index, "apartamento", $apartamento, "apt");
+                $rowModel->addRow($dataset_id, $record_index, "tu_index", $tu_index, null);
+                $rowModel->addRow($dataset_id, $record_index, "largo_cable_tu", $largo_cable_tu, "m");
+                $record_index++;
             }
+
+            // Store parameters in session (ensure it's always an array)
+            $_SESSION['loaded_params'] = $params;
+            $_SESSION['loaded_dataset_id'] = $dataset_id;
+
+            // For both UI (to render tables) and CanonicalMapperService (for processing),
+            // we use the structured data directly.
+            // It's assumed the UI JavaScript expects this format, with 'apartments' and 'tus' keys.
+            $rowModel = new DatasetRow(); // Already instantiated
+
+            /**
+             * Rebuild canonical dataset from DB rows
+             */
+            // buildStructuredData now returns ['apartments' => [...], 'tus' => [...]]
+            $structuredData = $rowModel->buildStructuredData($dataset_id); 
+
+            /**
+             * Rehydrate editor state
+             */
+            $_SESSION['loaded_canonical_dataset'] = [
+                'inputs'      => $_SESSION['loaded_params'] ?? [], // Use $_SESSION['loaded_params']
+                'apartments'  => $structuredData['apartments'], // Directly use the apartments array
+                'tus'         => $structuredData['tus']       // Directly use the tus array
+            ];
 
             // commit
             $pdo->commit();
@@ -525,7 +619,7 @@ class DatasetController
                 $_SESSION['upload_warnings'][] = $msgText;
 
                 // Also log warning
-                $this->logEvent('warning', $msgText, $_SESSION['user_id'] ?? null);
+                $this->logEvent('warning', "{$field_name} (row {$rnum}): {$m['message']}", $_SESSION['user_id'] ?? null);
             }
         }
     }
