@@ -1,139 +1,128 @@
 <?php
+
 namespace app\helpers;
 
-require_once __DIR__ . '/../services/CanonicalRehydrationService.php';
-// REMOVE: require_once __DIR__ . '/../services/CanonicalValidationService.php';
-require_once __DIR__ . '/../services/CanonicalSchemaValidator.php';
-
-use App\Services\CanonicalRehydrationService;
-// REMOVE: use App\Services\CanonicalValidationService;
-use App\Services\CanonicalSchemaValidator;
+use RuntimeException;
 use DateTime;
-use Throwable;
 
 class ResultParser
 {
-    private array $errors = [];
-    private array $warnings = [];
-
-    private array $meta = [];
-    private array $canonical = [];
-
-    private function __construct() {}
+    private array $row;
+    private array $detail;
+    private array $summary;
 
     public static function fromDbRow(array $row): self
     {
-        $parser = new self();
+        return new self($row);
+    }
 
-        $parser->parseMeta($row);
+    private function __construct(array $row)
+    {
+        $this->row = $row;
 
-        // --- Always decode ---
-        $inputs  = $parser->decodeJson($row['inputs_json'] ?? null, 'inputs_json');
-        $details = $parser->decodeJson($row['detail_json'] ?? null, 'detail_json');
-        $summary = $parser->decodeJson($row['summary_json'] ?? null, 'summary_json');
+        $this->detail = $this->decodeJson($row['detail_json'] ?? null, 'detail_json');
+        $this->summary = $this->decodeJson($row['summary_json'] ?? null, 'summary_json');
 
-        // --- Always map ---
-        $mapper = new CanonicalRehydrationService($inputs, $details);
-        $canonicalData = $mapper->mapToCanonical();
-
-        if (is_array($canonicalData)) {
-            $parser->canonical = $canonicalData;
-        } else {
-            $parser->errors[] = 'Canonical mapping failed.';
-        }
-
-        // --- Validate canonical schema ---
-        $schemaValidator = new CanonicalSchemaValidator();
-        if (!$schemaValidator->validate($parser->canonical)) {
-            throw new \RuntimeException(
-                "Canonical schema validation failed: " .
-                implode("; ", $schemaValidator->getErrors())
-            );
-        }
-
-        $parser->errors   = array_merge($parser->errors, $mapper->getErrors());
-        $parser->warnings = array_merge($parser->warnings, $mapper->getWarnings());
-
-        // --- Validate canonical ---
-        // REMOVE this entire block:
-        // if (!empty($parser->canonical)) {
-        //     $validator = new CanonicalValidationService($parser->canonical, $summary);
-        //     $validator->validate();
-        //
-        //     $parser->errors   = array_merge($parser->errors, $validator->getErrors());
-        //     $parser->warnings = array_merge($parser->warnings, $validator->getWarnings());
-        // }
-
-        return $parser;
+        $this->validateCanonical();
     }
 
     private function decodeJson(?string $json, string $field): array
     {
-        if ($json === null || $json === '') {
-            $this->errors[] = "$field is empty";
-            return [];
+        if (!$json) {
+            throw new RuntimeException("Result {$field} is empty");
         }
 
-        try {
-            $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-            return is_array($decoded) ? $decoded : [];
-        } catch (Throwable $t) {
-            $this->errors[] = "$field invalid JSON: " . $t->getMessage();
-            error_log("ResultParser::$field JSON error: " . $t->getMessage());
-            return [];
+        $decoded = json_decode($json, true);
+
+        if (!is_array($decoded)) {
+            throw new RuntimeException("Result {$field} malformed JSON");
         }
+
+        return $decoded;
     }
 
-    private function parseMeta(array $row): void
+    private function validateCanonical(): void
     {
-        $start = isset($row['start_time']) ? new DateTime($row['start_time']) : null;
-        $end   = isset($row['end_time']) ? new DateTime($row['end_time']) : null;
-
-        $runtime = null;
-        if ($start && $end) {
-            $runtime = $end->getTimestamp() - $start->getTimestamp();
+        if (empty($this->detail)) {
+            throw new RuntimeException("Canonical detail_json is empty");
         }
 
-        $this->meta = [
-            'opt_id' => (int)($row['opt_id'] ?? 0),
-            'status' => $row['status'] ?? 'unknown',
-            'start_time' => $start,
-            'end_time' => $end,
-            'runtime_seconds' => $runtime,
-        ];
+        foreach ($this->detail as $index => $tu) {
+
+            if (!is_array($tu)) {
+                throw new RuntimeException("TU index {$index} is not an object");
+            }
+
+            $requiredKeys = [
+                'tu_id',
+                'piso',
+                'apto',
+                'bloque',
+                'nivel_tu',
+                'nivel_min',
+                'nivel_max',
+                'cumple',
+                'losses'
+            ];
+
+            foreach ($requiredKeys as $key) {
+                if (!array_key_exists($key, $tu)) {
+                    throw new RuntimeException(
+                        "Canonical violation: missing '{$key}' in TU index {$index}"
+                    );
+                }
+            }
+
+            if (!is_array($tu['losses'])) {
+                throw new RuntimeException(
+                    "Canonical violation: losses must be array (TU index {$index})"
+                );
+            }
+        }
     }
 
-    /* =====================
-       PUBLIC API
-       ===================== */
+    /* ===============================
+       Public API (STRICT)
+       =============================== */
 
     public function meta(): array
     {
-        return $this->meta;
+        return [
+            'opt_id'     => $this->row['opt_id'] ?? null,
+            'status'     => $this->row['status'] ?? null,
+            'dataset_id' => $this->row['dataset_id'] ?? null,
+            'created_at' => isset($this->row['created_at'])
+                ? new DateTime($this->row['created_at'])
+                : null,
+        ];
     }
 
     public function canonical(): array
     {
-        return $this->canonical;
+        return [
+            'detail'  => $this->detail,
+            'summary' => $this->summary,
+            'inputs'  => json_decode($this->row['inputs_json'] ?? '[]', true) ?: []
+        ];
     }
 
-    public function errors(): array
+    public function summary(): array
     {
-        return $this->errors;
+        return $this->summary;
     }
 
     public function warnings(): array
     {
-        return $this->warnings;
+        return []; // No legacy, no warnings
+    }
+
+    public function errors(): array
+    {
+        return []; // Strict mode throws immediately
     }
 
     public function hasErrors(): bool
     {
-        return !empty($this->errors);
-    }
-
-    public function hasWarnings(): bool
-    {
-        return !empty($this->warnings);
+        return false;
     }
 }

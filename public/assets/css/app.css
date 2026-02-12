@@ -1,0 +1,23 @@
+/* Page background */
+body {
+    background: #f7f7f7;
+}
+
+/* Generic utilities */
+.hidden {
+    display: none;
+}
+
+/* Tabs */
+.tab-btn {
+    margin-right: 10px;
+}
+
+/* Card-like sections (used across app) */
+.section-box {
+    background: #fff;
+    border-radius: 8px;
+    padding: 25px;
+    margin-top: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+}

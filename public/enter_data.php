@@ -292,12 +292,17 @@ endif; ?>
                 <tbody id="tuBody"></tbody>
             </table>
 
+            <!-- Hidden input for the canonical JSON payload -->
+            <input type="hidden" id="canonical_payload" name="canonical_payload">
+
             <button id="saveBtn" class="btn btn-success" type="submit" name="action" value="save">Save Dataset</button>
+            
             <?php if (!empty($_GET['dataset_id'])): ?>
-                <a href="../app/controllers/DatasetController.php?action=run_python&dataset_id=<?= $_GET['dataset_id'] ?>"
-                class="btn btn-warning mt-3">
+                <button type="submit" 
+                        class="btn btn-warning mt-3" 
+                        formaction="../app/controllers/DatasetController.php?action=run_python&dataset_id=<?= htmlspecialchars($_GET['dataset_id']) ?>">
                     ▶ Run Optimization
-                </a>
+                </button>
             <?php endif; ?>
         </form>
     </div>

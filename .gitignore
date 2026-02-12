@@ -16,7 +16,6 @@ app/python/
 storage/cache/
 storage/logs/
 storage/temp/
-public/assets/
 *.pyc
 .env
 /app/python/__pycache__/

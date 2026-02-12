@@ -8,7 +8,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-
 // prefer composer autoload and include helper for robust loading
 $autoload = __DIR__ . '/../../vendor/autoload.php';
 if (is_file($autoload)) require_once $autoload;
@@ -30,6 +29,7 @@ require_one_of([__DIR__ . "/../models/ResultsDetail.php"]);
 $_SESSION['upload_warnings'] = [];
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use app\services\CanonicalResultBuilder;
 
 
 class DatasetController
@@ -530,7 +530,6 @@ class DatasetController
 
             // Skip header row
             $headerSkipped = false;
-            // record_index continues from apartment rows to maintain uniqueness
             
             foreach ($tuRows as $rnum => $r) {
                 if (!$headerSkipped) {
@@ -551,11 +550,17 @@ class DatasetController
                     continue;
                 }
 
+                // Generate canonical tu_id
+                $tu_id = "P{$piso}A{$apartamento}TU{$tu_index}";
+
+                // Now save each field to dataset_rows using addRow
+                // record_index continues from apartment rows to maintain uniqueness
+                $rowModel->addRow($dataset_id, $record_index, "tu_id", $tu_id, null); // Add tu_id
                 $rowModel->addRow($dataset_id, $record_index, "piso", $piso, "floor");
                 $rowModel->addRow($dataset_id, $record_index, "apartamento", $apartamento, "apt");
                 $rowModel->addRow($dataset_id, $record_index, "tu_index", $tu_index, null);
                 $rowModel->addRow($dataset_id, $record_index, "largo_cable_tu", $largo_cable_tu, "m");
-                $record_index++;
+                $record_index++; // Increment record_index for each TU
             }
 
             // Store parameters in session (ensure it's always an array)
@@ -565,7 +570,7 @@ class DatasetController
             // For both UI (to render tables) and CanonicalMapperService (for processing),
             // we use the structured data directly.
             // It's assumed the UI JavaScript expects this format, with 'apartments' and 'tus' keys.
-            $rowModel = new DatasetRow(); // Already instantiated
+            $rowModel = new DatasetRow(); // Already instantiated - this line is redundant here, can be removed.
 
             /**
              * Rebuild canonical dataset from DB rows
@@ -654,175 +659,212 @@ class DatasetController
     $pdo = $DB->getConnection();
 
     /* ---------------------------------------------------------
-       1) Python executable + script path
+       1) Decode POST canonical payload
     --------------------------------------------------------- */
-    $python_bin = "/usr/bin/python3";
-    $python_script = realpath(__DIR__ . "/../python/10/optimizer_db.py");
+    if (empty($_POST['canonical_payload'])) {
+        throw new Exception("No canonical payload received.");
+    }
 
-    if (!$python_script || !is_file($python_script)) {
-        $this->logEvent('error', "Python script not found: {$python_script}", $_SESSION['user_id'] ?? null);
-        throw new Exception("Python script not found.");
+    $canonical = json_decode($_POST['canonical_payload'], true);
+    if (!is_array($canonical) || !isset($canonical['inputs'], $canonical['apartments'], $canonical['tus'])) {
+        throw new Exception("Invalid canonical payload JSON.");
+    }
+
+    // [NEW] Inject tu_id into the canonical data structure immediately after decoding.
+    // This ensures the data is complete before being used anywhere else (for canonical_json and dataset_rows).
+    foreach ($canonical['tus'] as &$tu) { // Use reference to modify array in place
+        if (!isset($tu['tu_id']) || empty($tu['tu_id'])) {
+            if (isset($tu['piso'], $tu['apartamento'], $tu['tu_index'])) {
+                $tu['tu_id'] = "P{$tu['piso']}A{$tu['apartamento']}TU{$tu['tu_index']}";
+            } else {
+                // Handle cases where essential keys are missing for ID generation
+                throw new Exception("Cannot generate tu_id: A TU is missing 'piso', 'apartamento', or 'tu_index'.");
+            }
+        }
+    }
+    unset($tu); // Unset the reference after the loop
+
+    /* ---------------------------------------------------------
+       2) Save canonical JSON in datasets table
+    --------------------------------------------------------- */
+    $stmt = $pdo->prepare("
+        UPDATE datasets SET canonical_json = :canonical WHERE dataset_id = :dataset_id
+    ");
+    $stmt->execute([
+        'canonical' => json_encode($canonical, JSON_UNESCAPED_UNICODE),
+        'dataset_id'        => $dataset_id
+    ]);
+
+    /* ---------------------------------------------------------
+       3) Optional: populate legacy dataset_rows for backward compatibility
+    --------------------------------------------------------- */
+    $rowModel = new DatasetRow();
+    $gpModel  = new GeneralParams();
+
+    $pdo->beginTransaction();
+    try {
+        // Clear old rows
+        $rowModel->deleteRowsByDataset($dataset_id);
+
+        // Save general parameters
+        $gpModel->saveForDataset($dataset_id, $canonical['inputs']);
+
+        // Save apartment rows
+        $record_index = 0;
+        foreach ($canonical['apartments'] as $apt) {
+            $rowModel->addRow($dataset_id, $record_index, "piso", $apt['piso'], "floor");
+            $rowModel->addRow($dataset_id, $record_index, "apartamento", $apt['apartamento'], "apt");
+            $rowModel->addRow($dataset_id, $record_index, "tus_requeridos", $apt['tus_requeridos'], "units");
+            $rowModel->addRow($dataset_id, $record_index, "largo_cable_derivador", $apt['largo_cable_derivador'], "m");
+            $rowModel->addRow($dataset_id, $record_index, "largo_cable_repartidor", $apt['largo_cable_repartidor'], "m");
+            $record_index++;
+        }
+
+// Insert new TU rows from canonical payload
+$tu_record_offset = 10000;
+
+foreach ($canonical['tus'] as $i => $tu) {
+    $tu_record_index = $tu_record_offset + $i;
+
+    // Generate a canonical TU ID if not already present
+    if (!isset($tu['tu_id']) || empty($tu['tu_id'])) {
+        // Example format: "P{floor}A{apartment}TU{index}"
+        $tu['tu_id'] = "P{$tu['piso']}A{$tu['apartamento']}TU{$tu['tu_index']}";
+    }
+
+    // Save all required canonical fields
+    $rowModel->addRow($dataset_id, $tu_record_index, "tu_id", $tu['tu_id'], null);
+    $rowModel->addRow($dataset_id, $tu_record_index, "piso", $tu['piso'], "floor");
+    $rowModel->addRow($dataset_id, $tu_record_index, "apartamento", $tu['apartamento'], "apt");
+    $rowModel->addRow($dataset_id, $tu_record_index, "tu_index", $tu['tu_index'], null);
+    $rowModel->addRow($dataset_id, $tu_record_index, "largo_cable_tu", $tu['largo_cable_tu'], "m");
+}
+
+        $pdo->commit();
+    } catch (\Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
     }
 
     /* ---------------------------------------------------------
-       2) Ensure output dir (Python side) exists
+       4) Call Python optimizer (reads canonical_json)
     --------------------------------------------------------- */
+    $python_bin    = "/usr/bin/python3";
+    $python_script = realpath(__DIR__ . "/../python/10/optimizer_db.py");
+
     putenv("OUTPUT_DIR=/var/tdt_outputs");
 
-    /* ---------------------------------------------------------
-       3) Build safe exec command
-    --------------------------------------------------------- */
-    $cmd = escapeshellcmd($python_bin) . " " .
-       escapeshellarg($python_script) . " " .
-       escapeshellarg((string)$dataset_id);
-
+    $cmd = escapeshellcmd($python_bin) . " " . escapeshellarg($python_script) . " " . escapeshellarg((string)$dataset_id);
     $output = [];
     $return_var = 0;
     exec($cmd, $output, $return_var);
 
-    /* ---------------------------------------------------------
-       4) Execution error?
-    --------------------------------------------------------- */
     if ($return_var !== 0) {
-        $this->logEvent('error',
-            "Python failed (rc={$return_var}) Output: " . implode("\n", array_slice($output, -20)),
-            $_SESSION['user_id'] ?? null
-        );
-        throw new Exception("Python script failed with return code {$return_var}");
-    }
-
-    if ($output === null) {
-        file_put_contents(
-            __DIR__ . '/python_raw.txt',
-            implode("\n", $output)
-        );
-        throw new Exception("Malformed JSON returned by Python");
+        throw new Exception("Python failed (rc={$return_var}): " . implode("\n", $output));
     }
 
     /* ---------------------------------------------------------
-       5) Extract JSON from final stdout
+       5) Parse Python JSON output
     --------------------------------------------------------- */
-    
     $stdout = implode("\n", $output);
-
     $jsonStart = strpos($stdout, "{");
-    if ($jsonStart === false) {
-        $this->logEvent('error',
-            "No JSON from python. Raw output: " . substr($stdout, 0, 4000),
-            $_SESSION['user_id'] ?? null
-        );
-        throw new Exception("Python did not return JSON.");
-    }
+    if ($jsonStart === false) throw new Exception("Python did not return JSON.");
 
-    $jsonStr = substr($stdout, $jsonStart);
-    $data = json_decode($jsonStr, true);
-
+    $data = json_decode(substr($stdout, $jsonStart), true);
     if (json_last_error() !== JSON_ERROR_NONE) {
-        $this->logEvent('error',
-            "JSON decode error: " . json_last_error_msg() . " Payload: " . substr($jsonStr, 0, 4000),
-            $_SESSION['user_id'] ?? null
-        );
-        throw new Exception("Malformed JSON returned by Python: " . json_last_error_msg());
+        throw new Exception("Malformed JSON from Python: " . json_last_error_msg());
     }
 
     /* ---------------------------------------------------------
-       6) Validate python result
+       6) Build STRICT canonical detail from Python output
     --------------------------------------------------------- */
-    $py_status = strtolower(trim($data['status'] ?? ''));
+    $rawDetail = $data['detail'] ?? [];
+    $canonicalDetail = []; // Initialize canonicalDetail
 
-    // Mapping Python -> DB enum
-    $map = [
-        'success'    => 'completed',   // Successful optimization
-        'optimal'    => 'completed',   // MILP found optimal solution
-        'infeasible' => 'infeasible',  // MILP infeasible
-        'failed'     => 'failed'       // Explicit fails
-    ];
+    if (!empty($rawDetail)) {
+        // Map Python flat rows (PascalCase) to a canonical structure (snake_case/lowercase)
+        $builderInput = [];
+        foreach ($rawDetail as $row) {
+            $tu_id = $row['tu_id'] ?? $row['Toma'] ?? null;
+            if (!$tu_id) {
+                continue; // Or throw an exception if every row MUST have an ID
+            }
 
-    // Fallback to failed if unknown
-    $status = $map[$py_status] ?? 'failed';
-    
+            $losses = [];
+            foreach ($row as $key => $value) {
+                if (str_contains($key, '(dB)') && !str_contains($key, 'Nivel TU')) {
+                    $segment = str_replace(['(dB)', 'Pérdida ', '→', '↔'], '', $key);
+                    $segment = trim(preg_replace('/[^A-Za-z0-9\s-]/', '', $segment));
+                    $losses[] = [
+                        'segment' => strtolower(str_replace(' ', '_', $segment)),
+                        'value'   => (float)$value
+                    ];
+                }
+            }
+            if (empty($losses)) {
+                $losses[] = ['segment' => 'unknown', 'value' => 0];
+            }
 
-    if (empty($data['opt_id'])) {
-        throw new Exception("Python did not return opt_id.");
+            $builderInput[] = [
+                'tu_id'     => $tu_id,
+                'piso'      => (int)($row['Piso'] ?? 0),
+                'apto'      => (int)($row['Apto'] ?? 0),
+                'bloque'    => (int)($row['Bloque'] ?? 0),
+                'nivel_tu'  => (float)($row['Nivel TU Final (dBµV)'] ?? 0),
+                'losses'    => $losses
+            ];
+        }
+        
+        // Get min/max levels from Python inputs
+        $nivelMin = (float)($data['inputs']['Nivel_minimo'] ?? 48);
+        $nivelMax = (float)($data['inputs']['Nivel_maximo'] ?? 69);
+        if ($nivelMin >= $nivelMax) {
+            throw new Exception("Invalid signal range from Python inputs.");
+        }
+
+        // Manually construct the final canonical detail, bypassing the faulty builder
+        foreach($builderInput as $tu) {
+            $nivel_tu = $tu['nivel_tu'];
+            $tu['nivel_min'] = $nivelMin;
+            $tu['nivel_max'] = $nivelMax;
+            $tu['cumple'] = ($nivel_tu >= $nivelMin && $nivel_tu <= $nivelMax);
+            $canonicalDetail[] = $tu;
+        }
     }
-
-    $opt_id = intval($data['opt_id']);
 
     /* ---------------------------------------------------------
-       7) Ensure optimization row exists or update state
+       7) Insert/Update results table
     --------------------------------------------------------- */
-    $st = $pdo->prepare("SELECT 1 FROM optimizations WHERE opt_id = :id");
-    $st->execute(['id' => $opt_id]);
+    $opt_id = intval($data['opt_id'] ?? 0);
+    if (!$opt_id) throw new Exception("Python did not return opt_id.");
 
-    if ($st->rowCount() === 0) {
-        $insert = $pdo->prepare("
-            INSERT INTO optimizations (opt_id, dataset_id, status, created_at)
-            VALUES (:opt_id, :dataset_id, :status, NOW())
-        ");
-        $insert->execute([
-            'opt_id' => $opt_id,
-            'dataset_id' => $dataset_id,
-            'status' => $status
-        ]);
-    } else {
-        $update = $pdo->prepare("UPDATE optimizations SET status = :status WHERE opt_id = :opt_id");
-        $update->execute([
-            'status' => $status,
-            'opt_id' => $opt_id
-        ]);
-    }
+    $summaryJson = json_encode($data['summary'] ?? [], JSON_UNESCAPED_UNICODE);
+    $detailJson  = json_encode($canonicalDetail, JSON_UNESCAPED_UNICODE); // Use the builder's output
+    $inputsJson  = json_encode($data['inputs'] ?? [], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 
-    /* ---------------------------------------------------------
-       8)  Normalize Python payload to canonical EPIC-2 keys
-    --------------------------------------------------------- */
-    
-    if (isset($data['detalle']) && !isset($data['detail'])) {
-        $data['detail'] = $data['detalle'];
-    }
-    if (
-        !isset($data['detail']) ||
-        !is_array($data['detail']) ||
-        count($data['detail']) === 0
-    ) {
-        $data['summary']['warning'] = 'No valid TUs generated for given parameters';
-    }
+    error_log("Canonical TUs count: " . count($canonicalDetail));
 
-    $detailRows = $data['detail'] ?? [];
-
-    $summaryJson = json_encode($data['summary'], JSON_UNESCAPED_UNICODE);
-    $detailJson  = json_encode($detailRows, JSON_UNESCAPED_UNICODE);
-    $inputsJson = json_encode(
-    $data['inputs'],
-    JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-
-
-    /* ---------------------------------------------------------
-       9) Store per-TU results
-    --------------------------------------------------------- */
-    
-    $pdo->prepare("
+    $insert = $pdo->prepare("
         INSERT INTO results (opt_id, summary_json, detail_json, inputs_json)
-        VALUES (:opt_id, :summary, :detail, CAST(:inputs AS JSON))
+        VALUES (:opt_id, :summary, :detail, :inputs)
         ON DUPLICATE KEY UPDATE
-            summary_json = VALUES(summary_json),
-            detail_json  = VALUES(detail_json),
-            inputs_json  = CAST(VALUES(inputs_json) AS JSON)
-    ")->execute([
-        'opt_id'  => $opt_id,
-        'summary' => $summaryJson,
-        'detail'  => $detailJson,
-        'inputs'  => $inputsJson,
+            summary_json = :summary,
+            detail_json  = :detail,
+            inputs_json  = :inputs
+    ");
+    $insert->execute([
+        ':opt_id' => $opt_id,
+        ':summary'=> $summaryJson,
+        ':detail' => $detailJson,
+        ':inputs' => $inputsJson,
     ]);
 
-
-
     /* ---------------------------------------------------------
-       10) Redirect to results UI
+       7) Redirect to results UI
     --------------------------------------------------------- */
-    header("Location: ../../public/results.php?opt_id=" . intval($opt_id));
+    header("Location: ../../public/results.php?opt_id=" . $opt_id);
     exit();
 }
-
 
 
     
