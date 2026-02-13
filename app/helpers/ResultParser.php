@@ -46,41 +46,61 @@ class ResultParser
     private function validateCanonical(): void
     {
         if (empty($this->detail)) {
-            throw new RuntimeException("Canonical detail_json is empty");
+            // This allows for valid results with 0 TUs, returning an empty detail array.
+            return;
         }
 
-        foreach ($this->detail as $index => $tu) {
+        $normalizedDetail = [];
+        $numericKeys = ['piso', 'apto', 'bloque', 'nivel_tu', 'nivel_min', 'nivel_max'];
 
+        foreach ($this->detail as $index => $tu) {
             if (!is_array($tu)) {
-                throw new RuntimeException("TU index {$index} is not an object");
+                throw new RuntimeException("Canonical violation: TU at index {$index} is not an object.");
             }
 
-            $requiredKeys = [
-                'tu_id',
-                'piso',
-                'apto',
-                'bloque',
-                'nivel_tu',
-                'nivel_min',
-                'nivel_max',
-                'cumple',
-                'losses'
-            ];
-
+            // 1. Presence Checks
+            $requiredKeys = ['tu_id', 'piso', 'apto', 'bloque', 'nivel_tu', 'nivel_min', 'nivel_max', 'cumple', 'losses'];
             foreach ($requiredKeys as $key) {
                 if (!array_key_exists($key, $tu)) {
-                    throw new RuntimeException(
-                        "Canonical violation: missing '{$key}' in TU index {$index}"
-                    );
+                    throw new RuntimeException("Canonical violation: missing '{$key}' in TU at index {$index}.");
                 }
             }
 
-            if (!is_array($tu['losses'])) {
-                throw new RuntimeException(
-                    "Canonical violation: losses must be array (TU index {$index})"
-                );
+            // 2. Type Compatibility Checks
+            if (!is_string($tu['tu_id']) || empty(trim($tu['tu_id']))) {
+                throw new RuntimeException("Canonical violation: 'tu_id' must be a non-empty string in TU at index {$index}.");
             }
+            foreach ($numericKeys as $key) {
+                if (!is_numeric($tu[$key])) {
+                    throw new RuntimeException("Canonical violation: '{$key}' must be numeric in TU at index {$index}.");
+                }
+            }
+            if (!is_bool($tu['cumple'])) {
+                // Allow 0 or 1 from JSON, which are not strictly booleans but are bool-compatible
+                if ($tu['cumple'] !== 0 && $tu['cumple'] !== 1) {
+                     throw new RuntimeException("Canonical violation: 'cumple' must be a boolean (or 0/1) in TU at index {$index}.");
+                }
+            }
+            if (!is_array($tu['losses'])) {
+                throw new RuntimeException("Canonical violation: 'losses' must be an array in TU at index {$index}.");
+            }
+
+            // 3. Normalize and build the new array
+            $normalizedDetail[] = [
+                'tu_id'     => (string)$tu['tu_id'],
+                'piso'      => (int)$tu['piso'],
+                'apto'      => (int)$tu['apto'],
+                'bloque'    => (int)$tu['bloque'],
+                'nivel_tu'  => (float)$tu['nivel_tu'],
+                'nivel_min' => (float)$tu['nivel_min'],
+                'nivel_max' => (float)$tu['nivel_max'],
+                'cumple'    => (bool)$tu['cumple'],
+                'losses'    => $tu['losses'],
+            ];
         }
+
+        // Overwrite the original detail array with the fully validated and normalized version.
+        $this->detail = $normalizedDetail;
     }
 
     /* ===============================
