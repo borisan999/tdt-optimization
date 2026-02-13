@@ -1,82 +1,91 @@
 <?php
-// api/results/list.php
-// Returns list of optimization runs with pagination + optional filters (date, keyword, status)
 
-require_once __DIR__ . "/../../app/config/db.php";
+declare(strict_types=1);
 
-header('Content-Type: application/json');
+namespace app\controllers;
 
-// SESSION AUTH (optional)
-if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../helpers/ResultParser.php';
+require_once __DIR__ . '/../services/ResultComplianceService.php'; // Include the new service
 
-// Pagination
-$page = max(1, intval($_GET['page'] ?? 1));
-$limit = max(5, min(200, intval($_GET['limit'] ?? 20))); // sane boundaries
-$offset = ($page - 1) * $limit;
+use app\helpers\ResultParser;
+use app\services\ResultComplianceService;
+use PDO;
+use RuntimeException;
+use DateTime;
 
-// Filters
-$keyword = trim($_GET['q'] ?? '');
-$status  = trim($_GET['status'] ?? '');   // e.g. "SUCCESS", "FAIL", etc.
-$dateFrom = trim($_GET['from'] ?? '');
-$dateTo   = trim($_GET['to'] ?? '');
+class ResultsController
+{
+    public int $opt_id;
+    public array $meta = [];
+    public array $summary = [];
+    public array $details = [];
+    public array $inputs = [];
+    public array $warnings = [];
+    public array $violations = [];
+    public ?string $created = null;
+    public string $status = 'unknown';
 
-// DB
-$db = new Database();
-$pdo = $db->getConnection();
+    public function __construct(int $opt_id)
+    {
+        if ($opt_id <= 0) {
+            throw new RuntimeException('opt_id is required');
+        }
+        $this->opt_id = $opt_id;
 
-// Base query
-$sql = "SELECT o.opt_id, o.created_at, o.status, o.notes
-        FROM optimizations o
-        WHERE 1 ";
+        $this->loadData();
+    }
 
-// dynamic filters
-$params = [];
+    private function loadData(): void
+    {
+        // 1. Fetch DB Row
+        $DB  = new \Database();
+        $pdo = $DB->getConnection();
 
-if ($keyword !== '') {
-    $sql .= " AND (o.notes LIKE :kw OR o.opt_id LIKE :kw)";
-    $params[':kw'] = "%$keyword%";
+        $sql = "
+            SELECT
+                o.opt_id, o.dataset_id, o.status, o.created_at,
+                r.summary_json, r.detail_json, r.inputs_json
+            FROM optimizations o
+            LEFT JOIN results r ON r.opt_id = o.opt_id
+            WHERE o.opt_id = :opt_id
+        ";
+        $st = $pdo->prepare($sql);
+        $st->execute(['opt_id' => $this->opt_id]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            throw new RuntimeException('Optimization not found');
+        }
+        
+        $this->status = $row['status'] ?? 'unknown';
+        if (isset($row['created_at'])) {
+            $this->created = (new DateTime($row['created_at']))->format('Y-m-d H:i:s');
+        }
+
+        // 2. Guard Clause for missing results
+        if (empty($row['detail_json'])) {
+            $this->meta = [
+                'opt_id' => $row['opt_id'],
+                'dataset_id' => $row['dataset_id'],
+                'status' => $this->status,
+                'created_at' => $this->created
+            ];
+            // Leave details, summary, etc., as empty arrays
+            return;
+        }
+
+        // 3. Parse via ResultParser
+        $parser = ResultParser::fromDbRow($row);
+        
+        $canonical = $parser->canonical();
+        $this->meta = $parser->meta();
+        $this->warnings = $parser->warnings();
+        $this->summary = $canonical['summary'] ?? [];
+        $this->details = $canonical['detail'] ?? [];
+        $this->inputs = $canonical['inputs'] ?? [];
+        
+        // 4. Use Service for Violation Calculation
+        $this->violations = ResultComplianceService::calculateViolations($this->details);
+    }
 }
-
-if ($status !== '') {
-    $sql .= " AND o.status = :st";
-    $params[':st'] = $status;
-}
-
-if ($dateFrom !== '') {
-    $sql .= " AND DATE(o.created_at) >= :df";
-    $params[':df'] = $dateFrom;
-}
-
-if ($dateTo !== '') {
-    $sql .= " AND DATE(o.created_at) <= :dt";
-    $params[':dt'] = $dateTo;
-}
-
-// Count total rows for pagination
-$countSql = "SELECT COUNT(*) FROM ($sql) AS sub";
-$stmt = $pdo->prepare($countSql);
-$stmt->execute($params);
-$total = intval($stmt->fetchColumn());
-
-// Add order + pagination
-$sql .= " ORDER BY o.opt_id DESC LIMIT :offset, :limit";
-
-$stmt = $pdo->prepare($sql);
-
-// Bind numeric separately
-foreach ($params as $k => $v) {
-    $stmt->bindValue($k, $v);
-}
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$stmt->bindValue(':limit', $limit,  PDO::PARAM_INT);
-
-$stmt->execute();
-$items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-echo json_encode([
-    'page' => $page,
-    'limit' => $limit,
-    'total' => $total,
-    'pages' => ceil($total / $limit),
-    'items' => $items
-], JSON_PRETTY_PRINT);

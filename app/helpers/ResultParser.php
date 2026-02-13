@@ -10,6 +10,7 @@ class ResultParser
     private array $row;
     private array $detail;
     private array $summary;
+    private array $inputs; // Added private property
 
     public static function fromDbRow(array $row): self
     {
@@ -22,6 +23,7 @@ class ResultParser
 
         $this->detail = $this->decodeJson($row['detail_json'] ?? null, 'detail_json');
         $this->summary = $this->decodeJson($row['summary_json'] ?? null, 'summary_json');
+        $this->inputs = $this->decodeJson($row['inputs_json'] ?? null, 'inputs_json'); // Initialize inputs
 
         $this->validateCanonical();
     }
@@ -102,7 +104,7 @@ class ResultParser
         return [
             'detail'  => $this->detail,
             'summary' => $this->summary,
-            'inputs'  => json_decode($this->row['inputs_json'] ?? '[]', true) ?: []
+            'inputs'  => $this->inputs, // Return inputs property
         ];
     }
 
