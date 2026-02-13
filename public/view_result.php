@@ -5,11 +5,9 @@
  * This file is now a pure view template.
  * All logic is handled by ResultsController.
  */
-
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-
 require_once __DIR__ . '/../app/auth/require_login.php';
 require_once __DIR__ . '/../app/controllers/ResultsController.php'; // Use the new controller
 
@@ -18,27 +16,26 @@ include __DIR__ . '/templates/navbar.php';
 
 use app\controllers\ResultsController;
 
-try {
-    $opt_id = intval($_GET['opt_id'] ?? 0);
-    $controller = new ResultsController($opt_id);
+$opt_id = intval($_GET['opt_id'] ?? 0);
+$controller = new ResultsController($opt_id);
+$response = $controller->execute();
 
-    // Make controller variables available to the view template
-    $meta = $controller->meta;
-    $summary = $controller->summary;
-    $details = $controller->details;
-    $inputs = $controller->inputs;
-    $violations = $controller->violations;
-    $warnings = $controller->warnings;
-    $status = $controller->status;
-    $created = $controller->created;
-    $dataset_id = $controller->meta['dataset_id'] ?? null;
-
-} catch (RuntimeException $e) {
-    // Render a clean error page if something goes wrong
-    echo "<div class='container my-4'><div class='alert alert-danger'><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</div></div>";
+if (($response['status'] ?? 'error') !== 'success') {
+    echo "<div class='container my-4'><div class='alert alert-danger'><strong>Error:</strong> " . htmlspecialchars($response['message'] ?? 'An unknown error occurred.') . " (Type: " . htmlspecialchars($response['error_type'] ?? 'unknown') . ")</div></div>";
     include __DIR__ . '/templates/footer.php';
-    die();
+    return; // Changed from die();
 }
+
+// Make controller variables available to the view template with defensive programming
+$meta = $response['meta'] ?? [];
+$summary = $response['summary'] ?? [];
+$details = $response['details'] ?? [];
+$violations = $response['violations'] ?? [];
+$warnings = $response['warnings'] ?? [];
+$inputs = $response['inputs'] ?? []; // Defensive
+$status = $meta['status'] ?? 'unknown';
+$created = $meta['created_at'] ?? null;
+$dataset_id = $meta['dataset_id'] ?? null;
 
 ?>
 <div class="container my-4">
@@ -75,100 +72,105 @@ try {
         </div>
     <?php endif; ?>
 
-    <h4>Summary Metrics</h4>
-
-    <table class="table table-bordered table-sm">
-        <tbody>
-        <?php foreach ($summary as $k => $v): ?>
-            <tr>
-                <th><?= htmlspecialchars($k) ?></th>
-                <td><?= is_scalar($v) ? htmlspecialchars((string)$v) : json_encode($v) ?></td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-
-    <h4>Violaciones de Nivel TU</h4>
-
-    <?php if (count($violations) === 0): ?>
-        <div class="alert alert-success">
-            Todas las tomas cumplen con la banda normativa.
+    <?php if (empty($details)): ?>
+        <div class="alert alert-info">
+            No result details available for this optimization. The process may still be running or it might have completed without generating a detailed output.
         </div>
     <?php else: ?>
+        <h4>Summary Metrics</h4>
 
-    <div class="table-responsive">
-        <table class="table table-sm table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>tu_id</th>
-                    <th>piso</th>
-                    <th>apto</th>
-                    <th>nivel_tu</th>
-                    <th>Tipo</th>
-                    <th>Δ vs Norma (dB)</th>
-                </tr>
-            </thead>
+        <table class="table table-bordered table-sm">
             <tbody>
-            <?php foreach ($violations as $v): ?>
-                <tr class="<?= $v['_violation_type'] === 'LOW' ? 'table-warning' : 'table-danger' ?>">
-                    <td><?= htmlspecialchars($v['tu_id'] ?? '—') ?></td>
-                    <td><?= htmlspecialchars($v['piso'] ?? '—') ?></td>
-                    <td><?= htmlspecialchars($v['apto'] ?? '—') ?></td>
-                    <td><?= number_format($v['nivel_tu'], 2) ?></td>
-                    <td><?= $v['_violation_type'] === 'LOW' ? 'Bajo norma' : 'Sobre norma' ?></td>
-                    <td><?= number_format($v['_violation_delta'], 2) ?></td>
+            <?php foreach ($summary as $k => $v): ?>
+                <tr>
+                    <th><?= htmlspecialchars($k) ?></th>
+                    <td><?= is_scalar($v) ? htmlspecialchars((string)$v) : json_encode($v) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
-    </div>
 
-    <?php endif; ?>
+        <h4>Violaciones de Nivel TU</h4>
 
-    <h4>Detail JSON (<?= count($details) ?> TUs)</h4>
+        <?php if (count($violations) === 0): ?>
+            <div class="alert alert-success">
+                Todas las tomas cumplen con la banda normativa.
+            </div>
+        <?php else: ?>
 
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered table-sm">
-            <thead>
-            <tr>
-                <?php if (!empty($details)): ?>
-                    <?php foreach (array_keys($details[0]) as $col): ?>
-                        <th><?= htmlspecialchars($col) ?></th>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($details as $rowDetail): ?>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>tu_id</th>
+                        <th>piso</th>
+                        <th>apto</th>
+                        <th>nivel_tu</th>
+                        <th>Tipo</th>
+                        <th>Δ vs Norma (dB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($violations as $v): ?>
+                    <tr class="<?= $v['_violation_type'] === 'LOW' ? 'table-warning' : 'table-danger' ?>">
+                        <td><?= htmlspecialchars($v['tu_id'] ?? '—') ?></td>
+                        <td><?= htmlspecialchars($v['piso'] ?? '—') ?></td>
+                        <td><?= htmlspecialchars($v['apto'] ?? '—') ?></td>
+                        <td><?= number_format($v['nivel_tu'], 2) ?></td>
+                        <td><?= $v['_violation_type'] === 'LOW' ? 'Bajo norma' : 'Sobre norma' ?></td>
+                        <td><?= number_format($v['_violation_delta'], 2) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <?php endif; ?>
+
+        <h4>Detail JSON (<?= count($details) ?> TUs)</h4>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered table-sm">
+                <thead>
                 <tr>
-                    <?php foreach ($rowDetail as $col_key => $val): ?>
-                        <td>
-                        <?php if (is_array($val)): ?>
-                            <?php if ($col_key === 'losses'): ?>
-                                <?php foreach ($val as $loss_item): ?>
-                                    <?php if (isset($loss_item['segment']) && isset($loss_item['value'])): ?>
-                                        <?= htmlspecialchars($loss_item['segment'] . ': ' . $loss_item['value']) ?><br>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
+                    <?php if (!empty($details)): ?>
+                        <?php foreach (array_keys($details[0]) as $col): ?>
+                            <th><?= htmlspecialchars($col) ?></th>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($details as $rowDetail): ?>
+                    <tr>
+                        <?php foreach ($rowDetail as $col_key => $val): ?>
+                            <td>
+                            <?php if (is_array($val)): ?>
+                                <?php if ($col_key === 'losses'): ?>
+                                    <?php foreach ($val as $loss_item): ?>
+                                        <?php if (isset($loss_item['segment']) && isset($loss_item['value'])): ?>
+                                            <?= htmlspecialchars($loss_item['segment'] . ': ' . $loss_item['value']) ?><br>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <?= htmlspecialchars(json_encode($val, JSON_UNESCAPED_UNICODE)) ?>
+                                <?php endif; ?>
                             <?php else: ?>
-                                <?= htmlspecialchars(json_encode($val, JSON_UNESCAPED_UNICODE)) ?>
+                                <?= htmlspecialchars((string)$val) ?>
                             <?php endif; ?>
-                        <?php else: ?>
-                            <?= htmlspecialchars((string)$val) ?>
-                        <?php endif; ?>
-                        </td>
-                    <?php endforeach; ?>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+                            </td>
+                        <?php endforeach; ?>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
 
-    <h4>Inputs JSON</h4>
-    <pre class="bg-white p-3 border rounded">
+        <h4>Inputs JSON</h4>
+        <pre class="bg-white p-3 border rounded">
 <?= htmlspecialchars(json_encode($inputs, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?>
-    </pre>
-
+        </pre>
+    <?php endif; ?>
 </div>
 
 <?php include __DIR__ . '/templates/footer.php'; ?>

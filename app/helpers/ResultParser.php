@@ -14,6 +14,22 @@ class ResultParser
 
     public static function fromDbRow(array $row): self
     {
+        if (!isset($row['detail_json'])) {
+            throw new \DomainException('Missing detail_json column.');
+        }
+
+        if (!is_string($row['detail_json']) || trim($row['detail_json']) === '') {
+            throw new \DomainException('Invalid detail_json payload.');
+        }
+
+        $decoded = json_decode($row['detail_json'], true);
+
+        if (!is_array($decoded)) {
+            throw new \DomainException('Malformed JSON in detail_json.');
+        }
+
+        $row['__decoded_detail'] = $decoded;
+
         return new self($row);
     }
 
@@ -21,87 +37,27 @@ class ResultParser
     {
         $this->row = $row;
 
-        $this->detail = $this->decodeJson($row['detail_json'] ?? null, 'detail_json');
+        $this->detail = $row['__decoded_detail'];
         $this->summary = $this->decodeJson($row['summary_json'] ?? null, 'summary_json');
-        $this->inputs = $this->decodeJson($row['inputs_json'] ?? null, 'inputs_json'); // Initialize inputs
-
-        $this->validateCanonical();
+        $this->inputs = $this->decodeJson($row['inputs_json'] ?? null, 'inputs_json');
     }
 
     private function decodeJson(?string $json, string $field): array
     {
         if (!$json) {
-            throw new RuntimeException("Result {$field} is empty");
+            throw new \DomainException("Result {$field} is empty");
         }
 
         $decoded = json_decode($json, true);
 
         if (!is_array($decoded)) {
-            throw new RuntimeException("Result {$field} malformed JSON");
+            throw new \DomainException("Result {$field} malformed JSON");
         }
 
         return $decoded;
     }
 
-    private function validateCanonical(): void
-    {
-        if (empty($this->detail)) {
-            // This allows for valid results with 0 TUs, returning an empty detail array.
-            return;
-        }
 
-        $normalizedDetail = [];
-        $numericKeys = ['piso', 'apto', 'bloque', 'nivel_tu', 'nivel_min', 'nivel_max'];
-
-        foreach ($this->detail as $index => $tu) {
-            if (!is_array($tu)) {
-                throw new RuntimeException("Canonical violation: TU at index {$index} is not an object.");
-            }
-
-            // 1. Presence Checks
-            $requiredKeys = ['tu_id', 'piso', 'apto', 'bloque', 'nivel_tu', 'nivel_min', 'nivel_max', 'cumple', 'losses'];
-            foreach ($requiredKeys as $key) {
-                if (!array_key_exists($key, $tu)) {
-                    throw new RuntimeException("Canonical violation: missing '{$key}' in TU at index {$index}.");
-                }
-            }
-
-            // 2. Type Compatibility Checks
-            if (!is_string($tu['tu_id']) || empty(trim($tu['tu_id']))) {
-                throw new RuntimeException("Canonical violation: 'tu_id' must be a non-empty string in TU at index {$index}.");
-            }
-            foreach ($numericKeys as $key) {
-                if (!is_numeric($tu[$key])) {
-                    throw new RuntimeException("Canonical violation: '{$key}' must be numeric in TU at index {$index}.");
-                }
-            }
-            if (!is_bool($tu['cumple'])) {
-                // Allow 0 or 1 from JSON, which are not strictly booleans but are bool-compatible
-                if ($tu['cumple'] !== 0 && $tu['cumple'] !== 1) {
-                     throw new RuntimeException("Canonical violation: 'cumple' must be a boolean (or 0/1) in TU at index {$index}.");
-                }
-            }
-            if (!is_array($tu['losses'])) {
-                throw new RuntimeException("Canonical violation: 'losses' must be an array in TU at index {$index}.");
-            }
-
-            // 3. Normalize and build the new array
-            $normalizedDetail[] = [
-                'tu_id'     => (string)$tu['tu_id'],
-                'piso'      => (int)$tu['piso'],
-                'apto'      => (int)$tu['apto'],
-                'bloque'    => (int)$tu['bloque'],
-                'nivel_tu'  => (float)$tu['nivel_tu'],
-                'nivel_min' => (float)$tu['nivel_min'],
-                'nivel_max' => (float)$tu['nivel_max'],
-                'cumple'    => (bool)$tu['cumple'],
-                'losses'    => $tu['losses'],
-            ];
-        }
-
-        // Overwrite the original detail array with the fully validated and normalized version.
-        $this->detail = $normalizedDetail;
-    }
 
     /* ===============================
        Public API (STRICT)
@@ -119,12 +75,78 @@ class ResultParser
         ];
     }
 
+
+
     public function canonical(): array
     {
+        if (!is_array($this->detail)) {
+            throw new \DomainException('Canonical detail must be an array.');
+        }
+
+        $normalizedDetail = [];
+        $numericKeys = ['piso','apto','bloque','nivel_tu','nivel_min','nivel_max'];
+
+        foreach ($this->detail as $index => $tu) {
+
+            if (!is_array($tu)) {
+                throw new \DomainException("TU at index {$index} must be an array.");
+            }
+
+            $requiredKeys = [
+                'tu_id','piso','apto','bloque',
+                'nivel_tu','nivel_min','nivel_max',
+                'cumple','losses'
+            ];
+
+            foreach ($requiredKeys as $key) {
+                if (!array_key_exists($key, $tu)) {
+                    throw new \DomainException("Missing '{$key}' in TU at index {$index}.");
+                }
+            }
+
+            if (!is_string($tu['tu_id']) || trim($tu['tu_id']) === '') {
+                throw new \DomainException("Invalid tu_id at index {$index}.");
+            }
+
+            foreach ($numericKeys as $key) {
+                if (!is_numeric($tu[$key])) {
+                    throw new \DomainException("Invalid numeric '{$key}' at index {$index}.");
+                }
+            }
+
+            if (!is_bool($tu['cumple']) && $tu['cumple'] !== 0 && $tu['cumple'] !== 1) {
+                throw new \DomainException("Invalid cumple at index {$index}.");
+            }
+
+            if (!is_array($tu['losses'])) {
+                throw new \DomainException("Invalid losses at index {$index}.");
+            }
+
+            $normalizedDetail[] = [
+                'tu_id'     => (string)$tu['tu_id'],
+                'piso'      => (int)$tu['piso'],
+                'apto'      => (int)$tu['apto'],
+                'bloque'    => (int)$tu['bloque'],
+                'nivel_tu'  => (float)$tu['nivel_tu'],
+                'nivel_min' => (float)$tu['nivel_min'],
+                'nivel_max' => (float)$tu['nivel_max'],
+                'cumple'    => (bool)$tu['cumple'],
+                'losses'    => $tu['losses'],
+            ];
+        }
+
+        if (!is_array($this->summary)) {
+            throw new \DomainException('Canonical summary must be an array.');
+        }
+
+        if (!is_array($this->inputs)) {
+            throw new \DomainException('Canonical inputs must be an array.');
+        }
+
         return [
-            'detail'  => $this->detail,
+            'detail'  => $normalizedDetail,
             'summary' => $this->summary,
-            'inputs'  => $this->inputs, // Return inputs property
+            'inputs'  => $this->inputs,
         ];
     }
 

@@ -16,29 +16,86 @@ use DateTime;
 
 class ResultsController
 {
-    public int $opt_id;
-    public array $meta = [];
-    public array $summary = [];
-    public array $details = [];
-    public array $inputs = [];
-    public array $warnings = [];
-    public array $violations = [];
-    public ?string $created = null;
-    public string $status = 'unknown';
+    private int $opt_id;
 
     public function __construct(int $opt_id)
     {
-        if ($opt_id <= 0) {
-            throw new RuntimeException('opt_id is required');
-        }
         $this->opt_id = $opt_id;
-
-        $this->loadData();
     }
 
-    private function loadData(): void
+    public function execute(): array
     {
-        // 1. Fetch DB Row
+        try {
+
+            if ($this->opt_id <= 0) {
+                return $this->error('malformed', 'Invalid optimization identifier.');
+            }
+
+            $row = $this->fetchRow();
+
+            if (!$row) {
+                return $this->error('not_found', 'Optimization not found.');
+            }
+
+            if (empty($row['detail_json'])) {
+                return $this->error('no_results', 'Optimization has not produced results yet.');
+            }
+
+            $parser = ResultParser::fromDbRow($row);
+            $canonical = $parser->canonical();
+
+            // 🔴 STRICT structural validation
+            if (
+                !isset($canonical['summary'], $canonical['detail']) ||
+                !is_array($canonical['summary']) ||
+                !is_array($canonical['detail'])
+            ) {
+                throw new \DomainException('Invalid canonical structure.');
+            }
+
+            // Optional but Strongly Recommended: Validate each TU structure before compliance calculation
+            foreach ($canonical['detail'] as $tu) {
+                if (!is_array($tu)) {
+                    throw new \DomainException('Invalid TU structure.');
+                }
+            }
+
+            $violations = ResultComplianceService::calculateViolations($canonical['detail']);
+
+            $meta = $parser->meta();
+            if (isset($meta['created_at']) && $meta['created_at'] instanceof \DateTimeInterface) {
+                $meta['created_at'] = $meta['created_at']->format('Y-m-d H:i:s');
+            }
+
+            return [
+                'status' => 'success',
+                'meta' => $meta,
+                'summary' => $canonical['summary'],
+                'details' => $canonical['detail'],
+                'inputs' => $canonical['inputs'],
+                'violations' => $violations,
+                'warnings' => $parser->warnings(),
+            ];
+
+        } catch (\DomainException $e) {
+
+            error_log('[RESULT_DOMAIN_ERROR] ' . $e->getMessage());
+            return $this->error('malformed', 'Result data is invalid.');
+
+        } catch (\RuntimeException $e) {
+
+            error_log('[RESULT_RUNTIME_ERROR] ' . $e->getMessage());
+            return $this->error('parser_error', 'An internal processing error occurred.');
+
+        } catch (\Throwable $e) {
+
+            error_log('[RESULT_FATAL] ' . $e->getMessage());
+            return $this->error('unexpected', 'Unexpected system error.');
+        }
+    }
+
+    private function fetchRow(): ?array
+    {
         $DB  = new \Database();
         $pdo = $DB->getConnection();
 
@@ -50,42 +107,20 @@ class ResultsController
             LEFT JOIN results r ON r.opt_id = o.opt_id
             WHERE o.opt_id = :opt_id
         ";
+
         $st = $pdo->prepare($sql);
         $st->execute(['opt_id' => $this->opt_id]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
 
-        if (!$row) {
-            throw new RuntimeException('Optimization not found');
-        }
-        
-        $this->status = $row['status'] ?? 'unknown';
-        if (isset($row['created_at'])) {
-            $this->created = (new DateTime($row['created_at']))->format('Y-m-d H:i:s');
-        }
+        return $row ?: null;
+    }
 
-        // 2. Guard Clause for missing results
-        if (empty($row['detail_json'])) {
-            $this->meta = [
-                'opt_id' => $row['opt_id'],
-                'dataset_id' => $row['dataset_id'],
-                'status' => $this->status,
-                'created_at' => $this->created
-            ];
-            // Leave details, summary, etc., as empty arrays
-            return;
-        }
-
-        // 3. Parse via ResultParser
-        $parser = ResultParser::fromDbRow($row);
-        
-        $canonical = $parser->canonical();
-        $this->meta = $parser->meta();
-        $this->warnings = $parser->warnings();
-        $this->summary = $canonical['summary'] ?? [];
-        $this->details = $canonical['detail'] ?? [];
-        $this->inputs = $canonical['inputs'] ?? [];
-        
-        // 4. Use Service for Violation Calculation
-        $this->violations = ResultComplianceService::calculateViolations($this->details);
+    private function error(string $type, string $message): array
+    {
+        return [
+            'status' => 'error',
+            'error_type' => $type,
+            'message' => $message,
+        ];
     }
 }
