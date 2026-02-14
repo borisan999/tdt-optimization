@@ -8,26 +8,26 @@ use DateTime;
 
 class ResultViewModel
 {
-    /**
-     * @param array $meta
-     * @param array $summary
-     * @param array $details
-     * @param array $inputs
-     * @param array $violations
-     * @param array $warnings
-     * @param string $status
-     * @param string|null $created
-     * @param int|null $dataset_id
-     */
+    public array $details;
+    public array $summary;
+    public array $inputs;
+    public array $meta;
+    public array $violations;
+    public array $results;
+
     public function __construct(
-        public array $meta,
-        public array $summary,
-        public array $details,
-        public array $inputs,
-        public array $violations,
-        public array $warnings,
-        public string $status,
-        public ?string $created,
-        public ?int $dataset_id
-    ) {}
+        ?array $details,
+        ?array $summary,
+        ?array $inputs,
+        ?array $meta,
+        ?array $violations,
+        ?array $results
+    ) {
+        $this->details = $details ?? [];
+        $this->summary = $summary ?? [];
+        $this->inputs = $inputs ?? [];
+        $this->meta = $meta ?? [];
+        $this->violations = $violations ?? [];
+        $this->results = $results ?? [];
+    }
 }

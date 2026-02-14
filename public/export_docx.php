@@ -105,43 +105,46 @@ if (!$result) {
     die('Optimization result not found');
 }
 
-$summary = json_decode($result['summary_json'], true);
-$parser = ResultParser::fromDbRow($result); // Pass the entire row
+// --------------------------------------------------
+// Build Canonical Model (Single Source of Truth)
+// --------------------------------------------------
+$parser = ResultParser::fromDbRow($result);
+
 if ($parser->hasErrors()) {
     die('Error parsing result: ' . implode(', ', $parser->errors()));
 }
+
 $canonical = $parser->canonical();
-$detail    = $parser->details(); // Keep legacy detail for non-inventory parts of the report for now
-$inputs    = $parser->inputs();   // Keep legacy inputs for other parts
 
+$summary  = $canonical['summary']  ?? [];
+$inputs   = $canonical['inputs']   ?? [];
+$detail   = $canonical['detail']   ?? [];
+$warnings = $canonical['warnings'] ?? [];
 
-if (!is_array($detail) || empty($detail)) { // Still check legacy detail if used elsewhere
-    die('Invalid or empty detail_json');
+// Safety validation
+if (!is_array($detail) || empty($detail)) {
+    die('Invalid or empty canonical detail data');
 }
 
-// Prepare Categorized Inventory
-// Check if canonical data is available and valid for inventory aggregation
-if (empty($canonical) || !isset($canonical['vertical_distribution']) || !isset($canonical['floors'])) {
-    die('Canonical data not available or invalid for inventory export.');
+if (
+    empty($canonical['vertical_distribution']) ||
+    empty($canonical['floors'])
+) {
+    die('Canonical topology incomplete for inventory export.');
 }
-$aggregator = new InventoryAggregator($canonical); // Pass canonical data
+
+// --------------------------------------------------
+// Inventory Aggregation
+// --------------------------------------------------
+$aggregator = new InventoryAggregator($canonical);
 $aggregatedData = $aggregator->aggregate();
 $categorizedInventory = $aggregatedData['inventory'];
 $allTotals = $aggregatedData['totals'];
 
-
-
 // --------------------------------------------------
-// Resolve global P_in (display only)
+// Resolve Global Input Power (Display Only)
 // --------------------------------------------------
-$GLOBAL_P_IN = null;
-if (isset($canonical['global_parameters']['input_power_dbuv'])) {
-    $GLOBAL_P_IN = (float)$canonical['global_parameters']['input_power_dbuv'];
-} elseif (isset($summary['input_level'])) { // Legacy fallback
-    $GLOBAL_P_IN = (float)$summary['input_level'];
-} elseif (isset($summary['P_in (entrada) (dBµV)'])) { // Legacy fallback
-    $GLOBAL_P_IN = (float)$summary['P_in (entrada) (dBµV)'];
-}
+$GLOBAL_P_IN = $inputs['potencia_entrada'] ?? null;
 
 // --------------------------------------------------
 // DOCX generation
@@ -164,7 +167,7 @@ $header->addText(
 
 // Add Footer (for warnings)
 $footer = $section->addFooter();
-$canonicalWarnings = $parser->warnings();
+$canonicalWarnings = $warnings;
 if (!empty($canonicalWarnings)) {
     $footer->addText('---', ['size' => 9]);
     $footer->addText('Notas de Ingeniería y Supuestos del Modelo:', ['bold' => true, 'size' => 9]);
@@ -264,12 +267,11 @@ $section->addText('Resumen total por capa de distribución:', ['italic' => true]
 foreach ($allTotals['Vertical Distribution'] as $totalItem) {
     $verticalTable->addRow();
     $verticalTable->addCell(1500)->addText('TOTAL', ['bold' => true]);
-    $verticalTable->addCell(1500)->addText($totalItem['Scope'], ['bold' => true]); // Use Scope for consistency
-    $verticalTable->addCell(3000)->addText($totalItem['Tipo'], ['bold' => true]); // Tipo
-    $verticalTable->addCell(1000)->addText($totalItem['Componente'], ['bold' => true]); // Componente
-    $verticalTable->addCell(1500)->addText($totalItem['Unidad'], ['bold' => true]); // Unidad
-    $verticalTable->addCell(3000)->addText($totalItem['Cantidad'], ['bold' => true]); // Cantidad
-    $verticalTable->addCell(3000)->addText('', ['bold' => true]); // Observación empty
+    $verticalTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]); // Use Tipo
+    $verticalTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]); // Componente
+    $verticalTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]); // Unidad
+    $verticalTable->addCell(1500)->addText($totalItem['Cantidad'], ['bold' => true]); // Cantidad
+    $verticalTable->addCell(3000)->addText($totalItem['Observación'] ?? '', ['bold' => true]); // Observación from totalItem
 }
 $section->addTextBreak(2);
 
@@ -463,16 +465,16 @@ $tuTable->addCell(1500)->addText('Estado', ['bold' => true]);
 
 foreach ($detail as $tu) {
     $tuTable->addRow();
-    $tuTable->addCell()->addText($tu['Toma'] ?? 'N/A');
-    $tuTable->addCell()->addText($tu['Piso'] ?? 'N/A');
-    $tuTable->addCell()->addText($tu['Apto'] ?? 'N/A');
+    $tuTable->addCell()->addText($tu['tu_id'] ?? 'N/A');
+    $tuTable->addCell()->addText((string)($tu['piso'] ?? 'N/A'));
+    $tuTable->addCell()->addText((string)($tu['apto'] ?? 'N/A'));
     $tuTable->addCell()->addText(
-        isset($tu['Nivel TU Final (dBµV)'])
-            ? number_format((float)$tu['Nivel TU Final (dBµV)'], 2)
+        isset($tu['nivel_tu'])
+            ? number_format((float)$tu['nivel_tu'], 2)
             : 'N/A'
     );
     $tuTable->addCell()->addText(
-        $tu['Estado'] ?? ($tu['OK'] ?? 'Dentro de rango')
+        ($tu['cumple'] ?? false) ? 'Dentro de rango' : 'Fuera de rango'
     );
 }
 $section->addTextBreak(2);

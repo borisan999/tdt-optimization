@@ -4,32 +4,53 @@ declare(strict_types=1);
 
 namespace app\services;
 
-class ResultComplianceService
+use DomainException;
+
+final class ResultComplianceService
 {
     /**
-     * @param array $details The canonical 'detail' array where each item is a TU.
-     * @return array The list of TUs that have violations.
+     * Calculate compliance violations for canonical TUs.
+     *
+     * @param array<int, array<string,mixed>> $details The canonical 'detail' array where each item is a TU.
+     * @return array<int, array<string,mixed>> The list of TUs that have violations. Each TU copy is returned (immutable).
+     *
+     * @throws DomainException If a TU is malformed.
      */
     public static function calculateViolations(array $details): array
     {
         $violations = [];
 
-        foreach ($details as $tu) {
-            $nivel = (float)($tu['nivel_tu'] ?? 0);
-            $min = (float)($tu['nivel_min'] ?? 48.0);
-            $max = (float)($tu['nivel_max'] ?? 69.0);
+        foreach ($details as $index => $tu) {
+            if (!is_array($tu)) {
+                throw new DomainException("TU at index {$index} must be an array.");
+            }
+
+            // Required numeric fields
+            $numericKeys = ['nivel_tu', 'nivel_min', 'nivel_max'];
+            foreach ($numericKeys as $key) {
+                if (!isset($tu[$key]) || !is_numeric($tu[$key])) {
+                    throw new DomainException("TU at index {$index} is missing numeric field '{$key}' or it's invalid.");
+                }
+            }
+
+            $nivel = (float)$tu['nivel_tu'];
+            $min   = (float)$tu['nivel_min'];
+            $max   = (float)$tu['nivel_max'];
+
+            // Create a copy to preserve immutability
+            $tuCopy = $tu;
 
             if ($nivel < $min) {
-                $tu['_violation_type'] = 'LOW';
-                $tu['_violation_delta'] = round($nivel - $min, 2);
-                $violations[] = $tu;
+                $tuCopy['_violation_type']  = 'LOW';
+                $tuCopy['_violation_delta'] = round($nivel - $min, 2);
+                $violations[] = $tuCopy;
             } elseif ($nivel > $max) {
-                $tu['_violation_type'] = 'HIGH';
-                $tu['_violation_delta'] = round($nivel - $max, 2);
-                $violations[] = $tu;
+                $tuCopy['_violation_type']  = 'HIGH';
+                $tuCopy['_violation_delta'] = round($nivel - $max, 2);
+                $violations[] = $tuCopy;
             }
         }
-        
+
         return $violations;
     }
 }

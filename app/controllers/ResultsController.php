@@ -6,10 +6,12 @@ namespace app\controllers;
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../helpers/ResultParser.php';
-require_once __DIR__ . '/../services/ResultComplianceService.php'; // Include the new service
+require_once __DIR__ . '/../services/ResultComplianceService.php';
+require_once __DIR__ . '/../viewmodels/ResultViewModel.php';
 
 use app\helpers\ResultParser;
 use app\services\ResultComplianceService;
+use app\viewmodels\ResultViewModel;
 use PDO;
 use RuntimeException;
 use DateTime;
@@ -26,75 +28,77 @@ class ResultsController
     public function execute(): array
     {
         try {
-
-            if ($this->opt_id <= 0) {
-                return $this->error('malformed', 'Invalid optimization identifier.');
+            // STEP 0.2 — Validation & Fetching
+            $resultId = $this->opt_id;
+            if (!$resultId) {
+                throw new \DomainException('Missing result ID.');
             }
 
-            $row = $this->fetchRow();
-
+            $row = $this->fetchResultRow($resultId); // Implement DB fetch
             if (!$row) {
-                return $this->error('not_found', 'Optimization not found.');
+                throw new \DomainException('Result not found.');
             }
 
-            if (empty($row['detail_json'])) {
-                return $this->error('no_results', 'Optimization has not produced results yet.');
+            if (!isset($row['detail_json']) || trim($row['detail_json']) === '') {
+                throw new \DomainException('Missing detail_json in DB row.');
             }
 
-            $parser = ResultParser::fromDbRow($row);
-            $canonical = $parser->canonical();
+            $parser = \app\helpers\ResultParser::fromDbRow($row);
 
-            // 🔴 STRICT structural validation
-            if (
-                !isset($canonical['summary'], $canonical['detail']) ||
-                !is_array($canonical['summary']) ||
-                !is_array($canonical['detail'])
-            ) {
-                throw new \DomainException('Invalid canonical structure.');
+            // STEP 0.3 — Canonical validation
+            $canonical = $parser->canonical(); // Already validates internally
+
+            // STEP 0.4 — Optional compliance / metrics
+            $violations = [];
+            try {
+                $violations = \app\services\ResultComplianceService::calculateViolations($canonical['detail']);
+            } catch (\Throwable $e) {
+                error_log("Compliance calculation error: " . $e->getMessage());
+                // Keep $violations empty — don’t break view
             }
 
-            // Optional but Strongly Recommended: Validate each TU structure before compliance calculation
-            foreach ($canonical['detail'] as $tu) {
-                if (!is_array($tu)) {
-                    throw new \DomainException('Invalid TU structure.');
-                }
-            }
-
-            $violations = ResultComplianceService::calculateViolations($canonical['detail']);
-
+            // STEP 0.5 — Normalize meta (DateTime -> string)
             $meta = $parser->meta();
             if (isset($meta['created_at']) && $meta['created_at'] instanceof \DateTimeInterface) {
                 $meta['created_at'] = $meta['created_at']->format('Y-m-d H:i:s');
             }
 
             return [
-                'status' => 'success',
-                'meta' => $meta,
-                'summary' => $canonical['summary'],
-                'details' => $canonical['detail'],
-                'inputs' => $canonical['inputs'],
-                'violations' => $violations,
-                'warnings' => $parser->warnings(),
+                'status'    => 'success',
+                'viewModel' => new \app\viewmodels\ResultViewModel(
+                    $canonical['detail'],
+                    $canonical['summary'],
+                    $canonical['inputs'],
+                    $meta,
+                    $violations,
+                    $row
+                ),
             ];
 
         } catch (\DomainException $e) {
-
-            error_log('[RESULT_DOMAIN_ERROR] ' . $e->getMessage());
-            return $this->error('malformed', 'Result data is invalid.');
-
+            return [
+                'status' => 'error',
+                'error_type' => 'parser_error',
+                'message' => 'Unable to parse result safely.',
+            ];
         } catch (\RuntimeException $e) {
-
-            error_log('[RESULT_RUNTIME_ERROR] ' . $e->getMessage());
-            return $this->error('parser_error', 'An internal processing error occurred.');
-
+            return [
+                'status' => 'error',
+                'error_type' => 'malformed',
+                'message' => 'Unexpected runtime error while processing result.',
+            ];
         } catch (\Throwable $e) {
-
-            error_log('[RESULT_FATAL] ' . $e->getMessage());
-            return $this->error('unexpected', 'Unexpected system error.');
+            error_log("Unexpected error in ResultsController: " . $e->getMessage());
+            error_log($e->getTraceAsString());
+            return [
+                'status' => 'error',
+                'error_type' => 'unknown',
+                'message' => 'An internal error occurred.',
+            ];
         }
     }
 
-    private function fetchRow(): ?array
+    private function fetchResultRow(int $resultId): ?array
     {
         $DB  = new \Database();
         $pdo = $DB->getConnection();
@@ -109,18 +113,9 @@ class ResultsController
         ";
 
         $st = $pdo->prepare($sql);
-        $st->execute(['opt_id' => $this->opt_id]);
+        $st->execute(['opt_id' => $resultId]);
         $row = $st->fetch(PDO::FETCH_ASSOC);
 
         return $row ?: null;
-    }
-
-    private function error(string $type, string $message): array
-    {
-        return [
-            'status' => 'error',
-            'error_type' => $type,
-            'message' => $message,
-        ];
     }
 }
