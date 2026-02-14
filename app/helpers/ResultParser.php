@@ -145,7 +145,7 @@ class ResultParser
 
         $topology = $this->buildTopology();
 
-        return [
+        $canonical = [
             'schema_version' => 1, // Added for future-proofing
             'detail'  => $normalizedDetail,
             'summary' => $this->summary,
@@ -154,6 +154,50 @@ class ResultParser
             'floors' => $topology['floors'],
             'warnings' => $this->warnings(), // Add warnings to canonical output
         ];
+
+        $this->validateCanonicalStructure($canonical);
+
+        return $canonical;
+    }
+
+    private function validateCanonicalStructure(array $canonical): void
+    {
+        $requiredKeys = [
+            'vertical_distribution',
+            'floors',
+            'detail',
+            'warnings'
+        ];
+
+        foreach ($requiredKeys as $key) {
+            if (!array_key_exists($key, $canonical)) {
+                throw new \RuntimeException("Canonical structure missing key: {$key}");
+            }
+        }
+
+        if (!is_array($canonical['floors'])) {
+            throw new \RuntimeException("Canonical floors must be array");
+        }
+
+        if (!is_array($canonical['vertical_distribution'])) {
+            throw new \RuntimeException("Canonical vertical_distribution must be array");
+        }
+        
+        if (!is_array($canonical['detail'])) {
+            throw new \RuntimeException("Canonical detail must be array");
+        }
+
+        $requiredTuKeys = ['tu_id', 'piso', 'apto', 'nivel_tu', 'cumple'];
+        foreach ($canonical['detail'] as $index => $tu) {
+            if (!is_array($tu)) {
+                throw new \RuntimeException("TU entry at index {$index} must be array");
+            }
+            foreach ($requiredTuKeys as $key) {
+                if (!array_key_exists($key, $tu)) {
+                    throw new \RuntimeException("TU entry at index {$index} is missing key: {$key}");
+                }
+            }
+        }
     }
 
     private function buildTopology(): array
