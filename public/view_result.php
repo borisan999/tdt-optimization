@@ -8,6 +8,59 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+session_start(); // Ensure session is started
+
+// Handle Infeasible Results first
+if (isset($_SESSION['optimization_result'])) {
+    $result = $_SESSION['optimization_result'];
+    unset($_SESSION['optimization_result']); // Clear the session variable
+
+    if ($result['status'] === 'infeasible') {
+        include __DIR__ . '/templates/header.php';
+        include __DIR__ . '/templates/navbar.php';
+        ?>
+        <div class="container my-4">
+            <div class="card border-warning shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Optimization Infeasible</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">The solver could not find a feasible solution for the given input parameters.</p>
+                    <hr>
+                    <dl class="row">
+                        <dt class="col-sm-3">Dataset ID</dt>
+                        <dd class="col-sm-9"><?= htmlspecialchars($result['dataset_id'] ?? 'N/A') ?></dd>
+
+                        <dt class="col-sm-3">Optimization ID</dt>
+                        <dd class="col-sm-9"><?= htmlspecialchars($result['opt_id'] ?? 'N/A') ?></dd>
+
+                        <dt class="col-sm-3">Solver Message</dt>
+                        <dd class="col-sm-9">
+                            <code class="text-danger"><?= htmlspecialchars($result['message'] ?? 'No message provided.') ?></code>
+                        </dd>
+                    </dl>
+                    <hr>
+                    <h5>Possible Reasons:</h5>
+                    <ul>
+                        <li>Excessive cable lengths causing high attenuation.</li>
+                        <li>Trunk power level is insufficient for the building's size.</li>
+                        <li>The selected passive components (splitters, taps) are not suitable.</li>
+                        <li>Minimum required signal level (Nivel Mínimo) is set too high.</li>
+                        <li>Maximum allowed signal level (Nivel Máximo) is set too low.</li>
+                    </ul>
+                    <a href="enter_data.php?dataset_id=<?= htmlspecialchars($result['dataset_id'] ?? 0) ?>" class="btn btn-primary mt-3">
+                        <i class="fas fa-edit"></i> Review and Adjust Input Data
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php
+        include __DIR__ . '/templates/footer.php';
+        exit; // IMPORTANT: Stop the script here
+    }
+}
+
+
 require_once __DIR__ . '/../app/auth/require_login.php';
 require_once __DIR__ . '/../app/controllers/ResultsController.php';
 

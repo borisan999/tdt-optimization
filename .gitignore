@@ -34,3 +34,4 @@ storage/temp/uploaded_excels/
 
 # Any local-only backups
 backup_*.sql
+.~lock.*

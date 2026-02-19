@@ -386,223 +386,254 @@ class DatasetController
         include __DIR__ . "/../../public/enter_data.php";
     }
 
-   /**
-     * Upload Excel (three-sheet template):
-     *  - sheet "parametros_generales" -> key/value (A=param_name, B=param_value)
-     *  - sheet "apartamentos"         -> columns: piso, apartamento, tus_requeridos, largo_cable_derivador, largo_cable_repartidor
-     *  - sheet "tu"                   -> columns: piso, apartamento, tu_index, largo_cable_tu
-     *
-     * On success:
-     *  - create dataset row in datasets
-     *  - save parametros_generales rows (parametros_generales table)
-     *  - save dataset_rows for apartments and tu rows (DatasetRow->addRow)
-     *  - store loaded data in session: loaded_params, loaded_dataset (like history load)
-     *  - redirect to enter_data.php?loaded=1&dataset_id=...
-     */
-    /**
-     * Upload Excel (production, with validation rules).
-     */
-    private function uploadExcel()
+    private function jsonResponse($data)
     {
-        // composer autoload for PhpSpreadsheet
-        require_once __DIR__ . "/../../vendor/autoload.php";
-        // ensure validation model available
-        require_once __DIR__ . "/../models/ValidationEngine.php";
-        require_once __DIR__ . "/../models/ValidationRules.php";
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
 
-        $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+    private function deepKsort(&$array)
+    {
+        if (!is_array($array)) return;
 
-        if (!isset($_FILES['excel_file'])) {
-            $this->logEvent('error', 'No file uploaded', $_SESSION['user_id'] ?? null);
-            http_response_code(400); die("No file uploaded.");
-        }
-
-        $tmp = $_FILES['excel_file']['tmp_name'];
-        if (!is_uploaded_file($tmp)) {
-            $this->logEvent('error', 'Upload file missing in tmp', $_SESSION['user_id'] ?? null);
-            http_response_code(400); die("Upload failed.");
-        }
-
-        try {
-            $spreadsheet = $reader->load($tmp);
-        } catch (\Throwable $e) {
-            $this->logEvent('error', 'PhpSpreadsheet load error: ' . $e->getMessage(), $_SESSION['user_id'] ?? null);
-            http_response_code(500); die("Failed to read Excel file: " . htmlspecialchars($e->getMessage()));
-        }
-
-        // required sheet names
-        $requiredSheets = ['parametros_generales', 'apartamentos', 'tu'];
-        foreach ($requiredSheets as $s) {
-            if (!$spreadsheet->sheetNameExists($s)) {
-                $this->logEvent('error', "Missing sheet: $s", $_SESSION['user_id'] ?? null);
-                http_response_code(400); die("Excel file must include sheet: $s");
+        ksort($array);
+        foreach ($array as &$value) {
+            if (is_array($value)) {
+                $this->deepKsort($value);
             }
-        }
-
-        $pdo = (new Database())->getConnection();
-
-        try {
-            $pdo->beginTransaction();
-
-            // create dataset record
-            $datasetModel = new Dataset();
-            $dataset_id = $datasetModel->create($_SESSION['user_id'] ?? null, "pending");
-
-            $gpModel = new GeneralParams();
-            $rowModel = new DatasetRow();
-            $validator = new ValidationRules();
-
-            /*
-            * 1) Parse parametros_generales
-            */
-            $sheet = $spreadsheet->getSheetByName('parametros_generales');
-            $rows = $sheet->toArray(null, true, true, true);
-            $params = []; // Initialize $params here
-            foreach ($rows as $rnum => $r) {
-                $name = trim((string)($r['A'] ?? ''));
-                $val  = trim((string)($r['B'] ?? ''));
-
-                if ($name === '' && $val === '') continue;
-                $lower = strtolower($name);
-                if (in_array($lower, ['param_name','parameter','param'])) continue;
-
-                // validate general parameter if rules exist
-                $msgs = $validator->validate($name, $val);
-                foreach ($msgs as $m) {
-                    // log warnings, abort on error
-                    if ($m['severity'] === 'error') {
-                        throw new \Exception("General param '{$name}': {$m['message']}");
-                    } else {
-                        $this->logEvent('warning', "General param '{$name}': {$m['message']}", $_SESSION['user_id'] ?? null);
-                    }
-                }
-
-                $params[$name] = $val;
-            }
-
-            if (!empty($params)) {
-                $gpModel->saveForDataset($dataset_id, $params);
-            }
-
-            /*
-            * 2) Parse "apartamentos" sheet and insert rows
-            */
-            $apartamentosSheet = $spreadsheet->getSheetByName('apartamentos');
-            $apartamentosRows = $apartamentosSheet->toArray(null, true, true, true);
-            
-            // Skip header row
-            $headerSkipped = false;
-            $record_index = 0; // Initialize record_index for apartment rows
-
-            foreach ($apartamentosRows as $rnum => $r) {
-                if (!$headerSkipped) {
-                    $headerSkipped = true;
-                    continue;
-                }
-
-                $piso                   = trim((string)($r['A'] ?? ''));
-                $apartamento            = trim((string)($r['B'] ?? ''));
-                $tus_requeridos         = trim((string)($r['C'] ?? ''));
-                $largo_cable_derivador  = trim((string)($r['D'] ?? ''));
-                $largo_cable_repartidor = trim((string)($r['E'] ?? ''));
-
-                if ($piso === '' && $apartamento === '') continue; // Skip empty rows
-
-                // Validate (simplified for now, can be expanded with applyValidation)
-                if (!is_numeric($piso) || !is_numeric($apartamento) || !is_numeric($tus_requeridos) || !is_numeric($largo_cable_derivador) || !is_numeric($largo_cable_repartidor)) {
-                    $_SESSION['upload_warnings'][] = "Row {$rnum} in 'apartamentos' sheet contains non-numeric data. Skipping row.";
-                    continue;
-                }
-
-                $rowModel->addRow($dataset_id, $record_index, "piso", $piso, "floor");
-                $rowModel->addRow($dataset_id, $record_index, "apartamento", $apartamento, "apt");
-                $rowModel->addRow($dataset_id, $record_index, "tus_requeridos", $tus_requeridos, "units");
-                $rowModel->addRow($dataset_id, $record_index, "largo_cable_derivador", $largo_cable_derivador, "m");
-                $rowModel->addRow($dataset_id, $record_index, "largo_cable_repartidor", $largo_cable_repartidor, "m");
-                $record_index++;
-            }
-
-            /*
-            * 3) Parse "tu" sheet and insert rows
-            */
-            $tuSheet = $spreadsheet->getSheetByName('tu');
-            $tuRows = $tuSheet->toArray(null, true, true, true);
-
-            // Skip header row
-            $headerSkipped = false;
-            
-            foreach ($tuRows as $rnum => $r) {
-                if (!$headerSkipped) {
-                    $headerSkipped = true;
-                    continue;
-                }
-
-                $piso        = trim((string)($r['A'] ?? ''));
-                $apartamento = trim((string)($r['B'] ?? ''));
-                $tu_index    = trim((string)($r['C'] ?? ''));
-                $largo_cable_tu = trim((string)($r['D'] ?? ''));
-
-                if ($piso === '' && $apartamento === '') continue; // Skip empty rows
-
-                // Validate (simplified for now)
-                if (!is_numeric($piso) || !is_numeric($apartamento) || !is_numeric($tu_index) || !is_numeric($largo_cable_tu)) {
-                    $_SESSION['upload_warnings'][] = "Row {$rnum} in 'tu' sheet contains non-numeric data. Skipping row.";
-                    continue;
-                }
-
-                // Generate canonical tu_id
-                $tu_id = "P{$piso}A{$apartamento}TU{$tu_index}";
-
-                // Now save each field to dataset_rows using addRow
-                // record_index continues from apartment rows to maintain uniqueness
-                $rowModel->addRow($dataset_id, $record_index, "tu_id", $tu_id, null); // Add tu_id
-                $rowModel->addRow($dataset_id, $record_index, "piso", $piso, "floor");
-                $rowModel->addRow($dataset_id, $record_index, "apartamento", $apartamento, "apt");
-                $rowModel->addRow($dataset_id, $record_index, "tu_index", $tu_index, null);
-                $rowModel->addRow($dataset_id, $record_index, "largo_cable_tu", $largo_cable_tu, "m");
-                $record_index++; // Increment record_index for each TU
-            }
-
-            // Store parameters in session (ensure it's always an array)
-            $_SESSION['loaded_params'] = $params;
-            $_SESSION['loaded_dataset_id'] = $dataset_id;
-
-            // For both UI (to render tables) and CanonicalMapperService (for processing),
-            // we use the structured data directly.
-            // It's assumed the UI JavaScript expects this format, with 'apartments' and 'tus' keys.
-            $rowModel = new DatasetRow(); // Already instantiated - this line is redundant here, can be removed.
-
-            /**
-             * Rebuild canonical dataset from DB rows
-             */
-            // buildStructuredData now returns ['apartments' => [...], 'tus' => [...]]
-            $structuredData = $rowModel->buildStructuredData($dataset_id); 
-
-            /**
-             * Rehydrate editor state
-             */
-            $_SESSION['loaded_canonical_dataset'] = [
-                'inputs'      => $_SESSION['loaded_params'] ?? [], // Use $_SESSION['loaded_params']
-                'apartments'  => $structuredData['apartments'], // Directly use the apartments array
-                'tus'         => $structuredData['tus']       // Directly use the tus array
-            ];
-
-            // commit
-            $pdo->commit();
-
-            $this->logEvent('info', "Excel upload processed dataset_id={$dataset_id}", $_SESSION['user_id'] ?? null);
-
-            // redirect to manual form that will auto-fill from session
-            header("Location: ../../public/enter_data.php?loaded=1&dataset_id={$dataset_id}");
-            exit();
-
-        } catch (\Throwable $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            $this->logEvent('error', "Upload failed: " . $e->getMessage(), $_SESSION['user_id'] ?? null);
-            http_response_code(400);
-            die("Upload failed: " . htmlspecialchars($e->getMessage()));
         }
     }
+
+    private function canonicalJson($data)
+    {
+        return json_encode(
+            $data,
+            JSON_UNESCAPED_UNICODE |
+            JSON_UNESCAPED_SLASHES |
+            JSON_PRESERVE_ZERO_FRACTION
+        );
+    }
+
+    private function castNumeric($value)
+    {
+        if (is_numeric($value)) {
+            if (strpos((string)$value, '.') !== false) {
+                return (float)$value;
+            }
+            return (int)$value;
+        }
+        return $value;
+    }
+
+   /**
+     * Upload Excel (production, with validation rules).
+     */
+    public function uploadExcel()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            die("Invalid request method.");
+        }
+
+        if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {
+            die("File upload failed.");
+        }
+
+        $ext = pathinfo($_FILES['excel_file']['name'], PATHINFO_EXTENSION);
+        if (strtolower($ext) !== 'xlsx') {
+            die("Only .xlsx files allowed.");
+        }
+
+        try {
+
+            $file = $_FILES['excel_file']['tmp_name'];
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+
+            $datasetModel = new Dataset();
+            $uploaded_by = $_SESSION['user_id'] ?? 1;
+            $dataset_id = $datasetModel->create($uploaded_by, "pending");
+
+            $canonical = [];
+
+            /* =====================================================
+            1️⃣ PARAMETROS_GENERALES
+            ====================================================== */
+            $sheet = $spreadsheet->getSheetByName('Parametros_Generales');
+            $rows = $sheet->toArray(null, true, true, false);
+
+            $paramMap = [];
+
+            foreach ($rows as $i => $row) {
+                if ($i === 0) continue;
+                if (!empty($row[0])) {
+                    $paramMap[trim($row[0])] = $this->castNumeric($row[1]);
+                }
+            }
+
+            // Map EXACT Python keys
+            $canonical['Piso_Maximo'] = $this->getv($paramMap, 'Piso_Maximo', null, 'int');
+            $canonical['apartamentos_por_piso'] = $this->getv($paramMap, 'Apartamentos_Piso', null, 'int');
+
+            $canonical['atenuacion_cable_por_metro'] =
+                $this->getv($paramMap, 'Atenuacion_Cable_dBporM', 0.2, 'float');
+
+            $canonical['atenuacion_cable_470mhz'] =
+                $this->getv($paramMap, 'Atenuacion_Cable_470MHz_dBporM', 0.127, 'float');
+
+            $canonical['atenuacion_cable_698mhz'] =
+                $this->getv($paramMap, 'Atenuacion_Cable_698MHz_dBporM', 0.1558, 'float');
+
+            $canonical['atenuacion_conector'] =
+                $this->getv($paramMap, 'Atenuacion_Conector_dB', 0.2, 'float');
+
+            $canonical['largo_cable_entre_pisos'] =
+                $this->getv($paramMap, 'Largo_Entre_Pisos_m', 3.0, 'float');
+
+            $canonical['potencia_entrada'] =
+                $this->getv($paramMap, 'Potencia_Entrada_dBuV', 110.0, 'float');
+
+            $canonical['Nivel_minimo'] =
+                $this->getv($paramMap, 'Nivel_Minimo_dBuV', 47.0, 'float');
+
+            $canonical['Nivel_maximo'] =
+                $this->getv($paramMap, 'Nivel_Maximo_dBuV', 70.0, 'float');
+
+            $canonical['Potencia_Objetivo_TU'] =
+                $this->getv($paramMap, 'Potencia_Objetivo_TU_dBuV', 60.0, 'float');
+
+            $canonical['conectores_por_union'] =
+                $this->getv($paramMap, 'Conectores_por_Union', 2, 'int');
+
+            $canonical['atenuacion_conexion_tu'] =
+                $this->getv($paramMap, 'Atenuacion_Conexion_TU_dB', 1.0, 'float');
+
+            $canonical['largo_cable_amplificador_ultimo_piso'] =
+                $this->getv($paramMap, 'Largo_Cable_Amplificador_Ultimo_Piso', 5, 'float');
+
+            $canonical['largo_cable_feeder_bloque'] =
+                $this->getv($paramMap, 'Largo_Feeder_Bloque_m (Mínimo)', 3.0, 'float');
+
+            $canonical['p_troncal'] =
+                (int) round($canonical['Piso_Maximo'] / 2, 0, PHP_ROUND_HALF_EVEN);
+
+
+            /* =====================================================
+            2️⃣ LARGO_CABLE_DERIVADOR_REPARTIDOR
+            ====================================================== */
+            $sheet = $spreadsheet->getSheetByName('largo_cable_derivador_repartido');
+            $rows = $sheet->toArray(null, true, true, false);
+
+            $lcd = [];
+            foreach ($rows as $i => $row) {
+                if ($i === 0) continue;
+                if (!empty($row[0]) && !empty($row[1])) {
+                    $key = trim($row[0]) . "|" . trim($row[1]);
+                    $lcd[$key] = $this->castNumeric($row[2]);
+                }
+            }
+            $canonical['largo_cable_derivador_repartidor'] = $lcd;
+
+            /* =====================================================
+            3️⃣ TUS REQUERIDOS
+            ====================================================== */
+            $sheet = $spreadsheet->getSheetByName('tus_requeridos_por_apartamento');
+            $rows = $sheet->toArray(null, true, true, false);
+
+            $tus = [];
+            foreach ($rows as $i => $row) {
+                if ($i === 0) continue;
+                $key = trim($row[0]) . "|" . trim($row[1]);
+                $tus[$key] = (int)$row[2];
+            }
+            $canonical['tus_requeridos_por_apartamento'] = $tus;
+
+            /* =====================================================
+            4️⃣ LARGO_CABLE_TU
+            ====================================================== */
+            $sheet = $spreadsheet->getSheetByName('largo_cable_tu');
+            $rows = $sheet->toArray(null, true, true, false);
+
+            $lctu = [];
+            foreach ($rows as $i => $row) {
+                if ($i === 0) continue;
+                $key = trim($row[0]) . "|" . trim($row[1]) . "|" . trim($row[2]);
+                $lctu[$key] = $this->castNumeric($row[3]);
+            }
+            $canonical['largo_cable_tu'] = $lctu;
+
+            /* =====================================================
+            5️⃣ DERIVADORES_DATA
+            ====================================================== */
+            $sheet = $spreadsheet->getSheetByName('derivadores_data');
+            $rows = $sheet->toArray(null, true, true, false);
+
+            $deriv = [];
+            foreach ($rows as $i => $row) {
+                if ($i === 0) continue;
+                $code = trim($row[0]);
+                $deriv[$code] = [
+                    'derivacion' => (float)$row[1],
+                    'paso' => (float)$row[2],
+                    'salidas' => (int)$row[3],
+                ];
+            }
+            $canonical['derivadores_data'] = $deriv;
+
+            /* =====================================================
+            6️⃣ REPARTIDORES_DATA
+            ====================================================== */
+            $sheet = $spreadsheet->getSheetByName('repartidores_data');
+            $rows = $sheet->toArray(null, true, true, false);
+
+            $rep = [];
+            foreach ($rows as $i => $row) {
+                if ($i === 0) continue;
+                $code = trim($row[0]);
+                $rep[$code] = [
+                    'perdida_insercion' => $this->castNumeric($row[1]),
+                    'salidas' => (int)$row[2],
+                ];
+            }
+            $canonical['repartidores_data'] = $rep;
+
+            /* =====================================================
+            7️⃣ DETERMINISTIC SORT
+            ====================================================== */
+            $this->deepKsort($canonical);
+
+            /* =====================================================
+            8️⃣ CANONICAL JSON + HASH
+            ====================================================== */
+            $json = $this->canonicalJson($canonical);
+
+            // FORENSIC DEBUGGING
+            $debug_output = "";
+            ob_start();
+            var_dump($json);
+            $debug_output .= "var_dump:\n" . ob_get_clean() . "\n";
+            $debug_output .= "strlen: " . strlen($json) . "\n";
+            $debug_output .= "bytes:\n" . print_r(unpack("C*", $json), true) . "\n";
+            file_put_contents('/home/boris/.gemini/tmp/3eeaf677a99c707c6fd9e90f29636c8e2c33bb90b53b48e418e621ce7e949348/php_debug.txt', $debug_output);
+            // END FORENSIC DEBUGGING
+
+            $hash = hash('sha256', $json);
+
+            $datasetModel->saveCanonicalInput($dataset_id, $json);
+
+            return $this->jsonResponse([
+                'success' => true,
+                'dataset_id' => $dataset_id,
+                'canonical_hash' => $hash
+            ]);
+
+        } catch (\Throwable $e) {
+            return $this->jsonResponse([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
 
     /**
      * Apply validation rules for a single field value using ValidationRules model.
@@ -652,6 +683,123 @@ class DatasetController
             // don't break the flow if logging fails
         }
     }
+    private function getv($map, $key, $default = null, $cast = 'float')
+    {
+        if (array_key_exists($key, $map)) {
+            $value = $map[$key];
+        } else {
+            $value = $default;
+        }
+
+        if ($cast === 'int') return (int)$value;
+        if ($cast === 'float') return (float)$value;
+
+        return $value;
+    }
+
+    function build_params_like_excel(array $dataset): array
+    {
+        $FLOAT_PRECISION = 6;
+
+        $inputs = $dataset['inputs'] ?? [];
+        $apartments = $dataset['apartments'] ?? [];
+        $tus = $dataset['tus'] ?? [];
+
+        // ----------------------------
+        // Helper (Excel getv equivalent)
+        // ----------------------------
+        $getv = function($key, $default = 0) use ($inputs) {
+            return isset($inputs[$key]) && $inputs[$key] !== ''
+                ? $inputs[$key]
+                : $default;
+        };
+
+        // ----------------------------
+        // Scalars (exact Excel mirror)
+        // ----------------------------
+
+        $Piso_Maximo = (int)$getv("Piso_Maximo", 0);
+        $apartamentos_por_piso = (int)$getv("Apartamentos_Piso", 0);
+
+        $params = [
+            "Piso_Maximo" => $Piso_Maximo,
+            "apartamentos_por_piso" => $apartamentos_por_piso,
+
+            "Nivel_minimo" => round((float)$getv("Nivel_Minimo_dBuV", 47), $FLOAT_PRECISION),
+            "Nivel_maximo" => round((float)$getv("Nivel_Maximo_dBuV", 77), $FLOAT_PRECISION),
+            "Potencia_Objetivo_TU" => round((float)$getv("Potencia_Objetivo_TU_dBuV", 60), $FLOAT_PRECISION),
+            "potencia_entrada" => round((float)$getv("Potencia_Entrada_dBuV", 100), $FLOAT_PRECISION),
+
+            "atenuacion_cable_por_metro" => round((float)$getv("Atenuacion_Cable_Por_Metro", 0.2), $FLOAT_PRECISION),
+            "atenuacion_cable_470mhz" => round((float)$getv("Atenuacion_Cable_470MHz", 0), $FLOAT_PRECISION),
+            "atenuacion_cable_698mhz" => round((float)$getv("Atenuacion_Cable_698MHz", 0), $FLOAT_PRECISION),
+            "atenuacion_conector" => round((float)$getv("Atenuacion_Conector", 0.2), $FLOAT_PRECISION),
+            "atenuacion_conexion_tu" => round((float)$getv("Atenuacion_Conexion_TU", 0.5), $FLOAT_PRECISION),
+
+            "largo_cable_entre_pisos" => round((float)$getv("Largo_Cable_Entre_Pisos", 3), $FLOAT_PRECISION),
+            "conectores_por_union" => (int)$getv("Conectores_Por_Union", 2),
+
+            "largo_cable_amplificador_ultimo_piso" =>
+                round((float)$getv("Largo_Cable_Amplificador_Ultimo_Piso", 0), $FLOAT_PRECISION),
+
+            "largo_cable_feeder_bloque" =>
+                round((float)$getv("Largo_Feeder_Bloque_m", 0), $FLOAT_PRECISION),
+        ];
+
+        // ----------------------------
+        // Compute p_troncal EXACTLY like Excel
+        // ----------------------------
+
+        $params["p_troncal"] = (int)round($Piso_Maximo / 2);
+
+        // ----------------------------
+        // Tuple dictionaries
+        // ----------------------------
+
+        $tus_req = [];
+        $largo_dr = [];
+        $largo_tu = [];
+
+        foreach ($apartments as $ap) {
+            $p = (int)$ap['piso'];
+            $a = (int)$ap['apartamento'];
+
+            $tus_req["$p|$a"] =
+                (int)$ap['tus_requeridos'];
+
+            $largo_dr["$p|$a"] =
+                round((float)$ap['largo_derivador'], $FLOAT_PRECISION);
+        }
+
+        foreach ($tus as $tu) {
+            $p = (int)$tu['piso'];
+            $a = (int)$tu['apartamento'];
+            $idx = (int)$tu['tu_idx'];
+
+            $largo_tu["$p|$a|$idx"] =
+                round((float)$tu['longitud'], $FLOAT_PRECISION);
+        }
+
+        ksort($tus_req);
+        ksort($largo_dr);
+        ksort($largo_tu);
+
+        $params["tus_requeridos_por_apartamento"] = $tus_req;
+        $params["largo_cable_derivador_repartidor"] = $largo_dr;
+        $params["largo_cable_tu"] = $largo_tu;
+
+        // ----------------------------
+        // Catalogs must also be injected
+        // ----------------------------
+        $params["derivadores_data"] =
+            $_SESSION['derivadores_catalog'] ?? [];
+
+        $params["repartidores_data"] =
+            $_SESSION['repartidores_catalog'] ?? [];
+
+        return $params;
+    }
+
 
     public function runPython($dataset_id)
 {
@@ -687,13 +835,13 @@ class DatasetController
     /* ---------------------------------------------------------
        2) Save canonical JSON in datasets table
     --------------------------------------------------------- */
-    $stmt = $pdo->prepare("
+    /*$stmt = $pdo->prepare("
         UPDATE datasets SET canonical_json = :canonical WHERE dataset_id = :dataset_id
     ");
     $stmt->execute([
         'canonical' => json_encode($canonical, JSON_UNESCAPED_UNICODE),
         'dataset_id'        => $dataset_id
-    ]);
+    ]);*/
 
     /* ---------------------------------------------------------
        3) Optional: populate legacy dataset_rows for backward compatibility
@@ -764,7 +912,7 @@ foreach ($canonical['tus'] as $i => $tu) {
     }
 
     /* ---------------------------------------------------------
-       5) Parse Python JSON output
+       5) Parse Python JSON output and check status
     --------------------------------------------------------- */
     $stdout = implode("\n", $output);
     $jsonStart = strpos($stdout, "{");
@@ -773,6 +921,36 @@ foreach ($canonical['tus'] as $i => $tu) {
     $data = json_decode(substr($stdout, $jsonStart), true);
     if (json_last_error() !== JSON_ERROR_NONE) {
         throw new Exception("Malformed JSON from Python: " . json_last_error_msg());
+    }
+
+    // --- Primary Status Gate ---
+    // Handle non-OK outcomes first. This is the correct architectural pattern.
+    $status = $data['status'] ?? null;
+
+    if ($status === 'infeasible') {
+        // This is a legitimate, expected outcome for some models.
+        // We redirect to the results page with a special session flag
+        // so the UI can render an 'infeasible' view.
+        $_SESSION['optimization_result'] = [
+            'status'     => 'infeasible',
+            'opt_id'     => $data['opt_id'] ?? null,
+            'dataset_id' => $data['dataset_id'] ?? null,
+            'message'    => $data['message'] ?? 'Model infeasible'
+        ];
+
+        header("Location: /tdt-optimization/public/view_result.php?opt_id=" . ($data['opt_id'] ?? 0));
+        exit;
+    }
+
+    if ($status === 'error') {
+        throw new RuntimeException(
+            "Optimization Error: " . ($data['message'] ?? 'The solver encountered an internal error.')
+        );
+    }
+
+    // We only proceed if the status is explicitly 'success'.
+    if ($status !== 'success') {
+        throw new RuntimeException("Unknown or missing optimizer status. Expected 'success', 'infeasible', or 'error'.");
     }
 
     /* ---------------------------------------------------------
@@ -836,11 +1014,36 @@ foreach ($canonical['tus'] as $i => $tu) {
        7) Insert/Update results table
     --------------------------------------------------------- */
     $opt_id = intval($data['opt_id'] ?? 0);
-    if (!$opt_id) throw new Exception("Python did not return opt_id.");
+    if (!$opt_id) {
+        throw new RuntimeException("Python did not return opt_id.");
+    }
 
-    $summaryJson = json_encode($data['summary'] ?? [], JSON_UNESCAPED_UNICODE);
+    if (empty($data['summary']) || !is_array($data['summary'])) {
+        throw new RuntimeException("Invalid or empty summary from optimizer.");
+    }
+
+    if (empty($data['inputs']) || !is_array($data['inputs'])) {
+        throw new RuntimeException("Invalid or empty inputs from optimizer.");
+    }
+
+    if (empty($canonicalDetail) || !is_array($canonicalDetail)) {
+        throw new RuntimeException("Optimizer returned zero TU results.");
+    }
+
+    if (count($canonicalDetail) === 0) {
+        throw new RuntimeException("No TU results produced.");
+    }
+
+    if (
+        isset($data['summary']['tu_total']) &&
+        $data['summary']['tu_total'] !== count($canonicalDetail)
+    ) {
+        throw new RuntimeException("Mismatch between summary TU count and detail rows.");
+    }
+
+    $summaryJson = json_encode($data['summary'], JSON_UNESCAPED_UNICODE);
     $detailJson  = json_encode($canonicalDetail, JSON_UNESCAPED_UNICODE); // Use the builder's output
-    $inputsJson  = json_encode($data['inputs'] ?? [], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    $inputsJson  = json_encode($data['inputs'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 
     error_log("Canonical TUs count: " . count($canonicalDetail));
 

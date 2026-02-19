@@ -60,4 +60,27 @@ class Dataset
         return $stmt->fetchAll();
     }
 
+    public function saveCanonicalInput($dataset_id, $json)
+    {
+        $hash = hash('sha256', $json);
+
+        $stmt = $this->pdo->prepare("
+            UPDATE datasets
+            SET canonical_json = :json,
+                canonical_hash = :hash
+            WHERE dataset_id = :id
+        ");
+
+        $stmt->execute([
+            ':json' => $json,
+            ':hash' => $hash,
+            ':id'   => $dataset_id
+        ]);
+
+        return $hash;
+    }
+
+
+
+
 }
