@@ -35,6 +35,19 @@ class Result
         }
 
     /**
+     * Save a result JSON for a dataset
+     */
+    public function saveResult($dataset_id, $opt_id, $summary_json, $detail_json, $inputs_json = '{}')
+    {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO results (dataset_id, opt_id, summary_json, detail_json, inputs_json)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([$dataset_id, $opt_id, $summary_json, $detail_json, $inputs_json]);
+    }
+
+    /**
      * Fetch all results for a given optimization ID
      */
     public function getByOptId($opt_id)

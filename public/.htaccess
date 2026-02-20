@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /tdt-optimization/public/
+
+# 1. Allow existing static assets (CSS, JS, Images, etc.) to be served directly
+# But EXCLUDE .php files from being served directly even if they exist
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_FILENAME} !\.php$
+RewriteRule ^ - [L]
+
+# 2. Route everything else (including all .php requests) to index.php
+RewriteRule ^ index.php [QSA,L]

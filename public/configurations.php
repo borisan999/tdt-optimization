@@ -18,7 +18,7 @@ include __DIR__ . '/templates/navbar.php';
             </p>
             <a
                 class="btn-primary"
-                href="/tdt-optimization/public/derivadores.php"
+                href="derivadores"
             >
                 Manage Derivadores
             </a>
@@ -32,7 +32,7 @@ include __DIR__ . '/templates/navbar.php';
             </p>
             <a
                 class="btn-primary"
-                href="/tdt-optimization/public/repartidores.php"
+                href="repartidores"
             >
                 Manage Repartidores
             </a>
@@ -46,7 +46,7 @@ include __DIR__ . '/templates/navbar.php';
             </p>
             <a
                 class="btn-primary"
-                href="/tdt-optimization/public/users.php"
+                href="users"
             >
                 Manage Users
             </a>

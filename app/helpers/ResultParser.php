@@ -92,6 +92,22 @@ class ResultParser
                 throw new \DomainException("TU at index {$index} must be an array.");
             }
 
+            // Compatibility Shim: Map legacy keys to new standardized keys
+            if (isset($tu['Toma']) && !isset($tu['tu_id'])) $tu['tu_id'] = $tu['Toma'];
+            if (isset($tu['Piso']) && !isset($tu['piso'])) $tu['piso'] = $tu['Piso'];
+            if (isset($tu['Apto']) && !isset($tu['apto'])) $tu['apto'] = $tu['Apto'];
+            if (isset($tu['Bloque']) && !isset($tu['bloque'])) $tu['bloque'] = $tu['Bloque'];
+            if (isset($tu['Nivel TU Final (dBµV)']) && !isset($tu['nivel_tu'])) $tu['nivel_tu'] = $tu['Nivel TU Final (dBµV)'];
+            
+            // Fallback for missing fields in very old results
+            if (!isset($tu['nivel_min'])) $tu['nivel_min'] = $this->inputs['Nivel_minimo'] ?? 48;
+            if (!isset($tu['nivel_max'])) $tu['nivel_max'] = $this->inputs['Nivel_maximo'] ?? 69;
+            if (!isset($tu['cumple'])) {
+                $val = (float)($tu['nivel_tu'] ?? 0);
+                $tu['cumple'] = ($val >= (float)$tu['nivel_min'] && $val <= (float)$tu['nivel_max']) ? 1 : 0;
+            }
+            if (!isset($tu['losses'])) $tu['losses'] = [];
+
             $requiredKeys = [
                 'tu_id','piso','apto','bloque',
                 'nivel_tu','nivel_min','nivel_max',
@@ -100,7 +116,7 @@ class ResultParser
 
             foreach ($requiredKeys as $key) {
                 if (!array_key_exists($key, $tu)) {
-                    throw new \DomainException("Missing '{$key}' in TU at index {$index}.");
+                    throw new \DomainException("Missing '{$key}' in TU at index {$index}. Keys present: " . implode(', ', array_keys($tu)));
                 }
             }
 
@@ -260,88 +276,84 @@ class ResultParser
             $floors_map[$floor_num]['apartments'][$apt_num]['tu_count']++;
             $floors_map[$floor_num]['apartments'][$apt_num]['apartment_internals']['tomas'][] = $tu_id;
 
-            // Process losses for horizontal and apartment internals, and accumulate vertical data per floor
-            foreach ($tu_row['losses'] as $loss) {
-                switch ($loss['segment']) {
-                    case 'riser_dentro_del_bloque':
-                        $riser_block_lengths_per_floor[$floor_num] = max($riser_block_lengths_per_floor[$floor_num] ?? 0.0, (float)($loss['value'] ?? 0.0));
-                        break;
-                    case 'riser_atenuacion_conectores':
-                        $riser_connector_attenuation_per_floor[$floor_num] = max($riser_connector_attenuation_per_floor[$floor_num] ?? 0.0, (float)($loss['value'] ?? 0.0));
-                        break;
-                    case 'riser_atenuacin_taps':
-                        $riser_taps_attenuation_per_floor[$floor_num] = max($riser_taps_attenuation_per_floor[$floor_num] ?? 0.0, (float)($loss['value'] ?? 0.0));
-                        break;
-                    case 'feeder_cable': // Horizontal cable length per floor
-                        $floors_map[$floor_num]['horizontal_distribution']['horizontal_cable_length_m'] += (float)($loss['value'] ?? 0.0);
-                        break;
-                    case 'feeder_conectores': // Horizontal connectors per floor, accumulate as float
-                        $floors_map[$floor_num]['horizontal_distribution']['horizontal_connectors_count'] += (float)($loss['value'] ?? 0.0);
-                        break;
-                    case 'derivador_piso': // Derivadores per floor, count as integer
-                        $floors_map[$floor_num]['horizontal_distribution']['total_floor_derivadores_count'] += 1;
-                        break;
-                    case 'cable_derivrep':
-                        $floors_map[$floor_num]['apartments'][$apt_num]['apartment_internals']['deriv_rep_connectors_count'] += 2.0; // Accumulate as float
-                        break;
-                    case 'cable_reptu':
-                        $floors_map[$floor_num]['apartments'][$apt_num]['apartment_internals']['rep_tu_connectors_count'] += 2.0; // Accumulate as float
-                        break;
-                    case 'conexin_tu':
-                        $floors_map[$floor_num]['apartments'][$apt_num]['apartment_internals']['conexion_tu_connectors_count'] += 1.0; // Accumulate as float
-                        break;
-                    case 'total':
-                        $apt_cable_len_from_total_loss = (float)($loss['value'] ?? 0.0) - (float)($tu_row['nivel_tu'] ?? 0.0);
-                        $floors_map[$floor_num]['apartments'][$apt_num]['apartment_internals']['calculated_apartment_cable_length_m'] = max(0.0, $apt_cable_len_from_total_loss);
-                        break;
+                    // Process losses for horizontal and apartment internals, and accumulate vertical data per floor
+                    foreach ($tu_row['losses'] as $loss) {
+                        switch ($loss['segment']) {
+                            case 'riser_dentro_del_bloque':
+                                $riser_block_lengths_per_floor[$floor_num] = max($riser_block_lengths_per_floor[$floor_num] ?? 0.0, (float)($loss['value'] ?? 0.0));
+                                break;
+                            case 'riser_atenuacion_conectores':
+                                $riser_connector_attenuation_per_floor[$floor_num] = max($riser_connector_attenuation_per_floor[$floor_num] ?? 0.0, (float)($loss['value'] ?? 0.0));
+                                break;
+                            case 'riser_atenuacin_taps':
+                                $riser_taps_attenuation_per_floor[$floor_num] = max($riser_taps_attenuation_per_floor[$floor_num] ?? 0.0, (float)($loss['value'] ?? 0.0));
+                                break;
+                            case 'feeder_cable': // Horizontal cable length per floor
+                                $floors_map[$floor_num]['horizontal_distribution']['horizontal_cable_length_m'] += (float)($loss['value'] ?? 0.0);
+                                break;
+                            case 'feeder_conectores': // Horizontal connectors per floor, accumulate as float
+                                $floors_map[$floor_num]['horizontal_distribution']['horizontal_connectors_count'] += (float)($loss['value'] ?? 0.0);
+                                break;
+                            case 'derivador_piso': // Derivadores per floor, count as integer
+                                $floors_map[$floor_num]['horizontal_distribution']['total_floor_derivadores_count'] += 1;
+                                break;
+                            case 'cable_derivrep':
+                                $floors_map[$floor_num]['apartments'][$apt_num]['apartment_internals']['deriv_rep_connectors_count'] += 2.0; // Accumulate as float
+                                break;
+                            case 'cable_reptu':
+                                $floors_map[$floor_num]['apartments'][$apt_num]['apartment_internals']['rep_tu_connectors_count'] += 2.0; // Accumulate as float
+                                break;
+                            case 'conexin_tu':
+                                $floors_map[$floor_num]['apartments'][$apt_num]['apartment_internals']['conexion_tu_connectors_count'] += 1.0; // Accumulate as float
+                                break;
+                            case 'total':
+                                // Just a marker
+                                break;
+                        }
+                    }
                 }
-            }
-        }
-        
-        // Finalize vertical distribution accumulator for rounding
-        $vertical_data_accumulator['total_antenna_trunk_cable_length_m'] = (float)($inputs['largo_cable_troncal'] ?? 0.0);
-        $vertical_data_accumulator['total_antenna_trunk_conectores_count'] = ($vertical_data_accumulator['total_antenna_trunk_cable_length_m'] > 0.0) ? 2.0 : 0.0;
-
-        foreach ($riser_block_lengths_per_floor as $length) {
-            $vertical_data_accumulator['total_riser_block_cable_length_m'] += $length;
-        }
-        // Sum attenuations as floats, then round the total sum
-        $total_riser_connector_attenuation = array_sum($riser_connector_attenuation_per_floor);
-        $vertical_data_accumulator['total_riser_connectors_count'] += $total_riser_connector_attenuation / 0.2; // Keep as float for now
-
-        $total_riser_taps_attenuation = array_sum($riser_taps_attenuation_per_floor);
-        $vertical_data_accumulator['total_riser_taps_count'] += $total_riser_taps_attenuation / 5.0; // Keep as float for now
-        
-        // Vertical splitters from inputs
-        $vertical_splitters_counts = [];
-        if (isset($inputs['derivadores_data']) && is_array($inputs['derivadores_data'])) {
-            foreach ($inputs['derivadores_data'] as $derivador) {
-                if (($derivador['paso'] ?? 0.0) > 0.0) {
-                    $splitter_model = $derivador['modelo'] ?? 'Unknown Vertical Splitter';
-                    $vertical_splitters_counts[$splitter_model] = ($vertical_splitters_counts[$splitter_model] ?? 0) + 1;
-                }
-            }
-        }
-        $vertical_data_accumulator['vertical_splitters'] = array_map(fn($model, $count) => ['splitter_model' => $model, 'count' => $count], array_keys($vertical_splitters_counts), array_values($vertical_splitters_counts));
-
-
-        // Finalize floors data (horizontal_distribution and apartment_internals) with rounding
-        foreach ($floors_map as $floor_num => &$floorData) {
-            // Apply rounding for horizontal_connectors_count after all aggregations for this floor
-            $floorData['horizontal_distribution']['horizontal_connectors_count'] = (int)round($floorData['horizontal_distribution']['horizontal_connectors_count']);
-            
-            foreach ($floorData['apartments'] as $apt_num => &$aptData) {
-                $aptData['apartment_internals']['calculated_apartment_cable_length_m'] = (float)($inputs['largo_cable_repartidor'][ "({$floor_num}, {$apt_num})" ] ?? $inputs['largo_cable_tu'][ "({$floor_num}, {$apt_num})" ] ?? 0.0);
                 
-                // Round connector counts for apartment internals
-                if ($aptData['apartment_internals']['calculated_apartment_cable_length_m'] > 0.0) {
-                    $aptData['apartment_internals']['deriv_rep_connectors_count'] = (int)round($aptData['apartment_internals']['deriv_rep_connectors_count']);
-                    $aptData['apartment_internals']['rep_tu_connectors_count'] = (int)round($aptData['apartment_internals']['rep_tu_connectors_count']);
+                // Finalize vertical distribution accumulator for rounding
+                $vertical_data_accumulator['total_antenna_trunk_cable_length_m'] = (float)($inputs['largo_cable_amplificador_ultimo_piso'] ?? 0.0);
+                $vertical_data_accumulator['total_antenna_trunk_conectores_count'] = ($vertical_data_accumulator['total_antenna_trunk_cable_length_m'] > 0.0) ? 2.0 : 0.0;
+            
+                foreach ($riser_block_lengths_per_floor as $length) {
+                    $vertical_data_accumulator['total_riser_block_cable_length_m'] += $length;
                 }
-                $aptData['apartment_internals']['conexion_tu_connectors_count'] = (int)round((float)($inputs['atenuacion_conexion_tu'] ?? 0.0) > 0.0 ? 1.0 : 0.0);
-            }
-        }
-        unset($aptData, $floorData);
+                // Sum attenuations as floats, then round the total sum
+                $total_riser_connector_attenuation = array_sum($riser_connector_attenuation_per_floor);
+                $vertical_data_accumulator['total_riser_connectors_count'] += $total_riser_connector_attenuation / 0.2; // Keep as float for now
+            
+                $total_riser_taps_attenuation = array_sum($riser_taps_attenuation_per_floor);
+                $vertical_data_accumulator['total_riser_taps_count'] += $total_riser_taps_attenuation / 5.0; // Keep as float for now
+                
+                // Vertical splitters from inputs
+                $vertical_splitters_counts = [];
+                if (isset($inputs['derivadores_data']) && is_array($inputs['derivadores_data'])) {
+                    foreach ($inputs['derivadores_data'] as $model => $specs) {
+                        // This logic might be complex if we don't know which were used. 
+                        // For now, if detail shows a derivador model, we could count it.
+                        // But buildTopology is for inventory.
+                    }
+                }
+                
+                // Finalize floors data (horizontal_distribution and apartment_internals) with rounding
+                foreach ($floors_map as $floor_num => &$floorData) {
+                    // Apply rounding for horizontal_connectors_count after all aggregations for this floor
+                    $floorData['horizontal_distribution']['horizontal_connectors_count'] = (int)round($floorData['horizontal_distribution']['horizontal_connectors_count']);
+                    
+                    foreach ($floorData['apartments'] as $apt_num => &$aptData) {
+                        $key = "{$floor_num}|{$apt_num}";
+                        $aptData['apartment_internals']['calculated_apartment_cable_length_m'] = (float)($inputs['largo_cable_derivador_repartidor'][$key] ?? 0.0);
+                        
+                        // Round connector counts for apartment internals
+                        if ($aptData['apartment_internals']['calculated_apartment_cable_length_m'] > 0.0) {
+                            $aptData['apartment_internals']['deriv_rep_connectors_count'] = (int)round($aptData['apartment_internals']['deriv_rep_connectors_count']);
+                            $aptData['apartment_internals']['rep_tu_connectors_count'] = (int)round($aptData['apartment_internals']['rep_tu_connectors_count']);
+                        }
+                        $aptData['apartment_internals']['conexion_tu_connectors_count'] = (int)round((float)($inputs['atenuacion_conexion_tu'] ?? 0.0) > 0.0 ? 1.0 : 0.0);
+                    }
+                }        unset($aptData, $floorData);
 
 
         ksort($floors_map);

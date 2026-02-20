@@ -8,7 +8,9 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-session_start(); // Ensure session is started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Handle Infeasible Results first
 if (isset($_SESSION['optimization_result'])) {
@@ -48,7 +50,7 @@ if (isset($_SESSION['optimization_result'])) {
                         <li>Minimum required signal level (Nivel Mínimo) is set too high.</li>
                         <li>Maximum allowed signal level (Nivel Máximo) is set too low.</li>
                     </ul>
-                    <a href="enter_data.php?dataset_id=<?= htmlspecialchars($result['dataset_id'] ?? 0) ?>" class="btn btn-primary mt-3">
+                    <a href="enter-data/<?= htmlspecialchars($result['dataset_id'] ?? 0) ?>" class="btn btn-primary mt-3">
                         <i class="fas fa-edit"></i> Review and Adjust Input Data
                     </a>
                 </div>

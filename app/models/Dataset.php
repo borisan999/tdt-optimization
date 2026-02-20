@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../services/CanonicalNormalizer.php";
+
+use App\Services\CanonicalNormalizer;
 
 class Dataset
 {
@@ -8,21 +11,30 @@ class Dataset
     public function __construct()
     {
         $this->pdo = (new Database())->getConnection();
-
     }
 
     /**
-     * Create a dataset record
+     * Create a dataset record with canonical JSON.
+     * Ensures normalization occurs before hashing and persistence.
      */
-    public function create($uploaded_by, $status = "pending")
+    public function createWithCanonical(array $canonicalJsonArray, $uploaded_by = 1, $status = "pending")
     {
-        $sql = "INSERT INTO datasets (uploaded_by, status) 
-                VALUES (:uploaded_by, :status)";
+        // 1. Normalize
+        $normalized = CanonicalNormalizer::normalize($canonicalJsonArray);
+        
+        // 2. Serialize and Hash
+        $json = json_encode($normalized, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $hash = hash('sha256', $json);
+
+        $sql = "INSERT INTO datasets (uploaded_by, status, canonical_json, canonical_hash) 
+                VALUES (:uploaded_by, :status, :canonical_json, :canonical_hash)";
         
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ':uploaded_by' => $uploaded_by,
-            ':status' => $status
+            ':status' => $status,
+            ':canonical_json' => $json,
+            ':canonical_hash' => $hash
         ]);
 
         return $this->pdo->lastInsertId();
@@ -49,7 +61,6 @@ class Dataset
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    
     /**
      * Return all datasets for History screen
      */
@@ -59,28 +70,4 @@ class Dataset
         $stmt = $this->pdo->query($sql);
         return $stmt->fetchAll();
     }
-
-    public function saveCanonicalInput($dataset_id, $json)
-    {
-        $hash = hash('sha256', $json);
-
-        $stmt = $this->pdo->prepare("
-            UPDATE datasets
-            SET canonical_json = :json,
-                canonical_hash = :hash
-            WHERE dataset_id = :id
-        ");
-
-        $stmt->execute([
-            ':json' => $json,
-            ':hash' => $hash,
-            ':id'   => $dataset_id
-        ]);
-
-        return $hash;
-    }
-
-
-
-
 }

@@ -1,4 +1,9 @@
 <?php
+/**
+ * public/export_input_excel.php
+ * "Close Loop" Export: Produces an Excel file that exactly matches the structure 
+ * required by ExcelProcessor.php for re-uploading.
+ */
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -21,6 +26,7 @@ try {
     $DB = new Database();
     $pdo = $DB->getConnection();
 
+    // We fetch inputs_json which contains the canonical dataset
     $sql = "SELECT inputs_json FROM results WHERE opt_id = :opt_id";
     $st = $pdo->prepare($sql);
     $st->execute(['opt_id' => $opt_id]);
@@ -37,117 +43,168 @@ try {
         die('Invalid inputs_json data');
     }
 
-    // 2. Create a new Spreadsheet object
+    // 2. Create Spreadsheet
     $spreadsheet = new Spreadsheet();
+    $spreadsheet->removeSheetByIndex(0); // Remove default sheet
 
-    // Helper to parse keys like "(1, 2, 3)"
-    if (!function_exists('parseKey')) {
-        function parseKey(string $key): array {
-            $cleaned = preg_replace('/[()\s]/', '', $key);
-            return array_map('intval', explode(',', $cleaned));
-        }
-    }
+    /* =====================================================
+    1️⃣ Parametros_Generales
+    ====================================================== */
+    $sheet = $spreadsheet->createSheet();
+    $sheet->setTitle('Parametros_Generales');
+    $sheet->setCellValue('A1', 'Key');
+    $sheet->setCellValue('B1', 'Valor');
 
-    // 3. Populate "parametros_generales" sheet
-    $sheet = $spreadsheet->getActiveSheet();
-    $sheet->setTitle('parametros_generales');
-    $sheet->setCellValue('A1', 'name');
-    $sheet->setCellValue('B1', 'value');
-
-    // Map internal python keys to the required template keys
-    $key_map = [
+    $param_mapping = [
         'Piso_Maximo'                        => 'Piso_Maximo',
         'apartamentos_por_piso'              => 'Apartamentos_Piso',
-        'largo_cable_amplificador_ultimo_piso' => 'Largo_Cable_Amplificador_Ultimo_Piso',
+        'atenuacion_cable_por_metro'         => 'Atenuacion_Cable_dBporM',
+        'atenuacion_cable_470mhz'            => 'Atenuacion_Cable_470MHz_dBporM',
+        'atenuacion_cable_698mhz'            => 'Atenuacion_Cable_698MHz_dBporM',
+        'atenuacion_conector'                => 'Atenuacion_Conector_dB',
+        'largo_cable_entre_pisos'            => 'Largo_Entre_Pisos_m',
         'potencia_entrada'                   => 'Potencia_Entrada_dBuV',
         'Nivel_minimo'                       => 'Nivel_Minimo_dBuV',
         'Nivel_maximo'                       => 'Nivel_Maximo_dBuV',
         'Potencia_Objetivo_TU'               => 'Potencia_Objetivo_TU_dBuV',
-        'largo_cable_feeder_bloque'          => 'Largo_Feeder_Bloque_m',
-        'atenuacion_cable_por_metro'         => 'Atenuacion_Cable_dBporM',
-        'atenuacion_conector'                => 'Atenuacion_Conector_dB',
-        'atenuacion_conexion_tu'             => 'Atenuacion_Conexion_TU_dB',
-        'largo_cable_entre_pisos'            => 'Largo_Entre_Pisos_m',
         'conectores_por_union'               => 'Conectores_por_Union',
+        'atenuacion_conexion_tu'             => 'Atenuacion_Conexion_TU_dB',
+        'largo_cable_amplificador_ultimo_piso' => 'Largo_Cable_Amplificador_Ultimo_Piso',
+        'largo_cable_feeder_bloque'          => 'Largo_Feeder_Bloque_m (Mínimo)',
     ];
 
-    $rowIndex = 2;
-    foreach ($key_map as $json_key => $template_key) {
-        if (isset($inputs[$json_key])) {
-            $sheet->setCellValue('A' . $rowIndex, $template_key);
-            $sheet->setCellValue('B' . $rowIndex, $inputs[$json_key]);
-            $rowIndex++;
+    $row = 2;
+    foreach ($param_mapping as $canonical_key => $excel_key) {
+        if (isset($inputs[$canonical_key])) {
+            $sheet->setCellValue('A' . $row, $excel_key);
+            $sheet->setCellValue('B' . $row, $inputs[$canonical_key]);
+            $row++;
         }
     }
 
-    // 4. Populate "apartamentos" sheet
-    $apartamentosSheet = $spreadsheet->createSheet();
-    $apartamentosSheet->setTitle('apartamentos');
-    $apartamentosSheet->setCellValue('A1', 'piso');
-    $apartamentosSheet->setCellValue('B1', 'apartamento');
-    $apartamentosSheet->setCellValue('C1', 'tus_requeridos');
-    $apartamentosSheet->setCellValue('D1', 'largo_cable_derivador');
-    $apartamentosSheet->setCellValue('E1', 'largo_cable_repartidor');
+    /* =====================================================
+    2️⃣ largo_cable_derivador_repartido
+    ====================================================== */
+    $sheet = $spreadsheet->createSheet();
+    $sheet->setTitle('largo_cable_derivador_repartido');
+    $sheet->setCellValue('A1', 'Piso');
+    $sheet->setCellValue('B1', 'Apto');
+    $sheet->setCellValue('C1', 'Longitud_m');
+
+    if (isset($inputs['largo_cable_derivador_repartidor']) && is_array($inputs['largo_cable_derivador_repartidor'])) {
+        $row = 2;
+        foreach ($inputs['largo_cable_derivador_repartidor'] as $key => $val) {
+            $parts = explode('|', $key);
+            if (count($parts) === 2) {
+                $sheet->setCellValue('A' . $row, $parts[0]);
+                $sheet->setCellValue('B' . $row, $parts[1]);
+                $sheet->setCellValue('C' . $row, $val);
+                $row++;
+            }
+        }
+    }
+
+    /* =====================================================
+    3️⃣ tus_requeridos_por_apartamento
+    ====================================================== */
+    $sheet = $spreadsheet->createSheet();
+    $sheet->setTitle('tus_requeridos_por_apartamento');
+    $sheet->setCellValue('A1', 'Piso');
+    $sheet->setCellValue('B1', 'Apto');
+    $sheet->setCellValue('C1', 'Cantidad_Tomas');
 
     if (isset($inputs['tus_requeridos_por_apartamento']) && is_array($inputs['tus_requeridos_por_apartamento'])) {
-        $rowIndex = 2;
-        foreach ($inputs['tus_requeridos_por_apartamento'] as $key => $tusRequeridos) {
-            list($piso, $apto) = parseKey($key);
-            
-            $largo_derivador = $inputs['largo_cable_derivador'][$key] ?? '';
-            $largo_repartidor = $inputs['largo_cable_repartidor'][$key] ?? '';
-
-            $apartamentosSheet->setCellValue('A' . $rowIndex, $piso);
-            $apartamentosSheet->setCellValue('B' . $rowIndex, $apto);
-            $apartamentosSheet->setCellValue('C' . $rowIndex, $tusRequeridos);
-            $apartamentosSheet->setCellValue('D' . $rowIndex, $largo_derivador);
-            $apartamentosSheet->setCellValue('E' . $rowIndex, $largo_repartidor);
-            $rowIndex++;
+        $row = 2;
+        foreach ($inputs['tus_requeridos_por_apartamento'] as $key => $val) {
+            $parts = explode('|', $key);
+            if (count($parts) === 2) {
+                $sheet->setCellValue('A' . $row, $parts[0]);
+                $sheet->setCellValue('B' . $row, $parts[1]);
+                $sheet->setCellValue('C' . $row, $val);
+                $row++;
+            }
         }
     }
 
-    // 5. Populate "tu" sheet
-    $tuSheet = $spreadsheet->createSheet();
-    $tuSheet->setTitle('tu');
-    $tuSheet->setCellValue('A1', 'piso');
-    $tuSheet->setCellValue('B1', 'apartamento');
-    $tuSheet->setCellValue('C1', 'tu_index');
-    $tuSheet->setCellValue('D1', 'largo_cable_tu');
+    /* =====================================================
+    4️⃣ largo_cable_tu
+    ====================================================== */
+    $sheet = $spreadsheet->createSheet();
+    $sheet->setTitle('largo_cable_tu');
+    $sheet->setCellValue('A1', 'Piso');
+    $sheet->setCellValue('B1', 'Apto');
+    $sheet->setCellValue('C1', 'TU Index');
+    $sheet->setCellValue('D1', 'Longitud_m');
 
     if (isset($inputs['largo_cable_tu']) && is_array($inputs['largo_cable_tu'])) {
-        $rowIndex = 2;
-        foreach ($inputs['largo_cable_tu'] as $key => $largo) {
-            list($piso, $apto, $tuIndex) = parseKey($key);
-
-            $tuSheet->setCellValue('A' . $rowIndex, $piso);
-            $tuSheet->setCellValue('B' . $rowIndex, $apto);
-            $tuSheet->setCellValue('C' . $rowIndex, $tuIndex);
-            $tuSheet->setCellValue('D' . $rowIndex, $largo);
-            $rowIndex++;
+        $row = 2;
+        foreach ($inputs['largo_cable_tu'] as $key => $val) {
+            $parts = explode('|', $key);
+            if (count($parts) === 3) {
+                $sheet->setCellValue('A' . $row, $parts[0]);
+                $sheet->setCellValue('B' . $row, $parts[1]);
+                $sheet->setCellValue('C' . $row, $parts[2]);
+                $sheet->setCellValue('D' . $row, $val);
+                $row++;
+            }
         }
     }
 
-    // 6. Set active sheet back to the first sheet
-    $spreadsheet->setActiveSheetIndex(0);
+    /* =====================================================
+    5️⃣ derivadores_data
+    ====================================================== */
+    $sheet = $spreadsheet->createSheet();
+    $sheet->setTitle('derivadores_data');
+    $sheet->setCellValue('A1', 'Modelo');
+    $sheet->setCellValue('B1', 'derivacion');
+    $sheet->setCellValue('C1', 'paso');
+    $sheet->setCellValue('D1', 'salidas');
 
-    // 7. Stream the file to the browser
-    $filename = "tdt_inputs_opt_{$opt_id}.xlsx";
+    if (isset($inputs['derivadores_data']) && is_array($inputs['derivadores_data'])) {
+        $row = 2;
+        foreach ($inputs['derivadores_data'] as $model => $specs) {
+            $sheet->setCellValue('A' . $row, $model);
+            $sheet->setCellValue('B' . $row, $specs['derivacion'] ?? 0);
+            $sheet->setCellValue('C' . $row, $specs['paso'] ?? 0);
+            $sheet->setCellValue('D' . $row, $specs['salidas'] ?? 0);
+            $row++;
+        }
+    }
+
+    /* =====================================================
+    6️⃣ repartidores_data
+    ====================================================== */
+    $sheet = $spreadsheet->createSheet();
+    $sheet->setTitle('repartidores_data');
+    $sheet->setCellValue('A1', 'Modelo');
+    $sheet->setCellValue('B1', 'perdida_insercion');
+    $sheet->setCellValue('C1', 'salidas');
+
+    if (isset($inputs['repartidores_data']) && is_array($inputs['repartidores_data'])) {
+        $row = 2;
+        foreach ($inputs['repartidores_data'] as $model => $specs) {
+            $sheet->setCellValue('A' . $row, $model);
+            $sheet->setCellValue('B' . $row, $specs['perdida_insercion'] ?? 0);
+            $sheet->setCellValue('C' . $row, $specs['salidas'] ?? 0);
+            $row++;
+        }
+    }
+
+    // 3. Finalize and Download
+    $spreadsheet->setActiveSheetIndex(0);
+    $filename = "tdt_golden_inputs_opt_{$opt_id}.xlsx";
+
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment;filename="' . $filename . '"');
     header('Cache-Control: max-age=0');
 
     $writer = new Xlsx($spreadsheet);
     $writer->save('php://output');
-
     exit;
 
 } catch (\Throwable $e) {
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
-    echo "A critical error occurred while generating the Excel file:\n\n";
-    echo "Message: " . $e->getMessage() . "\n";
-    echo "File: " . $e->getFile() . "\n";
-    echo "Line: " . $e->getLine() . "\n";
-    echo "\nTrace:\n" . $e->getTraceAsString();
+    echo "Error generating Golden Excel: " . $e->getMessage();
     exit;
 }

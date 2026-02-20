@@ -210,19 +210,23 @@ $titleTable->addCell()->addText(
 
 $titleTable->addRow();
 $titleTable->addCell()->addText('Nivel mínimo TU (dBµV)');
-$titleTable->addCell()->addText(number_format((float)($summary["min_level"] ?? 0), 2));
+$minLevel = $summary["min_nivel_tu"] ?? $summary["min_level"] ?? (count($detail) ? min(array_column($detail, 'nivel_tu')) : 0);
+$titleTable->addCell()->addText(number_format((float)$minLevel, 2));
 
 $titleTable->addRow();
 $titleTable->addCell()->addText('Nivel máximo TU (dBµV)');
-$titleTable->addCell()->addText(number_format((float)($summary["max_level"] ?? 0), 2));
+$maxLevel = $summary["max_nivel_tu"] ?? $summary["max_level"] ?? (count($detail) ? max(array_column($detail, 'nivel_tu')) : 0);
+$titleTable->addCell()->addText(number_format((float)$maxLevel, 2));
 
 $titleTable->addRow();
 $titleTable->addCell()->addText('Nivel promedio TU (dBµV)');
-$titleTable->addCell()->addText(number_format((float)($summary["avg_level"] ?? 0), 2));
+$avgLevel = $summary["avg_nivel_tu"] ?? $summary["avg_level"] ?? (count($detail) ? array_sum(array_column($detail, 'nivel_tu')) / count($detail) : 0);
+$titleTable->addCell()->addText(number_format((float)$avgLevel, 2));
 
 $titleTable->addRow();
 $titleTable->addCell()->addText('Número de Tomas');
-$titleTable->addCell()->addText((string)($summary["num_tomas"] ?? 0));
+$numTomas = $summary["total_tus"] ?? $summary["num_tomas"] ?? count($detail);
+$titleTable->addCell()->addText((string)$numTomas);
 
 $section->addTextBreak(2);
 

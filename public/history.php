@@ -38,7 +38,7 @@ $history = $datasetModel->getHistory(); // returns array (may be empty)
                         <td><?= htmlspecialchars($d['status']) ?></td>
                         <td><?= htmlspecialchars($d['created_at']) ?></td>
                         <td>
-                            <a href="view_dataset.php?id=<?= urlencode($d['dataset_id']) ?>"
+                            <a href="view-dataset/<?= urlencode($d['dataset_id']) ?>"
                                class="btn btn-primary btn-sm">View</a>
                         </td>
                     </tr>

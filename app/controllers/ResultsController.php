@@ -76,6 +76,7 @@ class ResultsController
             ];
 
         } catch (\DomainException $e) {
+            error_log("ResultParser DomainException: " . $e->getMessage());
             return [
                 'status' => 'error',
                 'error_type' => 'parser_error',

@@ -161,39 +161,53 @@ switch ($type) {
        DETAIL (PER TU) EXPORT
     ----------------------------------------------------- */
     case 'detail':
-        $details = json_decode($row['detail_json'], true);
-        if (!is_array($details) || empty($details)) {
-            die('Invalid or empty detail_json');
+        $parser = ResultParser::fromDbRow($row);
+        if ($parser->hasErrors()) {
+            die('Error parsing result: ' . implode(', ', $parser->errors()));
+        }
+        
+        // We use raw details because they contain all the columns from Python/Legacy
+        $details = $row['detail_json'] ? json_decode($row['detail_json'], true) : [];
+
+        if (empty($details)) {
+            die('No detail data available');
         }
 
-        // Collect all unique keys from all rows for a robust header
-        $allKeys = [];
-        foreach ($details as $tu) {
-            if (is_array($tu)) {
-                foreach ($tu as $key => $value) {
-                    $allKeys[$key] = true;
-                }
-            }
-        }
-        $headers = array_keys($allKeys);
+        // The specific 34 columns requested by the user
+        $headers = [
+            'Toma', 'Piso', 'Apto', 'Bloque', 'Piso Troncal', 'Piso Entrada Riser Bloque', 
+            'Direccion Propagacion', 'Longitud Antena→Troncal (m)', 
+            'Pérdida Antena→Troncal (cable) (dB)', 'Pérdida Antena↔Troncal (conectores) (dB)', 
+            'Repartidor Troncal', 'Salidas Troncal', 'Pérdida Repartidor Troncal (dB)', 
+            'Feeder Troncal→Entrada Bloque (m)', 'Pérdida Feeder (cable) (dB)', 
+            'Pérdida Feeder (conectores) (dB)', 'Pérdida Riser dentro del Bloque (dB)', 
+            'Distancia riser dentro bloque (m)', 'Riser Atenuacion Cable (dB)', 
+            'Riser Conectores (uds)', 'Riser Atenuacion Conectores (dB)', 
+            'Riser Atenuación Taps (dB)', 'Derivador Piso', 'Pérdida Derivador Piso (dB)', 
+            'Pérdida Cable Deriv→Rep (dB)', 'Pérdida Conectores Apto (dB)', 
+            'Repartidor Apt', 'Pérdida Repartidor Apt (dB)', 'Pérdida Cable Rep→TU (dB)', 
+            'Pérdida Conexión TU (dB)', 'Pérdida Total (dB)', 'P_in (entrada) (dBµV)', 
+            'Nivel TU Final (dBµV)', 'Distancia total hasta la toma (m)'
+        ];
+        
         echo implode(',', array_map('csv_escape', $headers)) . "\n";
-
-        // Keywords for formatting numeric values to 2 decimal places
-        $numericFormatKeywords = ['Nivel', 'Perdidas', 'Atenuacion', 'Factor'];
 
         foreach ($details as $tu) {
             $line = [];
             foreach ($headers as $h) {
                 $value = $tu[$h] ?? '';
+                
+                // Consistency check: some fields might have different names in version 2 vs legacy
+                if ($value === '' || $value === null) {
+                    if ($h === 'Toma') $value = $tu['tu_id'] ?? '';
+                    if ($h === 'Piso') $value = $tu['piso'] ?? '';
+                    if ($h === 'Apto') $value = $tu['apto'] ?? '';
+                    if ($h === 'Bloque') $value = $tu['bloque'] ?? '';
+                    if ($h === 'Nivel TU Final (dBµV)') $value = $tu['nivel_tu'] ?? '';
+                }
 
-                // Check if the value is numeric and the header matches formatting keywords
-                if (is_numeric($value)) {
-                    foreach ($numericFormatKeywords as $keyword) {
-                        if (stripos($h, $keyword) !== false) {
-                            $value = number_format((float)$value, 2, '.', '');
-                            break; 
-                        }
-                    }
+                if (is_float($value)) {
+                    $value = number_format($value, 2, '.', '');
                 }
                 $line[] = csv_escape($value);
             }

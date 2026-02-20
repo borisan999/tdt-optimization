@@ -21,6 +21,7 @@ $dataset = $datasetModel->get($dataset_id);
 $rows = $rowModel->getRowsByDataset($dataset_id);
 
 include __DIR__ . "/templates/header.php";
+include __DIR__ . "/templates/navbar.php";
 ?>
 
 <div class="container mt-4">
@@ -54,7 +55,7 @@ include __DIR__ . "/templates/header.php";
         </table>
     <?php endif; ?>
 
-    <a href="history.php" class="btn btn-secondary mt-3">Back to History</a>
+    <a href="history" class="btn btn-secondary mt-3">Back to History</a>
 </div>
 
 <?php include __DIR__ . "/templates/footer.php"; ?>

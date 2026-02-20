@@ -7,26 +7,33 @@ node_modules/
 *.log
 *.sql
 *.sqlite
-*.py
-app/python/
-*.xlsx
-*.png
-*.dot
-/storage/
-storage/cache/
-storage/logs/
-storage/temp/
 *.pyc
-.env
-/app/python/__pycache__/
-/app/python/output/
-/app/python/*.json
+/__pycache__/
+/app/python/**/__pycache__/
+/app/python/**/output/
+/app/python/**/*.xlsx
+/app/python/**/*.csv
+/app/python/**/*.png
+/app/python/**/*.json
 
 # IDE files
 .idea/
 .vscode/
 *.swp
 .DS_Store
+
+# Data files (global)
+*.xlsx
+*.csv
+*.png
+*.dot
+*.json
+
+# Storage and logs
+/storage/
+/storage/cache/
+/storage/logs/
+/storage/temp/
 
 # Generated reports / uploads
 storage/temp/generated_reports/
