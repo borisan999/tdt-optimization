@@ -1,6 +1,9 @@
 <?php
 
+require_once __DIR__ . '/../config/AppConfig.php';
+
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use App\Config\AppConfig;
 
 class ExcelProcessor
 {
@@ -19,8 +22,8 @@ class ExcelProcessor
         /* =====================================================
         1️⃣ PARAMETROS_GENERALES
         ====================================================== */
-        $sheet = $spreadsheet->getSheetByName('Parametros_Generales');
-        if (!$sheet) throw new Exception("Sheet 'Parametros_Generales' not found.");
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_PARAMS);
+        if (!$sheet) throw new Exception("Sheet '" . AppConfig::SHEET_PARAMS . "' not found.");
         
         $rows = $sheet->toArray(null, true, true, false);
         $paramMap = [];
@@ -50,14 +53,25 @@ class ExcelProcessor
         /* =====================================================
         2️⃣ LARGO_CABLE_DERIVADOR_REPARTIDOR
         ====================================================== */
-        $sheet = $spreadsheet->getSheetByName('largo_cable_derivador_repartido');
-        if (!$sheet) throw new Exception("Sheet 'largo_cable_derivador_repartido' not found.");
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_LC_DR);
+        if (!$sheet) throw new Exception("Sheet '" . AppConfig::SHEET_LC_DR . "' not found.");
         
         $rows = $sheet->toArray(null, true, true, false);
         $lcd = [];
         foreach ($rows as $i => $row) {
-            if ($i === 0 || empty($row[0]) || empty($row[1])) continue;
-            $key = trim($row[0]) . "|" . trim($row[1]);
+            if ($i === 0) continue;
+            
+            $hasData = !empty($row[2]);
+            $piso = trim((string)($row[0] ?? ''));
+            $apto = trim((string)($row[1] ?? ''));
+
+            if ($piso === '' && $apto === '' && !$hasData) continue; 
+
+            if ($piso === '' || $apto === '') {
+                throw new Exception("Explicit Topology Violation: Row " . ($i + 1) . " in '" . AppConfig::SHEET_LC_DR . "' is missing structural keys (Piso/Apto). Merged cells are forbidden.");
+            }
+
+            $key = "$piso|$apto";
             $lcd[$key] = self::castNumeric($row[2]);
         }
         $canonical['largo_cable_derivador_repartidor'] = $lcd;
@@ -65,14 +79,25 @@ class ExcelProcessor
         /* =====================================================
         3️⃣ TUS REQUERIDOS
         ====================================================== */
-        $sheet = $spreadsheet->getSheetByName('tus_requeridos_por_apartamento');
-        if (!$sheet) throw new Exception("Sheet 'tus_requeridos_por_apartamento' not found.");
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_TUS_REQ);
+        if (!$sheet) throw new Exception("Sheet '" . AppConfig::SHEET_TUS_REQ . "' not found.");
         
         $rows = $sheet->toArray(null, true, true, false);
         $tus = [];
         foreach ($rows as $i => $row) {
-            if ($i === 0 || empty($row[0])) continue;
-            $key = trim($row[0]) . "|" . trim($row[1]);
+            if ($i === 0) continue;
+
+            $hasData = !empty($row[2]);
+            $piso = trim((string)($row[0] ?? ''));
+            $apto = trim((string)($row[1] ?? ''));
+
+            if ($piso === '' && $apto === '' && !$hasData) continue;
+
+            if ($piso === '' || $apto === '') {
+                throw new Exception("Explicit Topology Violation: Row " . ($i + 1) . " in '" . AppConfig::SHEET_TUS_REQ . "' is missing structural keys (Piso/Apto). Merged cells are forbidden.");
+            }
+
+            $key = "$piso|$apto";
             $tus[$key] = (int)$row[2];
         }
         $canonical['tus_requeridos_por_apartamento'] = $tus;
@@ -80,14 +105,26 @@ class ExcelProcessor
         /* =====================================================
         4️⃣ LARGO_CABLE_TU
         ====================================================== */
-        $sheet = $spreadsheet->getSheetByName('largo_cable_tu');
-        if (!$sheet) throw new Exception("Sheet 'largo_cable_tu' not found.");
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_LC_TU);
+        if (!$sheet) throw new Exception("Sheet '" . AppConfig::SHEET_LC_TU . "' not found.");
         
         $rows = $sheet->toArray(null, true, true, false);
         $lctu = [];
         foreach ($rows as $i => $row) {
-            if ($i === 0 || empty($row[0])) continue;
-            $key = trim($row[0]) . "|" . trim($row[1]) . "|" . trim($row[2]);
+            if ($i === 0) continue;
+            
+            $hasData = !empty($row[3]);
+            $piso = trim((string)($row[0] ?? ''));
+            $apto = trim((string)($row[1] ?? ''));
+            $tuIdx = trim((string)($row[2] ?? ''));
+
+            if ($piso === '' && $apto === '' && $tuIdx === '' && !$hasData) continue;
+
+            if ($piso === '' || $apto === '' || $tuIdx === '') {
+                throw new Exception("Explicit Topology Violation: Row " . ($i + 1) . " in '" . AppConfig::SHEET_LC_TU . "' is missing structural keys (Piso/Apto/TU Index). Merged cells are forbidden.");
+            }
+
+            $key = "$piso|$apto|$tuIdx";
             $lctu[$key] = self::castNumeric($row[3]);
         }
         $canonical['largo_cable_tu'] = $lctu;
@@ -95,8 +132,8 @@ class ExcelProcessor
         /* =====================================================
         5️⃣ DERIVADORES_DATA
         ====================================================== */
-        $sheet = $spreadsheet->getSheetByName('derivadores_data');
-        if (!$sheet) throw new Exception("Sheet 'derivadores_data' not found.");
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_DERIVADORES);
+        if (!$sheet) throw new Exception("Sheet '" . AppConfig::SHEET_DERIVADORES . "' not found.");
         
         $rows = $sheet->toArray(null, true, true, false);
         $deriv = [];
@@ -114,8 +151,8 @@ class ExcelProcessor
         /* =====================================================
         6️⃣ REPARTIDORES_DATA
         ====================================================== */
-        $sheet = $spreadsheet->getSheetByName('repartidores_data');
-        if (!$sheet) throw new Exception("Sheet 'repartidores_data' not found.");
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_REPARTIDORES);
+        if (!$sheet) throw new Exception("Sheet '" . AppConfig::SHEET_REPARTIDORES . "' not found.");
         
         $rows = $sheet->toArray(null, true, true, false);
         $rep = [];
@@ -128,6 +165,11 @@ class ExcelProcessor
             ];
         }
         $canonical['repartidores_data'] = $rep;
+
+        // Final Safeguard: Ensure we actually have TU data (Task: Irreversible Doctrine)
+        if (empty($canonical['largo_cable_tu'])) {
+            throw new Exception("Explicit Topology Violation: No TU rows detected. Data rows must be explicit and non-merged.");
+        }
 
         return $canonical;
     }

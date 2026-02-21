@@ -162,6 +162,12 @@ class CanonicalValidator
             return;
         }
 
+        // Strict Cardinality Check: Apartment Count
+        $expectedApartments = $this->data['Piso_Maximo'] * $this->data['apartamentos_por_piso'];
+        if (count($map) !== $expectedApartments) {
+            $this->addError('tus_requeridos_por_apartamento', "Apartment cardinality mismatch. Expected $expectedApartments entries, found " . count($map));
+        }
+
         foreach ($map as $key => $tuCount) {
             if (!preg_match('/^\d+\|\d+$/', (string)$key)) {
                 $this->addError('tus_requeridos_por_apartamento', "Invalid key format '$key'. Must match f|a");
@@ -208,6 +214,12 @@ class CanonicalValidator
         if (!is_array($tuCableMap)) {
             $this->addError('largo_cable_tu', 'Must be an array');
             return;
+        }
+
+        // Strict Cardinality Check: TU Density
+        $expectedTUs = array_sum($this->apartmentSet);
+        if (count($tuCableMap) !== $expectedTUs) {
+            $this->addError('largo_cable_tu', "TU tensor density mismatch. Expected $expectedTUs TUs based on apartment requirements, but found " . count($tuCableMap) . " cable lengths.");
         }
 
         foreach ($this->apartmentSet as $aptKey => $expectedTus) {

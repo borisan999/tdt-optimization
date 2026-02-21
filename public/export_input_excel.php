@@ -11,9 +11,11 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/config/db.php';
+require_once __DIR__ . '/../app/config/AppConfig.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use App\Config\AppConfig;
 
 try {
     // 1. Get opt_id and fetch results
@@ -51,7 +53,7 @@ try {
     1️⃣ Parametros_Generales
     ====================================================== */
     $sheet = $spreadsheet->createSheet();
-    $sheet->setTitle('Parametros_Generales');
+    $sheet->setTitle(AppConfig::SHEET_PARAMS);
     $sheet->setCellValue('A1', 'Key');
     $sheet->setCellValue('B1', 'Valor');
 
@@ -86,7 +88,7 @@ try {
     2️⃣ largo_cable_derivador_repartido
     ====================================================== */
     $sheet = $spreadsheet->createSheet();
-    $sheet->setTitle('largo_cable_derivador_repartido');
+    $sheet->setTitle(AppConfig::SHEET_LC_DR);
     $sheet->setCellValue('A1', 'Piso');
     $sheet->setCellValue('B1', 'Apto');
     $sheet->setCellValue('C1', 'Longitud_m');
@@ -108,7 +110,7 @@ try {
     3️⃣ tus_requeridos_por_apartamento
     ====================================================== */
     $sheet = $spreadsheet->createSheet();
-    $sheet->setTitle('tus_requeridos_por_apartamento');
+    $sheet->setTitle(AppConfig::SHEET_TUS_REQ);
     $sheet->setCellValue('A1', 'Piso');
     $sheet->setCellValue('B1', 'Apto');
     $sheet->setCellValue('C1', 'Cantidad_Tomas');
@@ -130,7 +132,7 @@ try {
     4️⃣ largo_cable_tu
     ====================================================== */
     $sheet = $spreadsheet->createSheet();
-    $sheet->setTitle('largo_cable_tu');
+    $sheet->setTitle(AppConfig::SHEET_LC_TU);
     $sheet->setCellValue('A1', 'Piso');
     $sheet->setCellValue('B1', 'Apto');
     $sheet->setCellValue('C1', 'TU Index');
@@ -154,7 +156,7 @@ try {
     5️⃣ derivadores_data
     ====================================================== */
     $sheet = $spreadsheet->createSheet();
-    $sheet->setTitle('derivadores_data');
+    $sheet->setTitle(AppConfig::SHEET_DERIVADORES);
     $sheet->setCellValue('A1', 'Modelo');
     $sheet->setCellValue('B1', 'derivacion');
     $sheet->setCellValue('C1', 'paso');
@@ -175,7 +177,7 @@ try {
     6️⃣ repartidores_data
     ====================================================== */
     $sheet = $spreadsheet->createSheet();
-    $sheet->setTitle('repartidores_data');
+    $sheet->setTitle(AppConfig::SHEET_REPARTIDORES);
     $sheet->setCellValue('A1', 'Modelo');
     $sheet->setCellValue('B1', 'perdida_insercion');
     $sheet->setCellValue('C1', 'salidas');

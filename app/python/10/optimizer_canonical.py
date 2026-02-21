@@ -67,7 +67,14 @@ def main():
         original_solve = modelo.solve
         modelo.solve = lambda: original_solve(PULP_CBC_CMD(msg=False))
         
-        df_detalle = Optimizacion_RITEL_10.resolver_y_exportar(modelo, params, all_toma_indices, "unused.xlsx")
+        # NOTE: resolver_y_exportar returns a tuple (df_detalle, ...) or just df_detalle 
+        # based on context. Let's handle both.
+        result_data = Optimizacion_RITEL_10.resolver_y_exportar(modelo, params, all_toma_indices, "unused.xlsx")
+
+        if isinstance(result_data, tuple):
+            df_detalle = result_data[0]
+        else:
+            df_detalle = result_data
 
         if df_detalle is None:
              os.dup2(saved_stdout_fd, fd_stdout)

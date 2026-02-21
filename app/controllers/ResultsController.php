@@ -44,6 +44,17 @@ class ResultsController
             }
 
             $parser = \app\helpers\ResultParser::fromDbRow($row);
+            $summary = $parser->summary();
+
+            // Detect Infeasible Result from summary
+            if (isset($summary['success']) && $summary['success'] === false) {
+                return [
+                    'status' => 'infeasible',
+                    'message' => $summary['message'] ?? 'Solver could not find a feasible solution.',
+                    'dataset_id' => $row['dataset_id'],
+                    'opt_id' => $row['opt_id']
+                ];
+            }
 
             // STEP 0.3 — Canonical validation
             $canonical = $parser->canonical(); // Already validates internally

@@ -76,6 +76,50 @@ $opt_id = intval($_GET['opt_id'] ?? 0);
 $controller = new ResultsController($opt_id);
 $response = $controller->execute();
 
+if (($response['status'] ?? 'error') === 'infeasible') {
+    include __DIR__ . '/templates/header.php';
+    include __DIR__ . '/templates/navbar.php';
+    ?>
+    <div class="container my-4">
+        <div class="card border-warning shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Optimization Infeasible</h4>
+            </div>
+            <div class="card-body">
+                <p class="lead">The solver could not find a feasible solution for the given input parameters.</p>
+                <hr>
+                <dl class="row">
+                    <dt class="col-sm-3">Dataset ID</dt>
+                    <dd class="col-sm-9"><?= htmlspecialchars((string)($response['dataset_id'] ?? 'N/A')) ?></dd>
+
+                    <dt class="col-sm-3">Optimization ID</dt>
+                    <dd class="col-sm-9"><?= htmlspecialchars((string)($response['opt_id'] ?? 'N/A')) ?></dd>
+
+                    <dt class="col-sm-3">Solver Message</dt>
+                    <dd class="col-sm-9">
+                        <code class="text-danger"><?= htmlspecialchars($response['message'] ?? 'No message provided.') ?></code>
+                    </dd>
+                </dl>
+                <hr>
+                <h5>Possible Reasons:</h5>
+                <ul>
+                    <li>Excessive cable lengths causing high attenuation.</li>
+                    <li>Trunk power level is insufficient for the building's size.</li>
+                    <li>The selected passive components (splitters, taps) are not suitable.</li>
+                    <li>Minimum required signal level (Nivel Mínimo) is set too high.</li>
+                    <li>Maximum allowed signal level (Nivel Máximo) is set too low.</li>
+                </ul>
+                <a href="enter-data/<?= htmlspecialchars((string)($response['dataset_id'] ?? 0)) ?>" class="btn btn-primary mt-3">
+                    <i class="fas fa-edit"></i> Review and Adjust Input Data
+                </a>
+            </div>
+        </div>
+    </div>
+    <?php
+    include __DIR__ . '/templates/footer.php';
+    return;
+}
+
 if (($response['status'] ?? 'error') !== 'success') {
     echo "<div class='container my-4'><div class='alert alert-danger'><strong>Error:</strong> " . htmlspecialchars($response['message'] ?? 'An unknown error occurred.') . " (Type: " . htmlspecialchars($response['error_type'] ?? 'unknown') . ")</div></div>";
     include __DIR__ . '/templates/footer.php';

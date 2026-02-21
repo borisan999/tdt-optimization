@@ -42,7 +42,7 @@ class CanonicalNormalizer
         }
 
         if (self::isAssoc($array)) {
-            ksort($array, SORT_STRING);
+            ksort($array, SORT_NATURAL);
         }
     }
 
