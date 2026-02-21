@@ -99,18 +99,26 @@ if ($format === "excel") {
     $sheet2 = $spreadsheet->createSheet();
     $sheet2->setTitle("Input – Parámetros");
 
-    $stmt = $pdo->prepare("SELECT param_name, param_value FROM parametros_generales WHERE dataset_id = :ds");
-    $stmt->execute([":ds" => $dataset_id]);
-    $params = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $inputs = json_decode($rows[0]["inputs_json"], true);
 
     $sheet2->setCellValue("A1", "param_name");
     $sheet2->setCellValue("B1", "param_value");
 
     $row = 2;
-    foreach ($params as $p) {
-        $sheet2->setCellValue("A{$row}", $p["param_name"]);
-        $sheet2->setCellValue("B{$row}", $p["param_value"]);
-        $row++;
+    $param_keys = [
+        'Piso_Maximo', 'apartamentos_por_piso', 'atenuacion_cable_por_metro',
+        'atenuacion_cable_470mhz', 'atenuacion_cable_698mhz', 'atenuacion_conector',
+        'largo_cable_entre_pisos', 'potencia_entrada', 'Nivel_minimo', 'Nivel_maximo',
+        'Potencia_Objetivo_TU', 'conectores_por_union', 'atenuacion_conexion_tu',
+        'largo_cable_amplificador_ultimo_piso', 'largo_cable_feeder_bloque', 'p_troncal'
+    ];
+
+    foreach ($param_keys as $key) {
+        if (isset($inputs[$key])) {
+            $sheet2->setCellValue("A{$row}", $key);
+            $sheet2->setCellValue("B{$row}", $is_scalar = is_scalar($inputs[$key]) ? $inputs[$key] : json_encode($inputs[$key]));
+            $row++;
+        }
     }
 
     /* -----------------------------------

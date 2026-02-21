@@ -21,3 +21,49 @@ body {
     margin-top: 20px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.07);
 }
+
+/* Sticky Action Bar */
+.sticky-bottom {
+    position: sticky;
+    bottom: 0;
+    z-index: 1020;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+}
+
+/* Form refinements */
+.form-label {
+    color: #495057;
+}
+
+.card-header h5, .card-header h6 {
+    margin-bottom: 0;
+}
+
+/* Table refinements */
+.table-responsive {
+    border-radius: 4px;
+}
+
+.table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    border-top: none;
+}
+
+/* Transitions */
+.btn, .nav-link, .card {
+    transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+/* Status colors */
+.bg-primary { background-color: #0d6efd !important; }
+.text-primary { color: #0d6efd !important; }
+

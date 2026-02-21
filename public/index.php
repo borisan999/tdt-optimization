@@ -136,6 +136,9 @@ elseif ($path === '/history' || $path === '/history.php') {
 elseif ($path === '/configurations' || $path === '/configurations.php') {
     require_once __DIR__ . '/configurations.php';
 }
+elseif ($path === '/general-params' || $path === '/general_params.php') {
+    require_once __DIR__ . '/general_params.php';
+}
 elseif ($path === '/derivadores' || $path === '/derivadores.php') {
     require_once __DIR__ . '/derivadores.php';
 }

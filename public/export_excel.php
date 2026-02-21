@@ -25,13 +25,21 @@ if (!$opt_id) {
 $db  = new Database();
 $pdo = $db->getConnection();
 
-$stmt = $pdo->prepare("SELECT summary_json, detail_json FROM results WHERE opt_id = :id");
+$stmt = $pdo->prepare("
+    SELECT r.summary_json, r.detail_json, d.dataset_name 
+    FROM results r
+    JOIN datasets d ON d.dataset_id = r.dataset_id
+    WHERE r.opt_id = :id
+");
 $stmt->execute([':id' => $opt_id]);
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$result) {
     die('Optimization result not found');
 }
+
+$dataset_name = $result['dataset_name'] ?? 'Unnamed';
+$safe_name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $dataset_name);
 
 $summary = json_decode($result['summary_json'], true);
 $parser = ResultParser::fromDbRow($result); // Pass the entire row
@@ -398,7 +406,7 @@ $spreadsheet->setActiveSheetIndex(0); // Detalle_Tomas
 // --------------------------------------------------
 // 6. Output
 // --------------------------------------------------
-$filename = "export_opt_{$opt_id}_detalle_tomas.xlsx";
+$filename = "tdt_export_{$safe_name}_opt_{$opt_id}.xlsx";
 
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Disposition: attachment; filename="' . $filename . '"');

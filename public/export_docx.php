@@ -94,9 +94,10 @@ $pdo = $db->getConnection();
 // Load results
 // --------------------------------------------------
 $stmt = $pdo->prepare("
-    SELECT summary_json, detail_json, inputs_json
-    FROM results
-    WHERE opt_id = :id
+    SELECT r.summary_json, r.detail_json, r.inputs_json, d.dataset_name
+    FROM results r
+    JOIN datasets d ON d.dataset_id = r.dataset_id
+    WHERE r.opt_id = :id
 ");
 $stmt->execute([':id' => $opt_id]);
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -104,6 +105,9 @@ $result = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$result) {
     die('Optimization result not found');
 }
+
+$dataset_name = $result['dataset_name'] ?? 'Unnamed';
+$safe_name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $dataset_name);
 
 // --------------------------------------------------
 // Build Canonical Model (Single Source of Truth)
@@ -488,7 +492,7 @@ $section->addTextBreak(2);
 // --------------------------------------------------
 // Output
 // --------------------------------------------------
-$filename = "tdt_optimization_{$opt_id}.docx";
+$filename = "tdt_optimization_{$safe_name}_{$opt_id}.docx";
 
 header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 header('Content-Disposition: attachment; filename="' . $filename . '"');

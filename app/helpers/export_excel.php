@@ -9,45 +9,15 @@ class export_excel
     
     /**
      * Load TU level thresholds for a dataset
-     * Source of truth: parametros_generales
+     * Source of truth: The inputs array (canonical JSON)
      */
-    function loadTuLevelThresholds(PDO $pdo, int $datasetId): array
+    function loadTuLevelThresholds(array $inputs): array
     {
-        $sql = "
-            SELECT param_name, param_value
-            FROM parametros_generales
-            WHERE dataset_id = :dataset_id
-            AND param_name IN (
-                'Nivel_Minimo_dBuV',
-                'Nivel_Maximo_dBuV',
-                'Potencia_Objetivo_TU_dBuV'
-            )
-        ";
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(['dataset_id' => $datasetId]);
-
-        $thresholds = [
-            'min'     => null,
-            'max'     => null,
-            'target'  => null,
+        return [
+            'min'     => (float)($inputs['Nivel_minimo'] ?? 48.0),
+            'max'     => (float)($inputs['Nivel_maximo'] ?? 69.0),
+            'target'  => (float)($inputs['Potencia_Objetivo_TU'] ?? 58.0),
         ];
-
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            switch ($row['param_name']) {
-                case 'Nivel_Minimo_dBuV':
-                    $thresholds['min'] = (float)$row['param_value'];
-                    break;
-                case 'Nivel_Maximo_dBuV':
-                    $thresholds['max'] = (float)$row['param_value'];
-                    break;
-                case 'Potencia_Objetivo_TU_dBuV':
-                    $thresholds['target'] = (float)$row['param_value'];
-                    break;
-            }
-        }
-
-        return $thresholds;
     }
 
     /**

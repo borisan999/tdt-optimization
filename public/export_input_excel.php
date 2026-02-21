@@ -29,7 +29,12 @@ try {
     $pdo = $DB->getConnection();
 
     // We fetch inputs_json which contains the canonical dataset
-    $sql = "SELECT inputs_json FROM results WHERE opt_id = :opt_id";
+    $sql = "
+        SELECT r.inputs_json, d.dataset_name 
+        FROM results r 
+        JOIN datasets d ON d.dataset_id = r.dataset_id
+        WHERE r.opt_id = :opt_id
+    ";
     $st = $pdo->prepare($sql);
     $st->execute(['opt_id' => $opt_id]);
     $row = $st->fetch(PDO::FETCH_ASSOC);
@@ -40,6 +45,9 @@ try {
     }
 
     $inputs = json_decode($row['inputs_json'], true);
+    $dataset_name = $row['dataset_name'] ?? 'Unnamed';
+    $safe_name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $dataset_name);
+
     if (json_last_error() !== JSON_ERROR_NONE) {
         http_response_code(500);
         die('Invalid inputs_json data');
@@ -194,7 +202,7 @@ try {
 
     // 3. Finalize and Download
     $spreadsheet->setActiveSheetIndex(0);
-    $filename = "tdt_golden_inputs_opt_{$opt_id}.xlsx";
+    $filename = "tdt_inputs_{$safe_name}_opt_{$opt_id}.xlsx";
 
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment;filename="' . $filename . '"');

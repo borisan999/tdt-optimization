@@ -14,6 +14,7 @@ class ResultViewModel
     public array $meta;
     public array $violations;
     public array $results;
+    public ?string $dataset_name;
 
     public function __construct(
         ?array $details,
@@ -21,7 +22,8 @@ class ResultViewModel
         ?array $inputs,
         ?array $meta,
         ?array $violations,
-        ?array $results
+        ?array $results,
+        ?string $dataset_name = null
     ) {
         $this->details = $details ?? [];
         $this->summary = $summary ?? [];
@@ -29,5 +31,6 @@ class ResultViewModel
         $this->meta = $meta ?? [];
         $this->violations = $violations ?? [];
         $this->results = $results ?? [];
+        $this->dataset_name = $dataset_name;
     }
 }

@@ -64,5 +64,63 @@ class GeneralParams
 
         return $params;
     }
+
+    /**
+     * Get associative array of all global default parameters
+     * dataset_id IS NULL in the database for these values
+     */
+    public function getDefaults()
+    {
+        $sql = "SELECT param_name, param_value
+                FROM parametros_generales
+                WHERE dataset_id IS NULL";
+
+        $stmt = $this->pdo->query($sql);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $params = [];
+        foreach ($results as $r) {
+            $params[$r['param_name']] = $r['param_value'];
+        }
+
+        return $params;
+    }
+
+    /**
+     * Save global default parameters
+     */
+    public function saveDefaults($params)
+    {
+        try {
+            $this->pdo->beginTransaction();
+
+            // 1. Clear existing defaults
+            $delete = $this->pdo->prepare(
+                "DELETE FROM parametros_generales WHERE dataset_id IS NULL"
+            );
+            $delete->execute();
+
+            // 2. Insert fresh values
+            $sql = "INSERT INTO parametros_generales (dataset_id, param_name, param_value)
+                    VALUES (NULL, :param_name, :param_value)";
+            $stmt = $this->pdo->prepare($sql);
+
+            foreach ($params as $name => $value) {
+                $stmt->execute([
+                    ':param_name' => $name,
+                    ':param_value' => $value
+                ]);
+            }
+
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log("Error saving global defaults: " . $e->getMessage());
+            return false;
+        }
+    }
 }
 ?>

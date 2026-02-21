@@ -30,7 +30,9 @@ class DatasetController
         $method = $_SERVER['REQUEST_METHOD'];
 
         // Basic routing logic
-        if ($method === 'GET' && preg_match('/^\/dataset\/(\d+)$/', $path, $matches)) {
+        if ($method === 'GET' && preg_match('/^\/dataset\/list$/', $path)) {
+            $this->listDatasets();
+        } elseif ($method === 'GET' && preg_match('/^\/dataset\/(\d+)$/', $path, $matches)) {
             $datasetId = (int)$matches[1];
             $this->getDataset($datasetId);
         } elseif ($method === 'POST' && strpos($path, '/dataset/update') !== false) {
@@ -50,11 +52,25 @@ class DatasetController
     }
 
     /**
+     * GET /datasets
+     */
+    private function listDatasets()
+    {
+        try {
+            $datasetModel = new Dataset();
+            $datasets = $datasetModel->getAll();
+            $this->jsonResponse(['success' => true, 'datasets' => $datasets]);
+        } catch (Exception $e) {
+            $this->jsonResponse(['success' => false, 'message' => 'Failed to list datasets'], 500);
+        }
+    }
+
+    /**
      * GET /dataset/{id}
      */
     private function getDataset(int $datasetId)
     {
-        $stmt = $this->pdo->prepare("SELECT canonical_json FROM datasets WHERE dataset_id = :id");
+        $stmt = $this->pdo->prepare("SELECT canonical_json, dataset_name FROM datasets WHERE dataset_id = :id");
         $stmt->execute(['id' => $datasetId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -70,7 +86,11 @@ class DatasetController
             return;
         }
 
-        $this->jsonResponse(['success' => true, 'canonical' => $canonical]);
+        $this->jsonResponse([
+            'success' => true, 
+            'canonical' => $canonical,
+            'dataset_name' => $row['dataset_name']
+        ]);
     }
 
     /**
@@ -82,6 +102,7 @@ class DatasetController
             $input = json_decode(file_get_contents('php://input'), true);
             $dataset_id = $_POST['dataset_id'] ?? $input['dataset_id'] ?? null;
             $canonical  = $_POST['canonical'] ?? $input['canonical'] ?? null;
+            $dataset_name = $_POST['dataset_name'] ?? $input['dataset_name'] ?? null;
 
             if (!$dataset_id || !$canonical) {
                 throw new Exception("Missing dataset_id or canonical.");
@@ -114,6 +135,7 @@ class DatasetController
                 UPDATE datasets
                 SET canonical_json = :json,
                     canonical_hash = :hash,
+                    dataset_name = :name,
                     status = 'pending',
                     updated_at = NOW()
                 WHERE dataset_id = :id
@@ -122,6 +144,7 @@ class DatasetController
             $stmt->execute([
                 'json' => $json,
                 'hash' => $hash,
+                'name' => $dataset_name,
                 'id'   => $dataset_id
             ]);
 
@@ -202,6 +225,10 @@ class DatasetController
             $canonicalJson = $row['canonical_json'];
 
             $stmt = $this->pdo->prepare("UPDATE datasets SET status = 'processing' WHERE dataset_id = ?");
+            $stmt->execute([$datasetId]);
+
+            // Enforce 1:1 Optimization per Dataset: Delete any previous optimization/results
+            $stmt = $this->pdo->prepare("DELETE FROM optimizations WHERE dataset_id = ?");
             $stmt->execute([$datasetId]);
 
             $stmt = $this->pdo->prepare("INSERT INTO optimizations (dataset_id, created_at, status, parameters_json) VALUES (?, NOW(), 'queued', '{}')");

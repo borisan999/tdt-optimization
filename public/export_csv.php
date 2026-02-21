@@ -99,7 +99,12 @@ if (!in_array($type, $allowed, true)) {
 $DB  = new Database();
 $pdo = $DB->getConnection();
 
-$sql = "SELECT summary_json, detail_json, inputs_json FROM results WHERE opt_id = :opt_id";
+$sql = "
+    SELECT r.summary_json, r.detail_json, r.inputs_json, d.dataset_name 
+    FROM results r 
+    JOIN datasets d ON d.dataset_id = r.dataset_id
+    WHERE r.opt_id = :opt_id
+";
 $st  = $pdo->prepare($sql);
 $st->execute(['opt_id' => $opt_id]);
 $row = $st->fetch(PDO::FETCH_ASSOC);
@@ -108,6 +113,9 @@ if (!$row) {
     http_response_code(404);
     die('Result not found');
 }
+
+$dataset_name = $row['dataset_name'] ?? 'Unnamed';
+$safe_name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $dataset_name);
 
 function csv_escape($v): string {
     if (is_array($v) || is_object($v)) {
@@ -127,7 +135,7 @@ function csv_escape($v): string {
 
 
 
-$filename = "opt_{$opt_id}_{$type}.csv";
+$filename = "opt_{$opt_id}_{$safe_name}_{$type}.csv";
 
 header('Content-Type: text/csv; charset=UTF-8');
 header('Content-Disposition: attachment; filename=' . $filename);

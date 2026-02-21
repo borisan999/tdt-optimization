@@ -38,6 +38,20 @@ include __DIR__ . '/templates/navbar.php';
             </a>
         </div>
 
+        <!-- General Parameters -->
+        <div class="dash-card">
+            <h2 class="section-title">General Parameters</h2>
+            <p>
+                Manage global default values for building geometry, signal constraints and losses.
+            </p>
+            <a
+                class="btn-primary"
+                href="general-params"
+            >
+                Manage Parameters
+            </a>
+        </div>
+
         <!-- Users -->
         <div class="dash-card">
             <h2 class="section-title">Users</h2>

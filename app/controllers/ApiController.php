@@ -56,8 +56,56 @@ class ApiController
             $this->deleteOptimization((int)$matches[1]);
         } elseif ($method === 'POST' && preg_match('/^\/api\/upload\/excel$/', $path)) {
             $this->uploadExcel();
+        } elseif ($method === 'GET' && preg_match('/^\/api\/catalogs$/', $path)) {
+            $this->getCatalogs();
         } else {
             $this->jsonResponse(false, null, ['code' => 'NOT_FOUND', 'message' => 'Endpoint not found'], 404);
+        }
+    }
+
+    private function getCatalogs()
+    {
+        try {
+            require_once __DIR__ . '/../models/DerivadorModel.php';
+            require_once __DIR__ . '/../models/RepartidorModel.php';
+            require_once __DIR__ . '/../models/GeneralParams.php';
+
+            $derivModel = new DerivadorModel();
+            $repModel = new RepartidorModel();
+            $genModel = new GeneralParams();
+
+            $derivs = $derivModel->getAll();
+            $reps = $repModel->getAll();
+            $genParams = $genModel->getDefaults(); // Load defaults from dataset_id IS NULL
+
+            $derivData = [];
+            foreach ($derivs as $d) {
+                $modelo = trim($d['modelo']);
+                if ($modelo === '') continue;
+                $derivData[$modelo] = [
+                    'derivacion' => (float)$d['derivacion'],
+                    'paso' => (float)$d['paso'],
+                    'salidas' => (int)$d['salidas'],
+                ];
+            }
+
+            $repData = [];
+            foreach ($reps as $r) {
+                $modelo = trim($r['modelo']);
+                if ($modelo === '') continue;
+                $repData[$modelo] = [
+                    'perdida_insercion' => (float)$r['perdida_insercion'],
+                    'salidas' => (int)$r['salidas'],
+                ];
+            }
+
+            $this->jsonResponse(true, [
+                'derivadores_data' => $derivData,
+                'repartidores_data' => $repData,
+                'general_params' => $genParams
+            ]);
+        } catch (Exception $e) {
+            $this->jsonResponse(false, null, ['code' => 'CATALOG_ERROR', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -65,6 +113,7 @@ class ApiController
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $canonical = $input['canonical'] ?? null;
+        $dataset_name = $input['dataset_name'] ?? null;
 
         if (!$canonical || !is_array($canonical)) {
             $this->jsonResponse(false, null, ['code' => 'VALIDATION_ERROR', 'message' => 'Invalid or missing canonical JSON'], 400);
@@ -82,7 +131,7 @@ class ApiController
             // 2. Normalization occurs inside createWithCanonical in the Model
             $datasetModel = new Dataset();
             $uploadedBy = $_SESSION['user_id'] ?? 3; // Fallback to confirmed valid user
-            $datasetId = $datasetModel->createWithCanonical($canonical, $uploadedBy);
+            $datasetId = $datasetModel->createWithCanonical($canonical, $uploadedBy, 'pending', $dataset_name);
 
             $this->jsonResponse(true, ['dataset_id' => (int)$datasetId, 'message' => 'Dataset created successfully']);
 
@@ -139,6 +188,9 @@ class ApiController
         }
 
         try {
+            // Use filename as default name
+            $dataset_name = $_POST['dataset_name'] ?? pathinfo($_FILES['excel_file']['name'], PATHINFO_FILENAME);
+
             // 1. Produce raw structure from Excel
             $rawCanonical = ExcelProcessor::readToCanonicalJson($_FILES['excel_file']['tmp_name']);
 
@@ -155,7 +207,7 @@ class ApiController
             // 4. Persistence (Normalization -> JSON -> Hash -> Store)
             $datasetModel = new Dataset();
             $uploadedBy = $_SESSION['user_id'] ?? 3; // Fallback to a confirmed valid user_id if session is empty
-            $datasetId = $datasetModel->createWithCanonical($normalized, $uploadedBy);
+            $datasetId = $datasetModel->createWithCanonical($normalized, $uploadedBy, 'pending', $dataset_name);
 
             $this->jsonResponse(true, ['dataset_id' => (int)$datasetId]);
 

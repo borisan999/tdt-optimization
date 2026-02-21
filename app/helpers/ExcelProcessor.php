@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../config/AppConfig.php';
+require_once __DIR__ . '/../models/DerivadorModel.php';
+require_once __DIR__ . '/../models/RepartidorModel.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Config\AppConfig;
@@ -130,38 +132,34 @@ class ExcelProcessor
         $canonical['largo_cable_tu'] = $lctu;
 
         /* =====================================================
-        5️⃣ DERIVADORES_DATA
+        5️⃣ DERIVADORES_DATA (Source: Database)
         ====================================================== */
-        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_DERIVADORES);
-        if (!$sheet) throw new Exception("Sheet '" . AppConfig::SHEET_DERIVADORES . "' not found.");
-        
-        $rows = $sheet->toArray(null, true, true, false);
+        $derivModel = new DerivadorModel();
+        $allDeriv = $derivModel->getAll();
         $deriv = [];
-        foreach ($rows as $i => $row) {
-            if ($i === 0 || empty($row[0])) continue;
-            $code = trim($row[0]);
-            $deriv[$code] = [
-                'derivacion' => (float)$row[1],
-                'paso' => (float)$row[2],
-                'salidas' => (int)$row[3],
+        foreach ($allDeriv as $d) {
+            $modelo = trim($d['modelo']);
+            if ($modelo === '') continue;
+            $deriv[$modelo] = [
+                'derivacion' => (float)$d['derivacion'],
+                'paso' => (float)$d['paso'],
+                'salidas' => (int)$d['salidas'],
             ];
         }
         $canonical['derivadores_data'] = $deriv;
 
         /* =====================================================
-        6️⃣ REPARTIDORES_DATA
+        6️⃣ REPARTIDORES_DATA (Source: Database)
         ====================================================== */
-        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_REPARTIDORES);
-        if (!$sheet) throw new Exception("Sheet '" . AppConfig::SHEET_REPARTIDORES . "' not found.");
-        
-        $rows = $sheet->toArray(null, true, true, false);
+        $repModel = new RepartidorModel();
+        $allRep = $repModel->getAll();
         $rep = [];
-        foreach ($rows as $i => $row) {
-            if ($i === 0 || empty($row[0])) continue;
-            $code = trim($row[0]);
-            $rep[$code] = [
-                'perdida_insercion' => (float)$row[1],
-                'salidas' => (int)$row[2],
+        foreach ($allRep as $r) {
+            $modelo = trim($r['modelo']);
+            if ($modelo === '') continue;
+            $rep[$modelo] = [
+                'perdida_insercion' => (float)$r['perdida_insercion'],
+                'salidas' => (int)$r['salidas'],
             ];
         }
         $canonical['repartidores_data'] = $rep;

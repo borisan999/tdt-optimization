@@ -78,19 +78,37 @@ document.addEventListener("input", e => {
 function showTab(tabId) {
     ["upload_tab", "manual_tab", "history_tab"].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.classList.add("hidden");
+        if (el) {
+            el.classList.add("hidden");
+            el.classList.remove("show", "active");
+        }
         
-        const btn = document.querySelector(`.tab-btn[onclick*="${id}"]`);
-        if (btn) btn.classList.remove("btn-primary");
-        if (btn) btn.classList.add("btn-secondary");
+        // Fix: derive button ID correctly (e.g. upload_tab -> upload-tab-btn)
+        const btnId = id.replace('_', '-') + '-btn';
+        const btn = document.getElementById(btnId) || document.querySelector(`.tab-btn[onclick*="${id}"]`);
+        
+        if (btn) {
+            btn.classList.remove("active", "btn-primary");
+            if (btn.classList.contains("tab-btn")) btn.classList.add("btn-secondary");
+        }
     });
     
     const showEl = document.getElementById(tabId);
-    if (showEl) showEl.classList.remove("hidden");
+    if (showEl) {
+        showEl.classList.remove("hidden");
+        setTimeout(() => showEl.classList.add("show", "active"), 10);
+    }
     
-    const activeBtn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
-    if (activeBtn) activeBtn.classList.remove("btn-secondary");
-    if (activeBtn) activeBtn.classList.add("btn-primary");
+    const activeBtnId = tabId.replace('_', '-') + '-btn';
+    const activeBtn = document.getElementById(activeBtnId) || document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
+    
+    if (activeBtn) {
+        activeBtn.classList.add("active");
+        if (activeBtn.classList.contains("tab-btn")) {
+            activeBtn.classList.remove("btn-secondary");
+            activeBtn.classList.add("btn-primary");
+        }
+    }
 }
 
 /* =========================================
@@ -115,18 +133,44 @@ const paramLabels = {
     "potencia_entrada": "Potencia Entrada (dBuV)",
 };
 
-function addApartmentRow(piso = '', apto = '', tus = '', deriv = '', rep = '') {
+const paramDescriptions = {
+    "Nivel_maximo": "Límite superior permitido por norma RITEL (máx 70 dBuV).",
+    "Nivel_minimo": "Límite inferior permitido por norma RITEL (mín 47 dBuV).",
+    "Piso_Maximo": "Altura total del edificio en niveles habitables.",
+    "Potencia_Objetivo_TU": "El valor de potencia que el algoritmo priorizará en cada toma.",
+    "apartamentos_por_piso": "Cantidad de unidades de vivienda por cada nivel tipo.",
+    "atenuacion_cable_470mhz": "Factor de pérdida del cable coaxial a 470 MHz.",
+    "atenuacion_cable_698mhz": "Factor de pérdida del cable coaxial a 698 MHz.",
+    "atenuacion_cable_por_metro": "Pérdida nominal por metro lineal de cable.",
+    "atenuacion_conector": "Pérdida por inserción de cada conector F mecánico.",
+    "atenuacion_conexion_tu": "Pérdida en el jack o toma final de usuario.",
+    "conectores_por_union": "Número de conectores instalados en cada derivación.",
+    "largo_cable_amplificador_ultimo_piso": "Longitud de la acometida desde cabecera al edificio.",
+    "largo_cable_entre_pisos": "Metraje de cable vertical entre plantas adyacentes.",
+    "largo_cable_feeder_bloque": "Cable horizontal desde el riser hasta el primer repartidor.",
+    "p_troncal": "Nivel donde se realiza el primer split de la red troncal.",
+    "potencia_entrada": "Potencia de señal disponible a la salida del amplificador.",
+};
+
+const tableFieldHints = {
+    "tus": "Cantidad de Tomas de Usuario requeridas para este apartamento.",
+    "deriv_rep": "Longitud del cable desde el Derivador de piso hasta el Repartidor del apartamento.",
+    "rep_tu": "Longitud del cable desde el Repartidor del apartamento hasta esta toma específica.",
+};
+
+function addApartmentRow(piso = '', apto = '', tus = '', deriv = '') {
     const apartmentsBody = document.getElementById("apartmentsBody");
     if (!apartmentsBody) return;
     const newRowHtml = `
         <tr>
-            <td><input type="number" name="piso[]" class="form-control validate-field" data-field="piso" value="${piso}" required></td>
-            <td><input type="number" name="apartamento[]" class="form-control validate-field" data-field="apartamento" value="${apto}" required></td>
-            <td><input type="number" name="tus_requeridos[]" class="form-control validate-field" data-field="tus_requeridos" value="${tus}" required></td>
-            <td><input type="number" name="largo_cable_derivador[]" class="form-control validate-field" data-field="largo_cable_derivador" step="any" value="${deriv}" required></td>
-            <td><input type="number" name="largo_cable_repartidor[]" class="form-control validate-field" data-field="largo_cable_repartidor" step="any" value="${rep}" required></td>
-            <td>
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); checkFormValidity();">X</button>
+            <td><input type="number" name="piso[]" class="form-control form-control-sm validate-field" data-field="piso" value="${piso}" required></td>
+            <td><input type="number" name="apartamento[]" class="form-control form-control-sm validate-field" data-field="apartamento" value="${apto}" required></td>
+            <td><input type="number" name="tus_requeridos[]" class="form-control form-control-sm validate-field" data-field="tus_requeridos" value="${tus}" title="${tableFieldHints.tus}" required></td>
+            <td><input type="number" name="largo_cable_derivador[]" class="form-control form-control-sm validate-field" data-field="largo_cable_derivador" step="any" value="${deriv}" title="${tableFieldHints.deriv_rep}" required></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('tr').remove(); checkFormValidity();">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </td>
         </tr>
     `;
@@ -138,12 +182,14 @@ function addTuRow(piso = '', apto = '', idx = '', len = '') {
     if (!tuBody) return;
     const newRowHtml = `
         <tr>
-            <td><input type="number" name="tu_piso[]" class="form-control validate-field" data-field="piso" value="${piso}" required></td>
-            <td><input type="number" name="tu_apartamento[]" class="form-control validate-field" data-field="apartamento" value="${apto}" required></td>
-            <td><input type="number" name="tu_index[]" class="form-control validate-field" data-field="tu_index" value="${idx}" required></td>
-            <td><input type="number" name="largo_tu[]" class="form-control validate-field" data-field="largo_cable_tu" step="any" value="${len}" required></td>
-            <td>
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); checkFormValidity();">X</button>
+            <td><input type="number" name="tu_piso[]" class="form-control form-control-sm validate-field" data-field="piso" value="${piso}" required></td>
+            <td><input type="number" name="tu_apartamento[]" class="form-control form-control-sm validate-field" data-field="apartamento" value="${apto}" required></td>
+            <td><input type="number" name="tu_index[]" class="form-control form-control-sm validate-field" data-field="tu_index" value="${idx}" required></td>
+            <td><input type="number" name="largo_tu[]" class="form-control form-control-sm validate-field" data-field="largo_cable_tu" step="any" value="${len}" title="${tableFieldHints.rep_tu}" required></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('tr').remove(); checkFormValidity();">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </td>
         </tr>
     `;
@@ -151,44 +197,110 @@ function addTuRow(piso = '', apto = '', idx = '', len = '') {
 }
 
 function renderGeneralParamsForm(params) {
-    const formDiv = document.getElementById('generalParamsForm');
-    if (!formDiv) return;
-    formDiv.innerHTML = '';
+    const container = document.getElementById('generalParamsContainer');
+    if (!container) return;
+    container.innerHTML = '';
 
-    for (const name in paramLabels) {
-        const value = params[name] ?? '';
-        formDiv.insertAdjacentHTML("beforeend", `
-            <div class="col-md-3 mb-3">
-                <label class="form-label">${paramLabels[name]}</label>
-                <input type="number"
-                    step="any"
-                    class="form-control validate-field"
-                    name="param_${name}"
-                    data-field="${name}"
-                    value="${value}" required>
-            </div>
-        `);
-    }
-    
-    const complex = [
-        { id: 'derivadores_data_json', label: 'Derivadores Data', data: params.derivadores_data },
-        { id: 'repartidores_data_json', label: 'Repartidores Data', data: params.repartidores_data },
-        { id: 'largo_cable_derivador_repartidor_json', label: 'Largo Cable Derivador Repartidor', data: params.largo_cable_derivador_repartidor },
-        { id: 'largo_cable_tu_json', label: 'Largo Cable TU', data: params.largo_cable_tu },
-        { id: 'tus_requeridos_por_apartamento_json', label: 'TUs Requeridos por Apartamento', data: params.tus_requeridos_por_apartamento }
+    const categories = [
+        {
+            title: 'Building Geometry',
+            icon: 'fa-building',
+            fields: ['Piso_Maximo', 'apartamentos_por_piso', 'largo_cable_entre_pisos', 'largo_cable_amplificador_ultimo_piso', 'largo_cable_feeder_bloque']
+        },
+        {
+            title: 'Signal Constraints',
+            icon: 'fa-signal',
+            fields: ['potencia_entrada', 'Nivel_minimo', 'Nivel_maximo', 'Potencia_Objetivo_TU', 'p_troncal']
+        },
+        {
+            title: 'Loss & Attenuation',
+            icon: 'fa-chart-line',
+            fields: ['atenuacion_cable_por_metro', 'atenuacion_cable_470mhz', 'atenuacion_cable_698mhz', 'atenuacion_conector', 'atenuacion_conexion_tu', 'conectores_por_union']
+        }
     ];
 
-    complex.forEach(c => {
-        formDiv.insertAdjacentHTML("beforeend", `
-            <div class="col-md-12 mb-3">
-                <label class="form-label">${c.label} (JSON)</label>
-                <textarea class="form-control" id="${c.id}" rows="5">${JSON.stringify(c.data ?? {}, null, 2)}</textarea>
-            </div>
-        `);
+    let rowHtml = '<div class="row">';
+    categories.forEach(cat => {
+        let cardBody = '<div class="row g-2">';
+        cat.fields.forEach(name => {
+            const label = paramLabels[name] || name;
+            const desc = paramDescriptions[name] || '';
+            const value = params[name] ?? '';
+            cardBody += `
+                <div class="col-md-6 col-lg-12 mb-2">
+                    <label class="form-label small fw-bold mb-0">${label}</label>
+                    <input type="number" step="any" class="form-control form-control-sm validate-field" 
+                           name="param_${name}" data-field="${name}" value="${value}" 
+                           title="${desc}" required>
+                </div>`;
+        });
+        cardBody += '</div>';
+
+        rowHtml += `
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm border-light">
+                    <div class="card-header bg-white py-2 border-bottom-0">
+                        <h6 class="mb-0 text-primary fw-bold"><i class="fas ${cat.icon} me-2"></i>${cat.title}</h6>
+                    </div>
+                    <div class="card-body pt-0">
+                        ${cardBody}
+                    </div>
+                </div>
+            </div>`;
     });
+    rowHtml += '</div>';
+    container.innerHTML = rowHtml;
+    
+    // Complex Data (Read-only Tables)
+    const complexContainer = document.getElementById('complexParamsForm');
+    if (complexContainer) {
+        complexContainer.innerHTML = '';
+        
+        // Helper to build a pretty table from catalog data
+        const buildTable = (title, headers, data) => {
+            let html = `<div class="mb-4">
+                <label class="form-label small fw-bold text-uppercase text-primary">${title}</label>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover table-bordered mb-0 small">
+                        <thead class="table-light"><tr>`;
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += `</tr></thead><tbody>`;
+            
+            Object.entries(data || {}).forEach(([model, specs]) => {
+                html += `<tr><td class="fw-bold">${model}</td>`;
+                if (title.includes('Derivadores')) {
+                    html += `<td>${specs.derivacion} dB</td><td>${specs.paso} dB</td><td>${specs.salidas}</td>`;
+                } else {
+                    html += `<td>${specs.perdida_insercion} dB</td><td>${specs.salidas}</td>`;
+                }
+                html += `</tr>`;
+            });
+            
+            if (Object.keys(data || {}).length === 0) {
+                html += `<tr><td colspan="${headers.length}" class="text-center text-muted italic">No data available</td></tr>`;
+            }
+            
+            html += `</tbody></table></div></div>`;
+            return html;
+        };
+
+        const derivTable = buildTable('Derivadores Catalog', ['Modelo', 'Derivación', 'Paso', 'Salidas'], params.derivadores_data);
+        const repTable = buildTable('Repartidores Catalog', ['Modelo', 'Pérdida Inserción', 'Salidas'], params.repartidores_data);
+
+        complexContainer.innerHTML = `
+            ${derivTable}
+            ${repTable}
+            <input type="hidden" id="derivadores_data_json" value='${JSON.stringify(params.derivadores_data || {})}'>
+            <input type="hidden" id="repartidores_data_json" value='${JSON.stringify(params.repartidores_data || {})}'>
+            <div class="form-text mt-n2 text-muted small"><i class="fas fa-info-circle"></i> These catalogs are read-only and managed in the equipment settings.</div>
+        `;
+    }
 }
 
-function populateFormFromCanonical(canonical) {
+function populateFormFromCanonical(canonical, name = '') {
+    const nameInput = document.getElementById('dataset_name');
+    if (nameInput) nameInput.value = name || '';
+
     renderGeneralParamsForm(canonical);
 
     // 1. Populate Apartments Table from Map
@@ -198,8 +310,7 @@ function populateFormFromCanonical(canonical) {
         Object.entries(canonical.tus_requeridos_por_apartamento).forEach(([key, tus]) => {
             const [piso, apto] = key.split('|');
             const derivLen = canonical.largo_cable_derivador_repartidor?.[key] || 0;
-            // Note: Repartidor length defaults to 0 as it's not explicitly in the Excel map
-            addApartmentRow(piso, apto, tus, derivLen, 0); 
+            addApartmentRow(piso, apto, tus, derivLen); 
         });
     }
 
@@ -227,12 +338,11 @@ function buildMapsFromTables(canonical) {
     // Extract from Apartments table
     document.querySelectorAll('#apartmentsBody tr').forEach(row => {
         const inputs = row.querySelectorAll('input');
-        if (inputs.length < 5) return;
+        if (inputs.length < 4) return;
         const piso = inputs[0].value;
         const apto = inputs[1].value;
         const tus = Number(inputs[2].value);
         const deriv = Number(inputs[3].value);
-        // rep is currently ignored as Excel map only has one length
         
         const key = `${piso}|${apto}`;
         tusReq[key] = tus;
@@ -266,11 +376,16 @@ function applyRepetition() {
     const targetEnd = Number(document.querySelector('input[name="targetEndFloor"]').value);
 
     if (!sourceFloorId || isNaN(targetStart) || isNaN(targetEnd)) {
-        alert("Fill repetition fields.");
+        alert("Please fill all repetition fields (Source Floor, Target Start, Target End).");
         return;
     }
 
-    // Extract current state from tables first to ensure we repeat what is on screen
+    if (targetStart > targetEnd) {
+        alert("Target Start cannot be greater than Target End.");
+        return;
+    }
+
+    // 1. Extract current state from tables to ensure we work with latest UI data
     const current = {};
     buildMapsFromTables(current);
 
@@ -278,39 +393,53 @@ function applyRepetition() {
     const largoDR = current.largo_cable_derivador_repartidor;
     const largoTU = current.largo_cable_tu;
 
-    // Filter source data
+    // 2. Identify all source entries for the given sourceFloorId
     const sourceApts = Object.keys(tusReq).filter(k => k.split('|')[0] === sourceFloorId);
     const sourceTus = Object.keys(largoTU).filter(k => k.split('|')[0] === sourceFloorId);
 
-    // Overwrite range
-    for (let f = targetStart; f <= targetEnd; f++) {
-        // Clear existing
-        Object.keys(tusReq).forEach(k => { if (parseInt(k.split('|')[0]) === f) delete tusReq[k]; });
-        Object.keys(largoDR).forEach(k => { if (parseInt(k.split('|')[0]) === f) delete largoDR[k]; });
-        Object.keys(largoTU).forEach(k => { if (parseInt(k.split('|')[0]) === f) delete largoTU[k]; });
+    if (sourceApts.length === 0) {
+        alert(`No data found for source floor ${sourceFloorId}. Add at least one apartment to this floor first.`);
+        return;
+    }
 
-        // Copy source
+    // 3. Duplicate source data into the target range
+    for (let f = targetStart; f <= targetEnd; f++) {
+        const floorStr = f.toString();
+        
+        // Remove existing entries for this target floor to avoid duplicates/ghost data
+        Object.keys(tusReq).forEach(k => { if (k.split('|')[0] === floorStr) delete tusReq[k]; });
+        Object.keys(largoDR).forEach(k => { if (k.split('|')[0] === floorStr) delete largoDR[k]; });
+        Object.keys(largoTU).forEach(k => { if (k.split('|')[0] === floorStr) delete largoTU[k]; });
+
+        // Copy Apartment-level data
         sourceApts.forEach(oldKey => {
             const [_, apto] = oldKey.split('|');
-            const newKey = `${f}|${apto}`;
+            const newKey = `${floorStr}|${apto}`;
             tusReq[newKey] = tusReq[oldKey];
             largoDR[newKey] = largoDR[oldKey];
         });
+
+        // Copy TU-level data
         sourceTus.forEach(oldKey => {
             const [_, apto, idx] = oldKey.split('|');
-            const newKey = `${f}|${apto}|${idx}`;
+            const newKey = `${floorStr}|${apto}|${idx}`;
             largoTU[newKey] = largoTU[oldKey];
         });
     }
 
-    // Refresh UI
-    const canonical = {
+    // 4. Update the global data object and refresh the UI
+    const updatedCanonical = {
         ...window.CANONICAL_DATA,
         tus_requeridos_por_apartamento: tusReq,
         largo_cable_derivador_repartidor: largoDR,
         largo_cable_tu: largoTU
     };
-    populateFormFromCanonical(canonical);
+    
+    // Crucial: Update the reference used by other parts of the app
+    window.CANONICAL_DATA = updatedCanonical;
+    
+    populateFormFromCanonical(updatedCanonical);
+    alert(`Successfully applied configuration from floor ${sourceFloorId} to floors ${targetStart}-${targetEnd}.`);
 }
 
 /* =========================================
@@ -318,16 +447,12 @@ function applyRepetition() {
 ========================================= */
 async function fetchJson(url, options = {}) {
     const response = await fetch(url, options);
-    
-    // Strict verification of Content-Type
     const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-        // Try to get some text for debugging
         const text = await response.text();
         console.error("Non-JSON response from " + url + ":", text);
         throw new Error("Invalid API response type. Expected JSON but received " + (contentType || "text/plain"));
     }
-
     const json = await response.json();
     return { json, status: response.status };
 }
@@ -339,13 +464,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     const urlParams = new URLSearchParams(window.location.search);
     let datasetId = urlParams.get('dataset_id');
 
-    // Extract datasetId from path if not in query (for /enter-data/123)
     if (!datasetId) {
-        const pathParts = window.location.pathname.split('/');
-        const enterDataIdx = pathParts.indexOf('enter-data');
-        if (enterDataIdx !== -1 && pathParts[enterDataIdx + 1]) {
-            datasetId = pathParts[enterDataIdx + 1];
-        }
+        const match = window.location.pathname.match(/\/enter-data\/(\d+)/);
+        if (match) datasetId = match[1];
     }
 
     const BASE = (document.querySelector('base')?.getAttribute('href') || '/').replace(/\/?$/, '/');
@@ -353,18 +474,76 @@ document.addEventListener('DOMContentLoaded', async function () {
     const ROUTE_PREFIX = isDirectPhp ? 'index.php/' : '';
     const BASE_API = BASE + ROUTE_PREFIX + 'api'; 
     const DATASET_API = BASE + ROUTE_PREFIX + 'dataset';
+    const DATASETS_LIST_API = DATASET_API + '/list';
 
-    // Repetition button
+    // 0. Fetch Managed Catalogs from DB
+    let managedCatalogs = { derivadores_data: {}, repartidores_data: {}, general_params: {} };
+    try {
+        const { json } = await fetchJson(`${BASE_API}/catalogs`);
+        if (json.success) {
+            managedCatalogs = json.data;
+        }
+    } catch (e) {
+        console.warn("Could not fetch latest catalogs from DB:", e);
+    }
+
+    // 0.1 Fetch Datasets History
+    const historySelect = document.getElementById('historySelect');
+    if (historySelect) {
+        try {
+            const { json } = await fetchJson(DATASETS_LIST_API);
+            if (json.success && json.datasets) {
+                json.datasets.forEach(ds => {
+                    const date = new Date(ds.created_at).toLocaleString();
+                    const name = ds.dataset_name || 'Unnamed Dataset';
+                    const option = document.createElement('option');
+                    option.value = ds.dataset_id;
+                    option.textContent = `${name} (ID: ${ds.dataset_id}) - ${date}`;
+                    historySelect.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.warn("Could not fetch datasets history:", e);
+        }
+    }
+
+    const historyLoadForm = document.getElementById('historyLoadForm');
+    if (historyLoadForm) {
+        historyLoadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const selectedId = historySelect.value;
+            if (selectedId) {
+                window.location.href = `${BASE}enter-data/${selectedId}`;
+            }
+        });
+    }
+
     const repeatBtn = document.getElementById('applyRepetitionBtn');
     if (repeatBtn) repeatBtn.onclick = applyRepetition;
 
-    if (datasetId) {
+    if (!datasetId) {
+        renderGeneralParamsForm({
+            ...managedCatalogs,
+            ...(managedCatalogs.general_params || {})
+        });
+    } else {
         document.getElementById('current_dataset_id').value = datasetId;
+        const statusBadge = document.getElementById('status_badge');
+        if (statusBadge) {
+            statusBadge.textContent = `Mode: Editing Dataset #${datasetId}`;
+            statusBadge.classList.replace('bg-secondary', 'bg-primary');
+        }
         try {
             const { json } = await fetchJson(`${DATASET_API}/${datasetId}`);
             if (json.success && json.canonical) {
-                window.CANONICAL_DATA = json.canonical;
-                populateFormFromCanonical(json.canonical);
+                // Merge managed catalogs into canonical (DB takes precedence)
+                const canonical = {
+                    ...json.canonical,
+                    derivadores_data: managedCatalogs.derivadores_data,
+                    repartidores_data: managedCatalogs.repartidores_data
+                };
+                window.CANONICAL_DATA = canonical;
+                populateFormFromCanonical(canonical, json.dataset_name || json.canonical.dataset_name);
                 showTab('manual_tab');
                 document.getElementById('runOptimizationBtn').classList.remove('hidden');
             } else {
@@ -376,7 +555,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    // Excel Upload
     const excelUploadForm = document.getElementById('excelUploadForm');
     if (excelUploadForm) {
         excelUploadForm.addEventListener('submit', async function (e) {
@@ -384,37 +562,32 @@ document.addEventListener('DOMContentLoaded', async function () {
             const formData = new FormData(this);
             try {
                 const { json } = await fetchJson(`${BASE_API}/upload/excel`, { method: 'POST', body: formData });
-
                 if (json.success && json.data && json.data.dataset_id) {
-                    window.location.href = `enter-data/${json.data.dataset_id}`;
+                    window.location.href = `${BASE}enter-data/${json.data.dataset_id}`;
                 } else {
-                    const errorMsg = json.error?.message || json.message || 'Check logs';
-                    alert('Upload failed: ' + errorMsg);
+                    alert('Upload failed: ' + (json.error?.message || 'Check logs'));
                 }
             } catch (e) { 
-                console.error('Upload error:', e); 
                 alert('Upload error: ' + e.message);
             }
         });
     }
 
-    // Manual Save
     const manualInputForm = document.getElementById('manualInputForm');
     if (manualInputForm) {
         manualInputForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             const targetDatasetId = document.getElementById('current_dataset_id').value;
+            const datasetName = document.getElementById('dataset_name').value;
 
             const canonical = {};
-            document.querySelectorAll('#generalParamsForm input[name^="param_"]').forEach(input => {
+            document.querySelectorAll('#generalParamsContainer input[name^="param_"]').forEach(input => {
                 const name = input.name.replace('param_', '');
                 canonical[name] = Number(input.value);
             });
 
-            // Merge maps from tables
             buildMapsFromTables(canonical);
 
-            // Merge catalog from textareas
             try {
                 canonical.derivadores_data = JSON.parse(document.getElementById('derivadores_data_json').value);
                 canonical.repartidores_data = JSON.parse(document.getElementById('repartidores_data_json').value);
@@ -425,26 +598,28 @@ document.addEventListener('DOMContentLoaded', async function () {
                 const { json } = await fetchJson(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dataset_id: targetDatasetId, canonical: canonical })
+                    body: JSON.stringify({ 
+                        dataset_id: targetDatasetId, 
+                        dataset_name: datasetName,
+                        canonical: canonical 
+                    })
                 });
 
                 if (json.success) {
                     alert('Saved!');
-                    if (!targetDatasetId && json.data?.dataset_id) {
-                        window.location.href = `enter-data/${json.data.dataset_id}`;
+                    const newId = json.data?.dataset_id || targetDatasetId;
+                    if (newId && newId !== targetDatasetId) {
+                        window.location.href = `${BASE}enter-data/${newId}`;
                     }
                 } else {
-                    const errorMsg = json.error?.message || json.message || 'Error';
-                    alert('Save failed: ' + errorMsg);
+                    alert('Save failed: ' + (json.error?.message || json.message || 'Error'));
                 }
             } catch (e) { 
-                console.error('Save error:', e); 
                 alert('Save error: ' + e.message);
             }
         });
     }
 
-    // Run
     const runBtn = document.getElementById('runOptimizationBtn');
     if (runBtn) {
         runBtn.addEventListener('click', async function () {
@@ -453,21 +628,13 @@ document.addEventListener('DOMContentLoaded', async function () {
             this.textContent = 'Running...';
             try {
                 const { json } = await fetchJson(`${DATASET_API}/run/${datasetId}`, { method: 'POST' });
-                // Robust extraction of opt_id from the result
-                // The API returns {success:true, result: {summary: { ... }, detail: [...], opt_id: ...}} 
-                // OR it might be in the top level if modified recently
                 const optId = json.result?.opt_id || json.opt_id;
-                
                 if (json.success && optId) {
-                    window.location.href = `view-result/${optId}`;
-                } else if (json.success) {
-                    // Fallback if optId is missing but success is true (shouldn't happen with current API)
-                    window.location.href = `results.php?dataset_id=${datasetId}`;
+                    window.location.href = `${BASE}view-result/${optId}`;
                 } else {
                     alert('Execution failed: ' + (json.error?.message || json.message || 'Error'));
                 }
             } catch (e) { 
-                console.error('Run error:', e); 
                 alert('Run error: ' + e.message);
             }
             finally { this.disabled = false; this.textContent = '▶ Run Optimization'; }

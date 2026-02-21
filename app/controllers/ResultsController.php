@@ -82,7 +82,8 @@ class ResultsController
                     $canonical['inputs'],
                     $meta,
                     $violations,
-                    $row
+                    $row,
+                    $row['dataset_name'] ?? null
                 ),
             ];
 
@@ -118,9 +119,11 @@ class ResultsController
         $sql = "
             SELECT
                 o.opt_id, o.dataset_id, o.status, o.created_at,
-                r.summary_json, r.detail_json, r.inputs_json
+                r.summary_json, r.detail_json, r.inputs_json,
+                d.dataset_name
             FROM optimizations o
             LEFT JOIN results r ON r.opt_id = o.opt_id
+            JOIN datasets d ON d.dataset_id = o.dataset_id
             WHERE o.opt_id = :opt_id
         ";
 

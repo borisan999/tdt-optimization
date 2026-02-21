@@ -162,7 +162,10 @@ $isInventoryAvailable = $canonicalAvailable;
 
 <div class="container my-4">
 
-    <h2 class="mb-3">Optimization Result Details</h2>
+    <div class="mb-3">
+        <h2 class="mb-0 text-primary"><?= htmlspecialchars($viewModel->dataset_name ?? 'Unnamed Dataset') ?></h2>
+        <div class="text-muted small">Optimization Result Details • Dataset ID: #<?= htmlspecialchars((string)$viewModel->meta['dataset_id']) ?></div>
+    </div>
 
     <div class="mb-3 d-flex gap-2 flex-wrap">
         <a class="btn btn-success btn-sm"
