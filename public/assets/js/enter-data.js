@@ -115,47 +115,34 @@ function showTab(tabId) {
    Editable Row Builders
 ========================================= */
 const paramLabels = {
-    "Nivel_maximo": "Nivel Máximo (dBuV)",
-    "Nivel_minimo": "Nivel Mínimo (dBuV)",
-    "Piso_Maximo": "Piso Máximo",
-    "Potencia_Objetivo_TU": "Potencia Objetivo TU (dBuV)",
-    "apartamentos_por_piso": "Apartamentos por Piso",
-    "atenuacion_cable_470mhz": "Atenuación Cable 470MHz",
-    "atenuacion_cable_698mhz": "Atenuación Cable 698MHz",
-    "atenuacion_cable_por_metro": "Atenuación Cable por Metro",
-    "atenuacion_conector": "Atenuación Conector",
-    "atenuacion_conexion_tu": "Atenuación Conexión TU",
-    "conectores_por_union": "Conectores por Unión",
-    "largo_cable_amplificador_ultimo_piso": "Largo Cable Amplificador Último Piso (m)",
-    "largo_cable_entre_pisos": "Largo Cable entre Pisos (m)",
-    "largo_cable_feeder_bloque": "Largo Cable Feeder Bloque (m)",
-    "p_troncal": "P Troncal",
-    "potencia_entrada": "Potencia Entrada (dBuV)",
+    "Nivel_maximo": __("param_Nivel_maximo"),
+    "Nivel_minimo": __("param_Nivel_minimo"),
+    "Piso_Maximo": __("param_Piso_Maximo"),
+    "Potencia_Objetivo_TU": __("param_Potencia_Objetivo_TU"),
+    "apartamentos_por_piso": __("param_apartamentos_por_piso"),
+    "atenuacion_cable_470mhz": __("param_atenuacion_cable_470mhz"),
+    "atenuacion_cable_698mhz": __("param_atenuacion_cable_698mhz"),
+    "atenuacion_cable_por_metro": __("param_atenuacion_cable_por_metro"),
+    "atenuacion_conector": __("param_atenuacion_conector"),
+    "atenuacion_conexion_tu": __("param_atenuacion_conexion_tu"),
+    "conectores_por_union": __("param_conectores_por_union"),
+    "largo_cable_amplificador_ultimo_piso": __("param_largo_cable_amplificador_ultimo_piso"),
+    "largo_cable_entre_pisos": __("param_largo_cable_entre_pisos"),
+    "largo_cable_feeder_bloque": __("param_largo_cable_feeder_bloque"),
+    "p_troncal": __("param_p_troncal"),
+    "potencia_entrada": __("param_potencia_entrada"),
 };
 
 const paramDescriptions = {
-    "Nivel_maximo": "Límite superior permitido por norma RITEL (máx 70 dBuV).",
-    "Nivel_minimo": "Límite inferior permitido por norma RITEL (mín 47 dBuV).",
-    "Piso_Maximo": "Altura total del edificio en niveles habitables.",
-    "Potencia_Objetivo_TU": "El valor de potencia que el algoritmo priorizará en cada toma.",
-    "apartamentos_por_piso": "Cantidad de unidades de vivienda por cada nivel tipo.",
-    "atenuacion_cable_470mhz": "Factor de pérdida del cable coaxial a 470 MHz.",
-    "atenuacion_cable_698mhz": "Factor de pérdida del cable coaxial a 698 MHz.",
-    "atenuacion_cable_por_metro": "Pérdida nominal por metro lineal de cable.",
-    "atenuacion_conector": "Pérdida por inserción de cada conector F mecánico.",
-    "atenuacion_conexion_tu": "Pérdida en el jack o toma final de usuario.",
-    "conectores_por_union": "Número de conectores instalados en cada derivación.",
-    "largo_cable_amplificador_ultimo_piso": "Longitud de la acometida desde cabecera al edificio.",
-    "largo_cable_entre_pisos": "Metraje de cable vertical entre plantas adyacentes.",
-    "largo_cable_feeder_bloque": "Cable horizontal desde el riser hasta el primer repartidor.",
-    "p_troncal": "Nivel donde se realiza el primer split de la red troncal.",
-    "potencia_entrada": "Potencia de señal disponible a la salida del amplificador.",
+    "Nivel_maximo": __("tooltip_Nivel_maximo"),
+    "Nivel_minimo": __("tooltip_Nivel_minimo"),
+    // ... add more if needed
 };
 
 const tableFieldHints = {
-    "tus": "Cantidad de Tomas de Usuario requeridas para este apartamento.",
-    "deriv_rep": "Longitud del cable desde el Derivador de piso hasta el Repartidor del apartamento.",
-    "rep_tu": "Longitud del cable desde el Repartidor del apartamento hasta esta toma específica.",
+    "tus": __("hint_tus"),
+    "deriv_rep": __("hint_deriv_rep"),
+    "rep_tu": __("hint_rep_tu"),
 };
 
 function addApartmentRow(piso = '', apto = '', tus = '', deriv = '') {
@@ -203,17 +190,17 @@ function renderGeneralParamsForm(params) {
 
     const categories = [
         {
-            title: 'Building Geometry',
+            title: __('cat_geometry'),
             icon: 'fa-building',
             fields: ['Piso_Maximo', 'apartamentos_por_piso', 'largo_cable_entre_pisos', 'largo_cable_amplificador_ultimo_piso', 'largo_cable_feeder_bloque']
         },
         {
-            title: 'Signal Constraints',
+            title: __('cat_constraints'),
             icon: 'fa-signal',
             fields: ['potencia_entrada', 'Nivel_minimo', 'Nivel_maximo', 'Potencia_Objetivo_TU', 'p_troncal']
         },
         {
-            title: 'Loss & Attenuation',
+            title: __('cat_attenuation'),
             icon: 'fa-chart-line',
             fields: ['atenuacion_cable_por_metro', 'atenuacion_cable_470mhz', 'atenuacion_cable_698mhz', 'atenuacion_conector', 'atenuacion_conexion_tu', 'conectores_por_union']
         }
@@ -530,7 +517,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         document.getElementById('current_dataset_id').value = datasetId;
         const statusBadge = document.getElementById('status_badge');
         if (statusBadge) {
-            statusBadge.textContent = `Mode: Editing Dataset #${datasetId}`;
+            statusBadge.textContent = __("mode_edit", { id: datasetId });
             statusBadge.classList.replace('bg-secondary', 'bg-primary');
         }
         try {

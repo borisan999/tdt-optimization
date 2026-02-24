@@ -7,15 +7,15 @@ include __DIR__ . '/templates/navbar.php';
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
         <div>
-            <h2 class="text-primary mb-0"><i class="fas fa-magic me-2"></i>Generador de Plantilla Avanzada</h2>
-            <p class="text-muted small mb-0">Herramienta para crear edificios complejos de forma rápida y visual.</p>
+            <h2 class="text-primary mb-0"><i class="fas fa-magic me-2"></i><?= __('gen_title') ?></h2>
+            <p class="text-muted small mb-0"><?= __('gen_subtitle') ?></p>
         </div>
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#helpModal">
-                <i class="fas fa-question-circle me-1"></i> Ayuda / Guía
+                <i class="fas fa-question-circle me-1"></i> <?= __('help_guide') ?>
             </button>
             <a href="dashboard" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Volver
+                <i class="fas fa-arrow-left"></i> <?= __('back') ?>
             </a>
         </div>
     </div>
@@ -25,13 +25,13 @@ include __DIR__ . '/templates/navbar.php';
         <div class="d-flex align-items-center">
             <div class="me-3"><i class="fas fa-info-circle text-info fa-2x"></i></div>
             <div>
-                <h6 class="fw-bold mb-1">Guía de 3 Pasos:</h6>
+                <h6 class="fw-bold mb-1"><?= __('step_by_step') ?>:</h6>
                 <div class="d-flex gap-4 flex-wrap small text-muted">
-                    <span><span class="badge bg-primary me-1">1</span> Configuración Global</span>
+                    <span><span class="badge bg-primary me-1">1</span> <?= __('global_config') ?></span>
                     <span><i class="fas fa-chevron-right mx-1 small"></i></span>
-                    <span><span class="badge bg-success me-1">2</span> Definir Modelos de Aptos</span>
+                    <span><span class="badge bg-success me-1">2</span> <?= __('apartment_models') ?></span>
                     <span><i class="fas fa-chevron-right mx-1 small"></i></span>
-                    <span><span class="badge bg-info text-dark me-1">3</span> Mapear Unidades del Edificio</span>
+                    <span><span class="badge bg-info text-dark me-1">3</span> <?= __('building_mapping') ?></span>
                 </div>
             </div>
         </div>
@@ -43,26 +43,26 @@ include __DIR__ . '/templates/navbar.php';
             <div class="col-lg-4">
                 <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px; z-index: 10;">
                     <div class="card-header bg-primary text-white py-3">
-                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Configuración Global</h5>
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i><?= __('global_config') ?></h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="mb-4">
-                            <label for="template-project-name" class="form-label fw-bold" title="Nombre descriptivo para identificar este proyecto.">
-                                Nombre del Proyecto <i class="fas fa-info-circle text-muted ms-1 small"></i>
+                            <label for="template-project-name" class="form-label fw-bold" title="<?= __('tooltip_project') ?>">
+                                <?= __('project_name') ?> <i class="fas fa-info-circle text-muted ms-1 small"></i>
                             </label>
-                            <input type="text" class="form-control border-primary-subtle shadow-sm" id="template-project-name" placeholder="Ej: Edificio Terrazul" required>
+                            <input type="text" class="form-control border-primary-subtle shadow-sm" id="template-project-name" placeholder="<?= __('project_placeholder') ?>" required>
                         </div>
 
                         <div class="row g-3 mb-4">
                             <div class="col-6">
-                                <label for="general-Piso_Maximo" class="form-label fw-bold" title="Número total de pisos en el edificio.">
-                                    Piso Máximo <i class="fas fa-info-circle text-muted ms-1 small"></i>
+                                <label for="general-Piso_Maximo" class="form-label fw-bold" title="<?= __('tooltip_max_floor') ?>">
+                                    <?= __('max_floor') ?> <i class="fas fa-info-circle text-muted ms-1 small"></i>
                                 </label>
                                 <input type="number" class="form-control shadow-sm" id="general-Piso_Maximo" value="10" step="1">
                             </div>
                             <div class="col-6">
-                                <label for="general-Apartamentos_Piso" class="form-label fw-bold" title="Cantidad máxima de apartamentos en un piso.">
-                                    Aptos x Piso <i class="fas fa-info-circle text-muted ms-1 small"></i>
+                                <label for="general-Apartamentos_Piso" class="form-label fw-bold" title="<?= __('tooltip_apts') ?>">
+                                    <?= __('apts_per_floor') ?> <i class="fas fa-info-circle text-muted ms-1 small"></i>
                                 </label>
                                 <input type="number" class="form-control shadow-sm" id="general-Apartamentos_Piso" value="4" required step="1">
                             </div>
@@ -72,36 +72,36 @@ include __DIR__ . '/templates/navbar.php';
                             <div class="accordion-item border-0 bg-light shadow-sm rounded-3 overflow-hidden">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed bg-light py-2 small fw-bold text-muted" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTech">
-                                        <i class="fas fa-tools me-2"></i> Parámetros Técnicos
+                                        <i class="fas fa-tools me-2"></i> <?= __('tech_params') ?>
                                     </button>
                                 </h2>
                                 <div id="collapseTech" class="accordion-collapse collapse" data-bs-parent="#paramsAccordion">
                                     <div class="accordion-body px-3 py-3 border-top border-2 border-white">
                                         <div class="mb-3">
-                                            <label class="form-label small mb-1 fw-bold" title="Distancia desde el amplificador hasta el primer derivador.">Largo Cable Amp. (m)</label>
+                                            <label class="form-label small mb-1 fw-bold" title="<?= __('tooltip_amp_dist') ?>"><?= __('tech_amp_length') ?></label>
                                             <input type="number" class="form-control form-control-sm" id="general-Largo_Cable_Amplificador_Ultimo_Piso" value="4" step="any">
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label small mb-1 fw-bold">Potencia Entrada (dBµV)</label>
+                                            <label class="form-label small mb-1 fw-bold"><?= __('tech_input_power') ?></label>
                                             <input type="number" class="form-control form-control-sm" id="general-Potencia_Entrada_dBuV" value="110" step="any">
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label small mb-1 fw-bold">Largo Feeder Bloque (m)</label>
+                                            <label class="form-label small mb-1 fw-bold"><?= __('tech_feeder_length') ?></label>
                                             <input type="number" class="form-control form-control-sm" id="general-Largo_Feeder_Bloque_m (Mínimo)" value="3.5" step="any">
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label small mb-1 fw-bold">Atenuación Cable (dB/m)</label>
+                                            <label class="form-label small mb-1 fw-bold"><?= __('tech_cable_atten') ?></label>
                                             <input type="number" class="form-control form-control-sm" id="general-Atenuacion_Cable_dBporM" value="0.2" step="any">
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label small mb-1 fw-bold">Largo Entre Pisos (m)</label>
+                                            <label class="form-label small mb-1 fw-bold"><?= __('tech_floor_dist') ?></label>
                                             <input type="number" class="form-control form-control-sm" id="general-Largo_Entre_Pisos_m" value="3.5" step="any">
                                         </div>
                                         <div class="mb-0">
-                                            <label class="form-label small mb-1 fw-bold">Banda Normativa (Min/Max)</label>
+                                            <label class="form-label small mb-1 fw-bold"><?= __('tech_norm_band') ?></label>
                                             <div class="input-group input-group-sm">
                                                 <input type="number" class="form-control" id="general-Nivel_Minimo_dBuV" value="47" step="any">
-                                                <span class="input-group-text bg-white">a</span>
+                                                <span class="input-group-text bg-white"><?= __('tech_to') ?></span>
                                                 <input type="number" class="form-control" id="general-Nivel_Maximo_dBuV" value="70" step="any">
                                             </div>
                                         </div>
@@ -111,7 +111,7 @@ include __DIR__ . '/templates/navbar.php';
                         </div>
 
                         <button id="generate-db-btn" type="submit" class="btn btn-primary btn-lg w-100 shadow-sm fw-bold">
-                            <i class="fas fa-rocket me-2"></i>Generar Proyecto
+                            <i class="fas fa-rocket me-2"></i><?= __('generate_btn') ?>
                         </button>
                     </div>
                 </div>
@@ -124,9 +124,9 @@ include __DIR__ . '/templates/navbar.php';
                 <!-- Step 1: Apartment Types -->
                 <div class="card shadow-sm border-0 mb-4 overflow-hidden rounded-3">
                     <div class="card-header bg-success text-white py-3 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-door-open me-2"></i>1. Modelos de Apartamento</h5>
+                        <h5 class="mb-0"><i class="fas fa-door-open me-2"></i>1. <?= __('apartment_models') ?></h5>
                         <button type="button" id="add-apartment-type-btn" class="btn btn-light btn-sm fw-bold shadow-sm">
-                            <i class="fas fa-plus-circle me-1"></i>Añadir Modelo
+                            <i class="fas fa-plus-circle me-1"></i><?= __('add_model') ?>
                         </button>
                     </div>
                     <div class="card-body bg-light-subtle p-4">
@@ -137,9 +137,9 @@ include __DIR__ . '/templates/navbar.php';
                 <!-- Step 2: Assignments -->
                 <div class="card shadow-sm border-0 mb-4 overflow-hidden rounded-3">
                     <div class="card-header bg-info text-dark py-3 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold"><i class="fas fa-network-wired me-2"></i>2. Mapeo del Edificio (Asignaciones)</h5>
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-network-wired me-2"></i>2. <?= __('building_mapping') ?></h5>
                         <button type="button" id="add-assignment-btn" class="btn btn-light btn-sm fw-bold shadow-sm">
-                            <i class="fas fa-plus-circle me-1"></i>Añadir Rango de Pisos
+                            <i class="fas fa-plus-circle me-1"></i><?= __('add_range') ?>
                         </button>
                     </div>
                     <div class="card-body bg-light-subtle p-4">
@@ -156,33 +156,33 @@ include __DIR__ . '/templates/navbar.php';
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-info text-dark">
-                <h5 class="modal-title fw-bold"><i class="fas fa-lightbulb me-2"></i>Guía del Generador</h5>
+                <h5 class="modal-title fw-bold"><i class="fas fa-lightbulb me-2"></i><?= __('gen_guide_title') ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <h6><strong>Concepto 1: Modelos de Apartamento</strong></h6>
-                <p>Aquí define las "plantillas" internas. Por ejemplo, un modelo "Tipo A" que tiene 3 tomas de TV. Define el cableado desde el pasillo hasta cada toma una sola vez.</p>
+                <h6><strong><?= __('concept_1_title') ?></strong></h6>
+                <p><?= __('concept_1_desc') ?></p>
                 
                 <hr>
                 
-                <h6><strong>Concepto 2: Rangos de Pisos y Unidades</strong></h6>
-                <p>En lugar de llenar apartamento por apartamento, usted dice: "En los pisos 1 al 5, los apartamentos 1 y 2 son de Tipo A".</p>
+                <h6><strong><?= __('concept_2_title') ?></strong></h6>
+                <p><?= __('concept_2_desc') ?></p>
                 
                 <hr>
                 
-                <h6><strong>¿Qué es una "Variación"?</strong></h6>
-                <p>Se usa cuando en un mismo rango de pisos hay diferentes modelos de apartamentos. 
+                <h6><strong><?= __('variation_title') ?></strong></h6>
+                <p><?= __('variation_desc') ?> 
                    <br><br>
-                   <strong>Ejemplo:</strong> 
-                   <br>En los pisos 1-10:
+                   <strong><?= __('variation_example_title') ?></strong> 
+                   <br><?= __('variation_example_1') ?>
                    <ul>
-                       <li>Los apartamentos 1, 2 y 3 son "Modelo Standard".</li>
-                       <li>El apartamento 4 es "Modelo Suite" (<em>Esta es la variación</em>).</li>
+                       <li><?= __('variation_example_2') ?></li>
+                       <li><?= __('variation_example_3') ?></li>
                    </ul>
                 </p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendido</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= __('got_it') ?></button>
             </div>
         </div>
     </div>
@@ -203,6 +203,7 @@ include __DIR__ . '/templates/navbar.php';
     .accordion-button:not(.collapsed) { color: #0d6efd; background-color: #e7f1ff; }
     .range-preview { min-height: 30px; padding: 4px 0; }
     .range-preview .badge { font-weight: normal; margin-bottom: 2px; transition: all 0.2s; cursor: default; }
+    .range-preview .badge:hover { transform: scale(1.1); opacity: 1 !important; }
     .preset-btn { font-size: 0.75rem; padding: 0.1rem 0.5rem; }
     .tu-grid { background: #fdfdfd; border: 1px solid #eee; border-radius: 8px; padding: 12px; }
 </style>
@@ -213,6 +214,14 @@ include __DIR__ . '/templates/navbar.php';
 document.addEventListener('DOMContentLoaded', function() {
     let apartmentTypeCounter = 0;
     let assignmentCounter = 0;
+
+    // Pass translations to JS
+    window.LANG = <?= json_encode(\app\helpers\Translation::getDictionary(), JSON_UNESCAPED_UNICODE) ?>;
+    function __(key, placeholders = {}) {
+        let text = window.LANG[key] || key;
+        for (const [k, v] of Object.entries(placeholders)) { text = text.replace(`{${k}}`, v); }
+        return text;
+    }
 
     function initTooltips() {
         if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
@@ -274,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selected = parseRangeString(value);
         
         if (selected.length === 0) {
-            previewContainer.innerHTML = '<span class="text-muted small italic">Ninguno seleccionado</span>';
+            previewContainer.innerHTML = `<span class="text-muted small italic">${__('none_selected')}</span>`;
             return;
         }
 
@@ -282,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
         selected.forEach(num => {
             const isError = num > maxVal || num < 1;
             const colorClass = isError ? 'bg-danger text-white' : (type === 'piso' ? 'bg-info text-dark' : 'bg-secondary text-white');
-            const label = type === 'apto' ? 'A' : 'P';
+            const label = type === 'apto' ? __('label_apt') : __('label_floor');
             html += `<span class="badge ${colorClass} opacity-75 shadow-sm" style="font-size: 0.65rem;">${label}${num}</span>`;
         });
         html += '</div>';
@@ -294,13 +303,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!container) return;
 
         const numTus = parseInt(document.getElementById(`tus-${typeId}`).value) || 0;
-        container.innerHTML = '<h6 class="mt-3 mb-2 small fw-bold text-secondary"><i class="fas fa-bezier-curve me-1"></i>Distancia a Tomas (m)</h6>';
+        container.innerHTML = `<h6 class="mt-3 mb-2 small fw-bold text-secondary"><i class="fas fa-bezier-curve me-1"></i>${__('outlets_dist')}</h6>`;
         
         const grid = document.createElement('div');
         grid.className = 'row row-cols-2 row-cols-sm-3 g-2 tu-grid';
         
         if (numTus === 0) {
-            grid.innerHTML = '<div class="col-12 text-center text-muted small p-2">Indique el número de tomas arriba</div>';
+            grid.innerHTML = `<div class="col-12 text-center text-muted small p-2">${__('indicate_tus')}</div>`;
         } else {
             for (let i = 1; i <= numTus; i++) {
                 const col = document.createElement('div');
@@ -308,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 col.innerHTML = `
                     <div class="input-group input-group-sm shadow-sm border rounded overflow-hidden">
                         <span class="input-group-text bg-light border-0 small fw-bold" style="width: 35px; justify-content: center;">#${i}</span>
-                        <input type="number" class="form-control border-0" id="len-tu-${typeId}-${i}" value="5" step="any" required title="Metros desde el repartidor interno hasta la toma #${i}">
+                        <input type="number" class="form-control border-0" id="len-tu-${typeId}-${i}" value="5" step="any" required title="${__('tooltip_tu_dist', {i: i})}">
                     </div>`;
                 grid.appendChild(col);
             }
@@ -327,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         document.querySelectorAll('.assignment-rule-block select').forEach(select => {
             const currentVal = select.value;
-            select.innerHTML = '<option value="" disabled selected>Elegir modelo...</option>';
+            select.innerHTML = `<option value="" disabled selected>${__('choose_model')}</option>`;
             types.forEach(type => {
                 const isSelected = type === currentVal ? ' selected' : '';
                 select.innerHTML += `<option value="${type}"${isSelected}>${type}</option>`;
@@ -342,18 +351,18 @@ document.addEventListener('DOMContentLoaded', function() {
         col.className = 'col-md-6 animate__animated animate__fadeInUp';
         col.innerHTML = `
             <div class="template-block type-card apartment-type-block h-100 shadow-sm" id="apartment-type-${apartmentTypeCounter}">
-                <button type="button" class="btn-close btn-close-custom btn-sm" onclick="this.closest('.col-md-6').remove(); updateAssignmentDropdowns();" title="Eliminar este modelo"></button>
+                <button type="button" class="btn-close btn-close-custom btn-sm" onclick="this.closest('.col-md-6').remove(); updateAssignmentDropdowns();" title="${__('delete_model')}"></button>
                 <div class="mb-3">
-                    <label class="small fw-bold mb-1"><i class="fas fa-tag me-1 text-success"></i>Nombre del Modelo</label>
-                    <input type="text" class="form-control form-control-sm border-success-subtle shadow-sm" id="type-name-${apartmentTypeCounter}" placeholder="Ej: Standard 3 Tomas" required title="Nombre único para este modelo">
+                    <label class="small fw-bold mb-1"><i class="fas fa-tag me-1 text-success"></i>${__('model_name')}</label>
+                    <input type="text" class="form-control form-control-sm border-success-subtle shadow-sm" id="type-name-${apartmentTypeCounter}" placeholder="${__('model_placeholder')}" required title="${__('tooltip_model_name')}">
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="small fw-bold mb-1" title="Cuántas salidas de TV tiene este apartamento">Nº Tomas (TUs)</label>
+                        <label class="small fw-bold mb-1" title="${__('tooltip_num_outlets')}">${__('num_outlets')}</label>
                         <input type="number" class="form-control form-control-sm shadow-sm" id="tus-${apartmentTypeCounter}" value="2" min="1" required>
                     </div>
                     <div class="col-6">
-                        <label class="small fw-bold mb-1" title="Metros desde el pasillo hasta el repartidor interno">Largo Entrada (m)</label>
+                        <label class="small fw-bold mb-1" title="${__('tooltip_entry_dist')}">${__('entry_length')}</label>
                         <input type="number" class="form-control form-control-sm shadow-sm" id="len-deriv-${apartmentTypeCounter}" value="8" step="any" required>
                     </div>
                 </div>
@@ -378,19 +387,19 @@ document.addEventListener('DOMContentLoaded', function() {
         ruleBlock.innerHTML = `
             <div class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label class="small fw-bold mb-1 text-muted">Modelo de Apartamento</label>
-                    <select class="form-select form-select-sm border-info-subtle shadow-sm" required title="Elija uno de los modelos creados en la Sección 1"></select>
+                    <label class="small fw-bold mb-1 text-muted">${__('apt_model')}</label>
+                    <select class="form-select form-select-sm border-info-subtle shadow-sm" required title="${__('choose_model_title')}"></select>
                 </div>
                 <div class="col-md-6">
-                    <label class="small fw-bold mb-1 text-muted" title="Números de puerta en los pisos seleccionados (ej: 1, 2, 3)">Apartamentos Aplicables</label>
+                    <label class="small fw-bold mb-1 text-muted" title="${__('tooltip_apt_numbers')}">${__('applicable_apts')}</label>
                     <div class="input-group input-group-sm shadow-sm">
-                        <input type="text" class="form-control range-input" data-range-type="apto" placeholder="Ej: 1-4, 6" required>
-                        <button class="btn btn-outline-secondary preset-btn" type="button" title="Usar todos los aptos del piso">Todos</button>
+                        <input type="text" class="form-control range-input" data-range-type="apto" placeholder="${__('apts_placeholder')}" required>
+                        <button class="btn btn-outline-secondary preset-btn" type="button" title="${__('use_all_apts')}">${__('all_btn')}</button>
                     </div>
                     <div class="range-preview"></div>
                 </div>
                 <div class="col-md-2 text-end pb-1">
-                    <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="this.closest('.assignment-rule-block').remove()" title="Eliminar regla">
+                    <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="this.closest('.assignment-rule-block').remove()" title="${__('delete_rule')}">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
@@ -401,7 +410,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const input = ruleBlock.querySelector('.range-input');
         input.addEventListener('input', () => updateRangePreview(input));
         ruleBlock.querySelector('.preset-btn').addEventListener('click', () => {
-            input.value = `1-${document.getElementById('general-Apartamentos_Piso').value}`;
+            const aptsPiso = document.getElementById('general-Apartamentos_Piso').value;
+            input.value = `1-${aptsPiso}`;
             updateRangePreview(input);
         });
         updateRangePreview(input);
@@ -415,21 +425,21 @@ document.addEventListener('DOMContentLoaded', function() {
         block.className = 'template-block assignment-card assignment-block animate__animated animate__fadeInUp shadow-sm';
         block.id = `assignment-${assignmentCounter}`;
         block.innerHTML = `
-            <button type="button" class="btn-close btn-close-custom" onclick="this.closest('.assignment-block').remove()" title="Eliminar este grupo de pisos"></button>
+            <button type="button" class="btn-close btn-close-custom" onclick="this.closest('.assignment-block').remove()" title="${__('delete_range')}"></button>
             <div class="row mb-3">
                 <div class="col-md-8">
-                    <label class="fw-bold text-info mb-1"><i class="fas fa-layer-group me-1"></i>Rango de Pisos</label>
+                    <label class="fw-bold text-info mb-1"><i class="fas fa-layer-group me-1"></i>${__('floor_range')}</label>
                     <div class="input-group input-group-sm shadow-sm">
-                        <input type="text" class="form-control range-input" data-range-type="piso" id="floors-${assignmentCounter}" placeholder="Ej: 1-5, 8, 10-12" required title="Indique los números de piso donde se aplicará este mapeo">
-                        <button class="btn btn-outline-info preset-btn" type="button" title="Seleccionar todos los pisos del edificio">Todos</button>
+                        <input type="text" class="form-control range-input" data-range-type="piso" id="floors-${assignmentCounter}" placeholder="${__('range_placeholder')}" required title="${__('tooltip_floor_range')}">
+                        <button class="btn btn-outline-info preset-btn" type="button" title="${__('use_all_floors')}">${__('all_btn')}</button>
                     </div>
                     <div class="range-preview"></div>
                 </div>
             </div>
             <div id="assignment-rules-container-${assignmentCounter}"></div>
             <div class="text-center mt-2 border-top pt-3">
-                <button type="button" class="btn btn-outline-info btn-sm px-4 rounded-pill shadow-sm fw-bold" onclick="addApartmentRule(${assignmentCounter})" title="Use esto si hay diferentes modelos de aptos en estos pisos">
-                    <i class="fas fa-plus me-1"></i>Variación en este Piso
+                <button type="button" class="btn btn-outline-info btn-sm px-4 rounded-pill shadow-sm fw-bold" onclick="addApartmentRule(${assignmentCounter})" title="${__('variation_btn_title')}">
+                    <i class="fas fa-plus me-1"></i>${__('variation_btn')}
                 </button>
             </div>`;
         container.appendChild(block);
@@ -437,7 +447,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const input = block.querySelector('.range-input');
         input.addEventListener('input', () => updateRangePreview(input));
         block.querySelector('.preset-btn').addEventListener('click', () => {
-            input.value = `1-${document.getElementById('general-Piso_Maximo').value}`;
+            const pisoMax = document.getElementById('general-Piso_Maximo').value;
+            input.value = `1-${pisoMax}`;
             updateRangePreview(input);
         });
 
@@ -461,13 +472,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const projectName = document.getElementById('template-project-name').value.trim();
         if (!projectName) {
-            showMessage('Por favor, ingrese un nombre para el proyecto.', true);
+            showMessage(__('project_name_error'), true);
             return;
         }
 
         genBtn.disabled = true;
         const originalText = genBtn.innerHTML;
-        genBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando Estructura...';
+        genBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + __('loading');
 
         const generalParams = {};
         document.querySelectorAll('#template-form input[id^="general-"]').forEach(input => {
@@ -513,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         if (assignmentsData.length === 0) {
-            showMessage('Debe definir al menos una asignación válida de pisos.', true);
+            showMessage(__('assignment_error'), true);
             genBtn.disabled = false;
             genBtn.innerHTML = originalText;
             return;
@@ -533,13 +544,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(templateData)
             });
             const result = await response.json();
-            if (!result.success) throw new Error(result.error?.message || 'Error en la generación del dataset');
+            if (!result.success) throw new Error(result.error?.message || 'Error');
             
-                    showMessage('¡Arquitectura procesada con éxito! Redirigiendo...');
-                    setTimeout(() => {
-                        window.location.href = `enter-data/${result.data.dataset_id}`;
-                    }, 1500);        } catch (error) { 
-            showMessage(`Error: ${error.message}`, true); 
+            showMessage(__('success_redirecting'));
+            setTimeout(() => {
+                window.location.href = `enter-data/${result.data.dataset_id}`;
+            }, 1500);
+        } catch (error) { 
+            showMessage(`${__('error_prefix')}${error.message}`, true); 
             genBtn.disabled = false;
             genBtn.innerHTML = originalText;
         } 
@@ -547,4 +559,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<?php include __DIR__ . '/templates/header.php'; ?>
 <?php include __DIR__ . '/templates/footer.php'; ?>

@@ -304,30 +304,30 @@ include __DIR__ . '/templates/navbar.php';
 <div class="container-fluid my-4">
     <div class="d-flex justify-content-between align-items-center mb-3 px-3">
         <div>
-            <h2 class="mb-0 text-primary">Topología de Red Interactiva</h2>
+            <h2 class="mb-0 text-primary"><?= __('tree_title') ?></h2>
             <div class="text-muted">Resultados de Optimización #<?= $opt_id ?></div>
         </div>
         <a href="view-result/<?= $opt_id ?>" class="btn btn-secondary shadow-sm">
-            <i class="fas fa-arrow-left"></i> Volver a Resultados
+            <i class="fas fa-arrow-left"></i> <?= __('back') ?>
         </a>
     </div>
 
     <div class="tree-container">
         <!-- Leyenda de colores -->
         <div class="legend-box">
-            <h5 class="mb-3" style="color:#2C3E50;">Simbología</h5>
-            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_CABECERA ?>"></span> Cabecera</div>
-            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_TRONCAL ?>"></span> Troncal</div>
-            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_BLOQUE ?>"></span> Bloque</div>
-            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_PISO ?>"></span> Piso (Derivador)</div>
-            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_APTO ?>"></span> Apto (Repartidor)</div>
-            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_OK ?>"></span> Toma OK</div>
-            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_BAD ?>"></span> Fuera de Norma</div>
+            <h5 class="mb-3" style="color:#2C3E50;"><?= __('symbology') ?></h5>
+            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_CABECERA ?>"></span> <?= __('headend') ?></div>
+            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_TRONCAL ?>"></span> <?= __('trunk') ?></div>
+            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_BLOQUE ?>"></span> <?= __('block') ?></div>
+            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_PISO ?>"></span> <?= __('floor') ?> (<?= __('derivador') ?>)</div>
+            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_APTO ?>"></span> <?= __('apartment') ?> (<?= __('repartidor') ?>)</div>
+            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_OK ?>"></span> <?= __('outlet_ok') ?></div>
+            <div class="mb-2"><span class="dot-legend" style="background:<?= $C_BAD ?>"></span> <?= __('outlet_bad') ?></div>
             <div class="mt-3 pt-2 border-top">
-                <span class="line-sample"></span> <b>Etiqueta:</b><br/>Distancia (m) | Pérdida (dB)
+                <span class="line-sample"></span> <b><?= __('label') ?>:</b><br/><?= __('distance') ?> (m) | <?= __('loss') ?> (dB)
             </div>
             <div class="mt-2 small text-muted">
-                <i class="fas fa-mouse-pointer"></i> Clic para expandir hijos.
+                <i class="fas fa-mouse-pointer"></i> <?= __('click_expand') ?>
             </div>
         </div>
 

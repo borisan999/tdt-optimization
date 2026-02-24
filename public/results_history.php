@@ -24,8 +24,8 @@ include __DIR__ . '/templates/navbar.php';
 <div class="container py-4">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">Optimization History</h2>
-        <a href="dashboard" class="btn btn-secondary">Back</a>
+        <h2 class="fw-bold"><?= __('opt_history') ?></h2>
+        <a href="dashboard" class="btn btn-secondary"><?= __('back') ?></a>
     </div>
 
     <div class="card shadow-sm">
@@ -34,15 +34,15 @@ include __DIR__ . '/templates/navbar.php';
             <table class="table table-bordered table-striped align-middle">
                 <thead class="table-dark">
                 <tr>
-                    <th>ID</th>
-                    <th>Status</th>
-                    <th>Created At</th>
-                    <th>Min Level</th>
-                    <th>Max Level</th>
-                    <th>Avg Level</th>
-                    <th>Min Loss</th>
-                    <th>Max Loss</th>
-                    <th>Action</th>
+                    <th><?= __('id') ?></th>
+                    <th><?= __('status') ?></th>
+                    <th><?= __('created_at') ?></th>
+                    <th><?= __('min_level') ?></th>
+                    <th><?= __('max_level') ?></th>
+                    <th><?= __('avg_level') ?></th>
+                    <th><?= __('min_loss') ?></th>
+                    <th><?= __('max_loss') ?></th>
+                    <th><?= __('action') ?></th>
                 </tr>
                 </thead>
 
@@ -60,11 +60,11 @@ include __DIR__ . '/templates/navbar.php';
                     ?>
 
                     <tr>
-                        <td><?= htmlspecialchars($row["opt_id"]) ?></td>
+                        <td><?= htmlspecialchars((string)$row["opt_id"]) ?></td>
 
                         <td>
                             <span class="badge bg-<?= $badgeClass ?>">
-                                <?= htmlspecialchars($row["status"]) ?>
+                                <?= __('status_' . strtolower(htmlspecialchars($row["status"]))) ?>
                             </span>
                         </td>
 
@@ -74,16 +74,16 @@ include __DIR__ . '/templates/navbar.php';
                                 : '-' ?>
                         </td>
 
-                        <td><?= $stats["min_level"] !== null ? number_format($stats["min_level"], 2) : "-" ?></td>
-                        <td><?= $stats["max_level"] !== null ? number_format($stats["max_level"], 2) : "-" ?></td>
-                        <td><?= $stats["avg_level"] !== null ? number_format($stats["avg_level"], 2) : "-" ?></td>
-                        <td><?= $stats["min_loss"] !== null ? number_format($stats["min_loss"], 2) : "-" ?></td>
-                        <td><?= $stats["max_loss"] !== null ? number_format($stats["max_loss"], 2) : "-" ?></td>
+                        <td><?= $stats["min_level"] !== null ? number_format((float)$stats["min_level"], 2) : "-" ?></td>
+                        <td><?= $stats["max_level"] !== null ? number_format((float)$stats["max_level"], 2) : "-" ?></td>
+                        <td><?= $stats["avg_level"] !== null ? number_format((float)$stats["avg_level"], 2) : "-" ?></td>
+                        <td><?= $stats["min_loss"] !== null ? number_format((float)$stats["min_loss"], 2) : "-" ?></td>
+                        <td><?= $stats["max_loss"] !== null ? number_format((float)$stats["max_loss"], 2) : "-" ?></td>
 
                         <td>
                             <a href="view-result/<?= $row["opt_id"] ?>"
                                class="btn btn-primary btn-sm">
-                                View Details
+                                <?= __('view_details') ?>
                             </a>
                         </td>
                     </tr>

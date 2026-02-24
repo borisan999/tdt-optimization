@@ -15,21 +15,21 @@ $history = $datasetModel->getHistory(); // returns array (may be empty)
 ?>
 
 <div class="container mt-4">
-    <h2>📁 Dataset History</h2>
+    <h2>📁 <?= __('dataset_history') ?></h2>
 
     <?php if (empty($history)): ?>
-        <div class="card p-3 mt-3 shadow-sm border-0">No datasets found.</div>
+        <div class="card p-3 mt-3 shadow-sm border-0"><?= __('no_datasets') ?></div>
     <?php else: ?>
         <div class="card shadow-sm border-0 mt-3">
             <div class="card-body p-0">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">ID</th>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Created Date</th>
-                            <th class="text-end pe-3">Action</th>
+                            <th class="ps-3"><?= __('id') ?></th>
+                            <th><?= __('name') ?></th>
+                            <th><?= __('status') ?></th>
+                            <th><?= __('created_date') ?></th>
+                            <th class="text-end pe-3"><?= __('action') ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -41,22 +41,22 @@ $history = $datasetModel->getHistory(); // returns array (may be empty)
                                 if($d['status'] === 'pending' || $d['status'] === 'processing') $statusColor = 'warning';
                             ?>
                             <tr>
-                                <td class="ps-3 fw-bold">#<?= htmlspecialchars($d['dataset_id']) ?></td>
+                                <td class="ps-3 fw-bold">#<?= htmlspecialchars((string)$d['dataset_id']) ?></td>
                                 <td><?= htmlspecialchars($d['dataset_name'] ?? 'Unnamed Dataset') ?></td>
                                 <td>
-                                    <span class="badge bg-<?= $statusColor ?>"><?= strtoupper(htmlspecialchars($d['status'])) ?></span>
+                                    <span class="badge bg-<?= $statusColor ?>"><?= __('status_' . strtolower(htmlspecialchars($d['status']))) ?></span>
                                 </td>
                                 <td><?= (new DateTime($d['created_at']))->format('M j, Y H:i') ?></td>
                                 <td class="text-end pe-3">
                                     <?php if ($d['latest_opt_id']): ?>
-                                        <a href="view-result/<?= urlencode($d['latest_opt_id']) ?>"
+                                        <a href="view-result/<?= urlencode((string)$d['latest_opt_id']) ?>"
                                            class="btn btn-primary btn-sm px-3">
-                                            <i class="fas fa-poll me-1"></i> View Result
+                                            <i class="fas fa-poll me-1"></i> <?= __('view_result') ?>
                                         </a>
                                     <?php endif; ?>
-                                    <a href="view-dataset/<?= urlencode($d['dataset_id']) ?>"
+                                    <a href="view-dataset/<?= urlencode((string)$d['dataset_id']) ?>"
                                        class="btn btn-outline-secondary btn-sm px-3 ms-1">
-                                        <i class="fas fa-eye me-1"></i> View Inputs
+                                        <i class="fas fa-eye me-1"></i> <?= __('view_inputs') ?>
                                     </a>
                                 </td>
                             </tr>

@@ -24,34 +24,34 @@ if (isset($_SESSION['optimization_result'])) {
         <div class="container my-4">
             <div class="card border-warning shadow-sm">
                 <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Optimization Infeasible</h4>
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> <?= __('opt_infeasible') ?></h4>
                 </div>
                 <div class="card-body">
-                    <p class="lead">The solver could not find a feasible solution for the given input parameters.</p>
+                    <p class="lead"><?= __('infeasible_desc') ?></p>
                     <hr>
                     <dl class="row">
-                        <dt class="col-sm-3">Dataset ID</dt>
+                        <dt class="col-sm-3"><?= __('dataset_id') ?></dt>
                         <dd class="col-sm-9"><?= htmlspecialchars($result['dataset_id'] ?? 'N/A') ?></dd>
 
-                        <dt class="col-sm-3">Optimization ID</dt>
+                        <dt class="col-sm-3"><?= __('opt_id') ?></dt>
                         <dd class="col-sm-9"><?= htmlspecialchars($result['opt_id'] ?? 'N/A') ?></dd>
 
-                        <dt class="col-sm-3">Solver Message</dt>
+                        <dt class="col-sm-3"><?= __('solver_message') ?></dt>
                         <dd class="col-sm-9">
-                            <code class="text-danger"><?= htmlspecialchars($result['message'] ?? 'No message provided.') ?></code>
+                            <code class="text-danger"><?= htmlspecialchars($result['message'] ?? __('no_message')) ?></code>
                         </dd>
                     </dl>
                     <hr>
-                    <h5>Possible Reasons:</h5>
+                    <h5><?= __('possible_reasons') ?></h5>
                     <ul>
-                        <li>Excessive cable lengths causing high attenuation.</li>
-                        <li>Trunk power level is insufficient for the building's size.</li>
-                        <li>The selected passive components (splitters, taps) are not suitable.</li>
-                        <li>Minimum required signal level (Nivel Mínimo) is set too high.</li>
-                        <li>Maximum allowed signal level (Nivel Máximo) is set too low.</li>
+                        <li><?= __('reason_cable') ?></li>
+                        <li><?= __('reason_trunk') ?></li>
+                        <li><?= __('reason_passive') ?></li>
+                        <li><?= __('reason_min_high') ?></li>
+                        <li><?= __('reason_max_low') ?></li>
                     </ul>
                     <a href="enter-data/<?= htmlspecialchars($result['dataset_id'] ?? 0) ?>" class="btn btn-primary mt-3">
-                        <i class="fas fa-edit"></i> Review and Adjust Input Data
+                        <i class="fas fa-edit"></i> <?= __('adjust_data_btn') ?>
                     </a>
                 </div>
             </div>
@@ -83,34 +83,34 @@ if (($response['status'] ?? 'error') === 'infeasible') {
     <div class="container my-4">
         <div class="card border-warning shadow-sm">
             <div class="card-header bg-warning text-dark">
-                <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Optimization Infeasible</h4>
+                <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> <?= __('opt_infeasible') ?></h4>
             </div>
             <div class="card-body">
-                <p class="lead">The solver could not find a feasible solution for the given input parameters.</p>
+                <p class="lead"><?= __('infeasible_desc') ?></p>
                 <hr>
                 <dl class="row">
-                    <dt class="col-sm-3">Dataset ID</dt>
+                    <dt class="col-sm-3"><?= __('dataset_id') ?></dt>
                     <dd class="col-sm-9"><?= htmlspecialchars((string)($response['dataset_id'] ?? 'N/A')) ?></dd>
 
-                    <dt class="col-sm-3">Optimization ID</dt>
+                    <dt class="col-sm-3"><?= __('opt_id') ?></dt>
                     <dd class="col-sm-9"><?= htmlspecialchars((string)($response['opt_id'] ?? 'N/A')) ?></dd>
 
-                    <dt class="col-sm-3">Solver Message</dt>
+                    <dt class="col-sm-3"><?= __('solver_message') ?></dt>
                     <dd class="col-sm-9">
-                        <code class="text-danger"><?= htmlspecialchars($response['message'] ?? 'No message provided.') ?></code>
+                        <code class="text-danger"><?= htmlspecialchars($response['message'] ?? __('no_message')) ?></code>
                     </dd>
                 </dl>
                 <hr>
-                <h5>Possible Reasons:</h5>
+                <h5><?= __('possible_reasons') ?></h5>
                 <ul>
-                    <li>Excessive cable lengths causing high attenuation.</li>
-                    <li>Trunk power level is insufficient for the building's size.</li>
-                    <li>The selected passive components (splitters, taps) are not suitable.</li>
-                    <li>Minimum required signal level (Nivel Mínimo) is set too high.</li>
-                    <li>Maximum allowed signal level (Nivel Máximo) is set too low.</li>
+                    <li><?= __('reason_cable') ?></li>
+                    <li><?= __('reason_trunk') ?></li>
+                    <li><?= __('reason_passive') ?></li>
+                    <li><?= __('reason_min_high') ?></li>
+                    <li><?= __('reason_max_low') ?></li>
                 </ul>
                 <a href="enter-data/<?= htmlspecialchars((string)($response['dataset_id'] ?? 0)) ?>" class="btn btn-primary mt-3">
-                    <i class="fas fa-edit"></i> Review and Adjust Input Data
+                    <i class="fas fa-edit"></i> <?= __('adjust_data_btn') ?>
                 </a>
             </div>
         </div>
@@ -164,42 +164,49 @@ $isInventoryAvailable = $canonicalAvailable;
 
     <div class="mb-3">
         <h2 class="mb-0 text-primary"><?= htmlspecialchars($viewModel->dataset_name ?? 'Unnamed Dataset') ?></h2>
-        <div class="text-muted small">Optimization Result Details • Dataset ID: #<?= htmlspecialchars((string)$viewModel->meta['dataset_id']) ?></div>
+        <div class="text-muted small"><?= __('result_details') ?> • <?= __('dataset_id') ?>: #<?= htmlspecialchars((string)$viewModel->meta['dataset_id']) ?></div>
     </div>
 
     <div class="mb-3 d-flex gap-2 flex-wrap">
         <a class="btn btn-success btn-sm"
            href="export_input_excel.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>">
-           <i class="fas fa-file-excel"></i> Export Inputs (XLSX)
+           <i class="fas fa-file-excel"></i> <?= __('export_xlsx') ?>
         </a>
         <a class="btn btn-outline-success btn-sm"
            href="export_csv.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&type=detail">
-           Export TUs Detail (CSV)
+           <?= __('export_tu_csv') ?>
         </a>
         <a class="btn btn-info btn-sm"
            href="results-tree/<?= urlencode((string)($viewModel->meta['opt_id'] ?? 0)) ?>">
-           <i class="fas fa-tree"></i> Visualizar Árbol (Interactivo)
+           <i class="fas fa-tree"></i> <?= __('view_tree_btn') ?>
         </a>
         <a class="btn btn-outline-secondary btn-sm <?= !$isInventoryAvailable ? 'disabled' : '' ?>"
            href="<?= $isInventoryAvailable ? 'export_csv.php?opt_id=' . urlencode($viewModel->meta['opt_id'] ?? 0) . '&type=inventory' : '#' ?>"
-           <?= !$isInventoryAvailable ? 'title="Canonical inventory data not available for this result. Run optimization to generate it."' : '' ?>>
-           Export Inventory (CSV)
+           <?= !$isInventoryAvailable ? 'title="' . __('inventory_not_available') . '"' : '' ?>>
+           <?= __('export_inventory_csv') ?>
         </a>
         <a class="btn btn-primary btn-sm"
            href="export_docx.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>">
-           Export Memoria de Diseño (DOCX)
+           <?= __('export_docx') ?>
         </a>
     </div>
 
     <!-- Summary Cards -->
     <div class="row mb-4 text-center">
-    <?php foreach (['tu_total','compliance_pct','tu_low','tu_high'] as $key): 
+    <?php 
+        $summaryLabels = [
+            'tu_total' => __('total_tus'),
+            'compliance_pct' => __('compliance_pct_label'),
+            'tu_low' => __('below_min'),
+            'tu_high' => __('above_max'),
+        ];
+        foreach (['tu_total','compliance_pct','tu_low','tu_high'] as $key): 
           $value = $summaryMetrics[$key] ?? '—';
           $color = ($key==='tu_low') ? 'warning' : (($key==='tu_high') ? 'danger' : 'primary'); ?>
         <div class="col-md-3">
             <div class="card shadow-sm border-<?= $color ?>">
                 <div class="card-body">
-                    <div class="fw-bold text-muted"><?= ucfirst(str_replace('_',' ',$key)) ?></div>
+                    <div class="fw-bold text-muted"><?= htmlspecialchars($summaryLabels[$key]) ?></div>
                     <div class="fs-3"><?= htmlspecialchars($value) ?><?= $key==='compliance_pct' ? '%' : '' ?></div>
                     <?php if($key==='compliance_pct' && is_numeric($value)): ?>
                     <div class="progress mt-2">
@@ -216,7 +223,7 @@ $isInventoryAvailable = $canonicalAvailable;
     <!-- Warnings -->
     <?php if (!empty($viewModel->warnings)): ?>
         <div class="alert alert-warning">
-            <strong>Parsing warnings:</strong>
+            <strong><?= __('parsing_warnings') ?></strong>
             <ul>
                 <?php foreach ($viewModel->warnings as $w): ?>
                     <li><?= htmlspecialchars($w) ?></li>
@@ -228,7 +235,7 @@ $isInventoryAvailable = $canonicalAvailable;
     <?php if (!empty($viewModel->details)): ?>
 
         <!-- Summary Metrics -->
-        <h4>Summary Metrics</h4>
+        <h4><?= __('summary_metrics') ?></h4>
         <table class="table table-bordered table-sm">
             <tbody>
             <?php foreach ($viewModel->summary as $k => $v): ?>
@@ -245,7 +252,7 @@ $isInventoryAvailable = $canonicalAvailable;
             <div class="col-md-6 mb-3">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Summary KPIs</h5>
+                        <h5 class="card-title"><?= __('summary_kpis') ?></h5>
                         <canvas id="summaryChart"></canvas>
                     </div>
                 </div>
@@ -253,7 +260,7 @@ $isInventoryAvailable = $canonicalAvailable;
             <div class="col-md-6 mb-3">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">TU Histogram</h5>
+                        <h5 class="card-title"><?= __('tu_histogram') ?></h5>
                         <canvas id="nivelChart" height="120"></canvas>
                     </div>
                 </div>
@@ -261,18 +268,18 @@ $isInventoryAvailable = $canonicalAvailable;
         </div>
 
         <!-- Violations -->
-        <h4>Violaciones de Nivel TU</h4>
+        <h4><?= __('tu_violations') ?></h4>
         <?php if(empty($viewModel->violations)): ?>
-            <div class="alert alert-success">Todas las tomas cumplen con la banda normativa.</div>
+            <div class="alert alert-success"><?= __('all_tus_ok') ?></div>
         <?php else: ?>
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="text-muted"><?= count($viewModel->violations) ?> tomas fuera de norma</div>
-                <a class="btn btn-outline-danger btn-sm" href="export_csv.php?opt_id=<?= $viewModel->meta['opt_id'] ?>&type=violations">Exportar violaciones (CSV)</a>
+                <div class="text-muted"><?= count($viewModel->violations) ?> <?= __('tus_out_of_norm') ?></div>
+                <a class="btn btn-outline-danger btn-sm" href="export_csv.php?opt_id=<?= $viewModel->meta['opt_id'] ?>&type=violations"><?= __('export_violations_csv') ?></a>
             </div>
             <table class="table table-sm table-bordered table-striped">
             <thead>
             <tr>
-                <th>Toma</th><th>Piso</th><th>Apto</th><th>Nivel TU (dBµV)</th><th>Tipo</th><th>Δ vs Norma (dB)</th>
+                <th><?= __('col_tu') ?></th><th><?= __('col_piso') ?></th><th><?= __('col_apto') ?></th><th><?= __('col_tu_id') ?> (dBµV)</th><th><?= __('col_type') ?></th><th><?= __('col_delta') ?></th>
             </tr>
             </thead>
             <tbody>
@@ -282,7 +289,7 @@ $isInventoryAvailable = $canonicalAvailable;
                 <td><?= htmlspecialchars($v['piso'] ?? '—') ?></td>
                 <td><?= htmlspecialchars($v['apto'] ?? '—') ?></td>
                 <td><?= number_format((float)($v['nivel_tu'] ?? 0),2) ?></td>
-                <td><?= ($v['_violation_type'] ?? '')==='LOW'?'Bajo norma':'Sobre norma' ?></td>
+                <td><?= ($v['_violation_type'] ?? '')==='LOW'? __('low_norm') : __('high_norm') ?></td>
                 <td><?= number_format((float)($v['_violation_delta'] ?? 0),2) ?></td>
             </tr>
             <?php endforeach; ?>
@@ -291,20 +298,20 @@ $isInventoryAvailable = $canonicalAvailable;
         <?php endif; ?>
 
         <!-- Detail TUs Table -->
-        <h4>Detail TUs (<?= count($viewModel->details) ?>)</h4>
+        <h4><?= __('detail_tus') ?> (<?= count($viewModel->details) ?>)</h4>
         <div class="table-responsive">
             <table id="detailTable" class="table table-striped table-bordered table-sm nowrap">
                 <thead class="table-light">
                     <tr>
-                        <th>TU ID</th>
-                        <th>Piso</th>
-                        <th>Apto</th>
-                        <th>Bloque</th>
-                        <th>Nivel TU (dBµV)</th>
-                        <th>Min</th>
-                        <th>Max</th>
-                        <th>Cumple</th>
-                        <th>Losses</th>
+                        <th><?= __('col_tu_id') ?></th>
+                        <th><?= __('col_piso') ?></th>
+                        <th><?= __('col_apto') ?></th>
+                        <th><?= __('col_bloque') ?></th>
+                        <th><?= __('col_tu_id') ?> (dBµV)</th>
+                        <th><?= __('col_min') ?></th>
+                        <th><?= __('col_max') ?></th>
+                        <th><?= __('col_cumple') ?></th>
+                        <th><?= __('col_losses') ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -324,13 +331,13 @@ $isInventoryAvailable = $canonicalAvailable;
                         <td>
                             <?php if(!empty($row['losses']) && is_array($row['losses'])): ?>
                                 <details>
-                                    <summary>Show losses</summary>
+                                    <summary><?= __('show_losses') ?></summary>
                                     <div class="table-responsive mt-2 mb-2" style="max-height:300px; overflow:auto;">
                                         <table class="table table-sm table-bordered mb-0">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th>Segment</th>
-                                                    <th>Value (dB)</th>
+                                                    <th><?= __('col_segment') ?></th>
+                                                    <th><?= __('col_value') ?></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -356,7 +363,7 @@ $isInventoryAvailable = $canonicalAvailable;
 
         <!-- Inputs JSON -->
         <details>
-            <summary>Structured Inputs (Form-style)</summary>
+            <summary><?= __('structured_inputs') ?></summary>
             <div class="mt-2">
 
                 <?php
@@ -376,7 +383,7 @@ $isInventoryAvailable = $canonicalAvailable;
                             if ($isTuTable) {
                                 // TU table
                                 echo '<table class="table table-sm table-bordered mb-2">';
-                                echo '<thead><tr><th>Piso</th><th>Apto</th><th>TU Index</th><th>Value (m)</th></tr></thead><tbody>';
+                                echo '<thead><tr><th>' . __('col_piso') . '</th><th>' . __('col_apto') . '</th><th>' . __('col_tu_index') . '</th><th>' . __('col_value_m') . '</th></tr></thead><tbody>';
                                 foreach ($value as $tuple => $v) {
                                     $parts = explode(',', trim($tuple, '()'));
                                     echo '<tr>';
@@ -454,7 +461,7 @@ $(document).ready(function() {
     if (summaryEl) {
         new Chart(summaryEl, {
             type: 'bar',
-            data: { labels: summaryLabels, datasets:[{ label:'Summary KPIs', data: summaryValues }] },
+            data: { labels: summaryLabels, datasets:[{ label: <?= json_encode(__('summary_kpis')) ?>, data: summaryValues }] },
             options: { responsive:true, scales:{ y:{ beginAtZero:true } } }
         });
     }
@@ -491,7 +498,7 @@ $(document).ready(function() {
             data: {
                 labels: hist.labels,
                 datasets: [{
-                    label: 'Cantidad de TUs',
+                    label: <?= json_encode(__('total_tus')) ?>,
                     data: hist.data,
                     backgroundColor: hist.values.map(binVals => {
                         if (binVals.some(v => v < COMPLIANCE_MIN)) return 'rgba(255,193,7,0.8)'; // LOW
@@ -506,7 +513,7 @@ $(document).ready(function() {
                     legend: { display: false },
                     title: {
                         display: true,
-                        text: 'Distribución de Nivel TU Final (dBµV)'
+                        text: <?= json_encode(__('tu_histogram') . ' (dBµV)') ?>
                     },
                     annotation: {
                         annotations: {
@@ -530,8 +537,8 @@ $(document).ready(function() {
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true, title: { display:true, text:'Cantidad de TUs' } },
-                    x: { title: { display:true, text:'Nivel TU (dBµV)' } }
+                    y: { beginAtZero: true, title: { display:true, text: <?= json_encode(__('total_tus')) ?> } },
+                    x: { title: { display:true, text: <?= json_encode(__('col_tu_id') . ' (dBµV)') ?> } }
                 }
             }
         });

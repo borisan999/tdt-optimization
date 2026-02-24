@@ -10,3 +10,6 @@ if (!isset($_SESSION['_initiated'])) {
     session_regenerate_id(true);
     $_SESSION['_initiated'] = true;
 }
+
+require_once __DIR__ . '/../helpers/Translation.php';
+\app\helpers\Translation::init();

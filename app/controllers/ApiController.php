@@ -58,6 +58,8 @@ class ApiController
             $this->uploadExcel();
         } elseif ($method === 'POST' && preg_match('/^\/api\/template\/generate$/', $path)) {
             $this->generateFromTemplate();
+        } elseif ($method === 'GET' && preg_match('/^\/api\/lang\/(en|es)$/', $path, $matches)) {
+            $this->changeLanguage($matches[1]);
         } elseif ($method === 'GET' && preg_match('/^\/api\/catalogs$/', $path)) {
             $this->getCatalogs();
         } else {
@@ -114,6 +116,16 @@ class ApiController
         } catch (Exception $e) {
             $this->jsonResponse(false, null, ['code' => 'GENERATION_ERROR', 'message' => $e->getMessage()], 500);
         }
+    }
+
+    private function changeLanguage(string $lang)
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['lang'] = $lang;
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? 'dashboard'));
+        exit;
     }
 
     private function getCatalogs()

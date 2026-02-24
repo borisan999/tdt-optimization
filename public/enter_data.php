@@ -8,25 +8,25 @@ include __DIR__ . '/templates/navbar.php';
 <main class="container mt-4 mb-5">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-edit text-primary"></i> Data Configuration</h2>
-        <div id="status_badge" class="badge bg-secondary">Mode: New Dataset</div>
+        <h2><i class="fas fa-edit text-primary"></i> <?= __('data_config_title') ?></h2>
+        <div id="status_badge" class="badge bg-secondary"><?= __('mode_new') ?></div>
     </div>
 
     <!-- TAB NAVIGATION -->
     <ul class="nav nav-tabs mb-4" id="dataTabs" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" id="upload-tab-btn" onclick="showTab('upload_tab');">
-                <i class="fas fa-file-upload"></i> Upload Excel
+                <i class="fas fa-file-upload"></i> <?= __('tab_upload') ?>
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link" id="manual-tab-btn" onclick="showTab('manual_tab')">
-                <i class="fas fa-keyboard"></i> Manual Entry
+                <i class="fas fa-keyboard"></i> <?= __('tab_manual') ?>
             </button>
         </li>
         <li class="nav-item">
             <button class="nav-link" id="history-tab-btn" onclick="showTab('history_tab')">
-                <i class="fas fa-history"></i> Load History
+                <i class="fas fa-history"></i> <?= __('tab_history') ?>
             </button>
         </li>
     </ul>
@@ -35,13 +35,13 @@ include __DIR__ . '/templates/navbar.php';
     <div id="upload_tab" class="tab-pane fade show active section-box">
         <div class="card shadow-sm">
             <div class="card-body p-4">
-                <h4 class="card-title mb-3">Upload Building Specification</h4>
-                <p class="text-muted">Upload an Excel file following the authoritative template (Piso/Apto/TU Index must be explicit).</p>
+                <h4 class="card-title mb-3"><?= __('upload_title') ?></h4>
+                <p class="text-muted"><?= __('upload_desc') ?></p>
                 <form id="excelUploadForm" method="POST" enctype="multipart/form-data">
                     <div class="input-group mb-3">
                         <input type="file" name="excel_file" class="form-control" accept=".xlsx" required>
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-upload"></i> Upload & Process
+                            <i class="fas fa-upload"></i> <?= __('upload_btn') ?>
                         </button>
                     </div>
                 </form>
@@ -58,10 +58,10 @@ include __DIR__ . '/templates/navbar.php';
                 <div class="card-body py-3">
                     <div class="row align-items-center">
                         <div class="col-md-3">
-                            <label class="form-label fw-bold mb-0 text-primary"><i class="fas fa-tag me-2"></i>Dataset Name</label>
+                            <label class="form-label fw-bold mb-0 text-primary"><i class="fas fa-tag me-2"></i><?= __('dataset_name') ?></label>
                         </div>
                         <div class="col-md-9">
-                            <input type="text" id="dataset_name" name="dataset_name" class="form-control" placeholder="e.g. Edificio Los Pinos - Bloque A" required>
+                            <input type="text" id="dataset_name" name="dataset_name" class="form-control" placeholder="<?= __('dataset_placeholder') ?>" required>
                         </div>
                     </div>
                 </div>
@@ -75,7 +75,7 @@ include __DIR__ . '/templates/navbar.php';
             <!-- Complex Data (Catalogs) - Collapsible -->
             <div class="card shadow-sm mb-4 border-info">
                 <div class="card-header bg-info text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#catalogCollapse">
-                    <h5 class="mb-0"><i class="fas fa-boxes"></i> Equipment Catalogs & Advanced Data</h5>
+                    <h5 class="mb-0"><i class="fas fa-boxes"></i> <?= __('catalogs_title') ?></h5>
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div id="catalogCollapse" class="collapse">
@@ -88,26 +88,26 @@ include __DIR__ . '/templates/navbar.php';
             <!-- Floor Repetition Utility -->
             <div class="card shadow-sm mb-4 border-primary">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-copy"></i> Smart Floor Repetition</h5>
+                    <h5 class="mb-0"><i class="fas fa-copy"></i> <?= __('repetition_title') ?></h5>
                 </div>
                 <div class="card-body">
-                    <p class="small text-muted">Use this to quickly populate multiple floors based on a template floor.</p>
+                    <p class="small text-muted"><?= __('repetition_desc') ?></p>
                     <div class="row g-3 align-items-end">
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold">Source Floor</label>
+                            <label class="form-label small fw-bold"><?= __('source_floor') ?></label>
                             <input type="number" name="sourceFloorId" class="form-control form-control-sm" placeholder="e.g. 1">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold">Target Start</label>
+                            <label class="form-label small fw-bold"><?= __('target_start') ?></label>
                             <input type="number" name="targetStartFloor" class="form-control form-control-sm" placeholder="e.g. 2">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold">Target End</label>
+                            <label class="form-label small fw-bold"><?= __('target_end') ?></label>
                             <input type="number" name="targetEndFloor" class="form-control form-control-sm" placeholder="e.g. 10">
                         </div>
                         <div class="col-md-3">
                             <button type="button" id="applyRepetitionBtn" class="btn btn-primary btn-sm w-100">
-                                <i class="fas fa-magic"></i> Apply to Range
+                                <i class="fas fa-magic"></i> <?= __('apply_range_btn') ?>
                             </button>
                         </div>
                     </div>
@@ -119,9 +119,9 @@ include __DIR__ . '/templates/navbar.php';
                 <div class="col-xl-6">
                     <div class="card shadow-sm mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center bg-white">
-                            <h5 class="mb-0">Apartments Configuration</h5>
+                            <h5 class="mb-0"><?= __('apt_config_title') ?></h5>
                             <button type="button" class="btn btn-outline-primary btn-sm" onclick="addApartmentRow()">
-                                <i class="fas fa-plus"></i> Add Row
+                                <i class="fas fa-plus"></i> <?= __('add_row') ?>
                             </button>
                         </div>
                         <div class="card-body p-0">
@@ -129,11 +129,11 @@ include __DIR__ . '/templates/navbar.php';
                                 <table class="table table-hover table-sm mb-0" id="apartmentsTable">
                                     <thead class="table-light sticky-top">
                                         <tr>
-                                            <th>Piso</th>
-                                            <th>Apto</th>
-                                            <th>TUs</th>
-                                            <th>Deriv→Rep (m)</th>
-                                            <th class="text-center">Action</th>
+                                            <th><?= __('col_piso') ?></th>
+                                            <th><?= __('col_apto') ?></th>
+                                            <th><?= __('col_tus') ?></th>
+                                            <th><?= __('col_deriv_rep') ?></th>
+                                            <th class="text-center"><?= __('col_action') ?></th>
                                         </tr>
                                     </thead>
                                     <tbody id="apartmentsBody"></tbody>
@@ -146,9 +146,9 @@ include __DIR__ . '/templates/navbar.php';
                 <div class="col-xl-6">
                     <div class="card shadow-sm mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center bg-white">
-                            <h5 class="mb-0">TU Cable Lengths</h5>
+                            <h5 class="mb-0"><?= __('tu_lengths_title') ?></h5>
                             <button type="button" class="btn btn-outline-primary btn-sm" onclick="addTuRow()">
-                                <i class="fas fa-plus"></i> Add Row
+                                <i class="fas fa-plus"></i> <?= __('add_row') ?>
                             </button>
                         </div>
                         <div class="card-body p-0">
@@ -156,11 +156,11 @@ include __DIR__ . '/templates/navbar.php';
                                 <table class="table table-hover table-sm mb-0" id="tuTable">
                                     <thead class="table-light sticky-top">
                                         <tr>
-                                            <th>Piso</th>
-                                            <th>Apto</th>
-                                            <th>TU Idx</th>
-                                            <th>Length (m)</th>
-                                            <th class="text-center">Action</th>
+                                            <th><?= __('col_piso') ?></th>
+                                            <th><?= __('col_apto') ?></th>
+                                            <th><?= __('col_tu_idx') ?></th>
+                                            <th><?= __('col_length') ?></th>
+                                            <th class="text-center"><?= __('col_action') ?></th>
                                         </tr>
                                     </thead>
                                     <tbody id="tuBody"></tbody>
@@ -177,11 +177,11 @@ include __DIR__ . '/templates/navbar.php';
                     <input type="hidden" id="current_dataset_id" name="dataset_id">
                     
                     <button id="saveBtn" class="btn btn-primary px-4" type="submit">
-                        <i class="fas fa-save"></i> Save Configuration
+                        <i class="fas fa-save"></i> <?= __('save_config_btn') ?>
                     </button>
                     
                     <button id="runOptimizationBtn" class="btn btn-warning px-4 hidden">
-                        <i class="fas fa-play"></i> Run Optimization
+                        <i class="fas fa-play"></i> <?= __('run_opt_btn') ?>
                     </button>
                 </div>
             </div>
@@ -192,16 +192,16 @@ include __DIR__ . '/templates/navbar.php';
     <div id="history_tab" class="tab-pane fade hidden section-box">
         <div class="card shadow-sm">
             <div class="card-body p-4">
-                <h4 class="card-title mb-3">Load From History</h4>
+                <h4 class="card-title mb-3"><?= __('load_history_title') ?></h4>
                 <form id="historyLoadForm">
                     <div class="mb-3">
-                        <label class="form-label">Select a previous configuration</label>
+                        <label class="form-label"><?= __('select_prev_config') ?></label>
                         <select id="historySelect" class="form-select" required>
-                            <option value="">-- Choose Dataset --</option>
+                            <option value=""><?= __('choose_dataset') ?></option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-info text-white">
-                        <i class="fas fa-folder-open"></i> Load Configuration
+                        <i class="fas fa-folder-open"></i> <?= __('load_config_btn') ?>
                     </button>
                 </form>
             </div>
@@ -210,5 +210,18 @@ include __DIR__ . '/templates/navbar.php';
 
 </main>
 
+<script>
+    // Pass translations to JS
+    window.LANG = <?= json_encode(\app\helpers\Translation::getDictionary(), JSON_UNESCAPED_UNICODE) ?>;
+    
+    // Helper function for JS
+    function __(key, placeholders = {}) {
+        let text = window.LANG[key] || key;
+        for (const [k, v] of Object.entries(placeholders)) {
+            text = text.replace(`{${k}}`, v);
+        }
+        return text;
+    }
+</script>
 <script src="assets/js/enter-data.js"></script>
 <?php include __DIR__ . '/templates/footer.php'; ?>
