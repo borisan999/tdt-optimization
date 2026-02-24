@@ -2,5 +2,6 @@
     <a href="dashboard">Dashboard</a>
     <a href="enter-data">Enter Data</a>
     <a href="history">History</a>
+    <a href="template-generator">Template Generator</a>
     <a href="configurations">Configurations</a>
 </nav>

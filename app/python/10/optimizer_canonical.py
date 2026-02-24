@@ -65,7 +65,8 @@ def main():
         # 5. Solve and Extract results using the exact logic from Optimizacion_RITEL_10
         # We override solve to be silent
         original_solve = modelo.solve
-        modelo.solve = lambda: original_solve(PULP_CBC_CMD(msg=False))
+        # Set a 20 second time limit and a 5% optimality gap for much faster responses
+        modelo.solve = lambda: original_solve(PULP_CBC_CMD(msg=False, timeLimit=20, gapRel=0.05, threads=4))
         
         # NOTE: resolver_y_exportar returns a tuple (df_detalle, ...) or just df_detalle 
         # based on context. Let's handle both.

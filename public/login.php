@@ -7,9 +7,12 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/config/db.php';
 require_once __DIR__ . '/../app/auth/session.php';
 require_once __DIR__ . '/../app/models/User.php';
-/*ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL); */
+
+// Redirect to dashboard if already logged in
+if (!empty($_SESSION['user_id'])) {
+    header('Location: /tdt-optimization/public/dashboard');
+    exit;
+}
 
 $db = new Database();
 $pdo = $db->getConnection();

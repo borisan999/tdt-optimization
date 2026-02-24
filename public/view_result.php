@@ -176,6 +176,10 @@ $isInventoryAvailable = $canonicalAvailable;
            href="export_csv.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&type=detail">
            Export TUs Detail (CSV)
         </a>
+        <a class="btn btn-info btn-sm"
+           href="results-tree/<?= urlencode((string)($viewModel->meta['opt_id'] ?? 0)) ?>">
+           <i class="fas fa-tree"></i> Visualizar Árbol (Interactivo)
+        </a>
         <a class="btn btn-outline-secondary btn-sm <?= !$isInventoryAvailable ? 'disabled' : '' ?>"
            href="<?= $isInventoryAvailable ? 'export_csv.php?opt_id=' . urlencode($viewModel->meta['opt_id'] ?? 0) . '&type=inventory' : '#' ?>"
            <?= !$isInventoryAvailable ? 'title="Canonical inventory data not available for this result. Run optimization to generate it."' : '' ?>>

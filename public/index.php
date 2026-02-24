@@ -133,6 +133,9 @@ elseif ($path === '/enter-data' || $path === '/enter_data.php') {
 elseif ($path === '/history' || $path === '/history.php') {
     require_once __DIR__ . '/history.php';
 }
+elseif ($path === '/template-generator' || $path === '/template_generator.php') {
+    require_once __DIR__ . '/template_generator.php';
+}
 elseif ($path === '/configurations' || $path === '/configurations.php') {
     require_once __DIR__ . '/configurations.php';
 }
@@ -155,6 +158,13 @@ elseif (preg_match('/^\/view-dataset\/(\d+)$/', $path, $matches)) {
 elseif (preg_match('/^\/view-result\/(\d+)$/', $path, $matches)) {
     $_GET['opt_id'] = $matches[1];
     require_once __DIR__ . '/view_result.php';
+}
+elseif (preg_match('/^\/results-tree\/(\d+)$/', $path, $matches)) {
+    $_GET['opt_id'] = $matches[1];
+    require_once __DIR__ . '/results_tree.php';
+}
+elseif ($path === '/results-tree' || $path === '/results_tree.php') {
+    require_once __DIR__ . '/results_tree.php';
 }
 elseif ($path === '/results-history' || $path === '/results_history.php') {
     require_once __DIR__ . '/results_history.php';

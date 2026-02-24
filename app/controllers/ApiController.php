@@ -56,10 +56,63 @@ class ApiController
             $this->deleteOptimization((int)$matches[1]);
         } elseif ($method === 'POST' && preg_match('/^\/api\/upload\/excel$/', $path)) {
             $this->uploadExcel();
+        } elseif ($method === 'POST' && preg_match('/^\/api\/template\/generate$/', $path)) {
+            $this->generateFromTemplate();
         } elseif ($method === 'GET' && preg_match('/^\/api\/catalogs$/', $path)) {
             $this->getCatalogs();
         } else {
             $this->jsonResponse(false, null, ['code' => 'NOT_FOUND', 'message' => 'Endpoint not found'], 404);
+        }
+    }
+
+    private function generateFromTemplate()
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$input) {
+            $this->jsonResponse(false, null, ['code' => 'INVALID_INPUT', 'message' => 'No input provided'], 400);
+            return;
+        }
+
+        try {
+            $pythonBin = "/usr/bin/python3";
+            $pythonScript = realpath(__DIR__ . "/../python/10/template_to_canonical.py");
+            if (!file_exists($pythonScript)) throw new Exception('Python template script not found.');
+
+            $descriptorspec = [0 => ["pipe", "r"], 1 => ["pipe", "w"], 2 => ["pipe", "w"]];
+
+            // Release session lock before long-running Python execution
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+
+            $process = proc_open("{$pythonBin} {$pythonScript}", $descriptorspec, $pipes);
+            if (!is_resource($process)) throw new Exception('Failed to start Python process.');
+
+            fwrite($pipes[0], json_encode($input));
+            fclose($pipes[0]);
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            $returnCode = proc_close($process);
+
+            if ($returnCode !== 0) {
+                throw new Exception("Python script failed with exit code {$returnCode}. Stderr: {$stderr}");
+            }
+
+            $canonical = json_decode($stdout, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($canonical)) {
+                throw new Exception('Malformed JSON response from Python script.');
+            }
+
+            // Persistence
+            $dataset_name = $input['project_name'] ?? 'Template Dataset';
+            $datasetModel = new Dataset();
+            $uploadedBy = $_SESSION['user_id'] ?? 3;
+            $datasetId = $datasetModel->createWithCanonical($canonical, $uploadedBy, 'pending', $dataset_name);
+
+            $this->jsonResponse(true, ['dataset_id' => (int)$datasetId, 'message' => 'Dataset generated and saved successfully']);
+
+        } catch (Exception $e) {
+            $this->jsonResponse(false, null, ['code' => 'GENERATION_ERROR', 'message' => $e->getMessage()], 500);
         }
     }
 

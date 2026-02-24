@@ -1,0 +1,28 @@
+feat: migrate to db-driven catalogs, implement dataset naming, and modernize dashboards
+    2
+    3 This commit represents a significant structural shift in how network configurations and optimizations are managed:
+    4
+    5 1. Centralized Equipment Catalogs & Parameters:
+    6    - Migrated Derivadores and Repartidores from Excel-based to database-driven.
+    7    - Seeded global system defaults for Building Geometry, Signal Constraints, and Attenuation.
+    8    - Added a new administrative UI ('General Parameters') to manage these system defaults.
+    9    - Refactored Excel processing to use database catalogs as the source of truth.
+   10
+   11 2. Dataset Naming & Identity:
+   12    - Added 'dataset_name' to track configurations by descriptive labels (e.g., building names) instead of just IDs.
+   13    - Integrated naming into manual entry, history dropdowns, and dashboard headers.
+   14    - Updated all export filenames (Excel, CSV, DOCX) to include the sanitized dataset name.
+   15
+   16 3. Enforced 1:1 Optimization Relationship:
+   17    - Modified logic to ensure each dataset configuration has exactly one authoritative optimization run.
+   18    - Automatically clear previous results when re-running an optimization to maintain data integrity.
+   19
+   20 4. Modernized User Interface:
+   21    - Upgraded Dataset Dashboard (view_dataset.php) to show structured canonical inputs and current result status.
+   22    - Improved History view with Bootstrap 5 cards, color-coded status badges, and direct links to results.
+   23    - Rendered equipment catalogs as user-friendly read-only tables during data entry.
+   24    - Fixed UI issues including navigation tab highlighting and HTML structure.
+   25
+   26 5. Export Logic Decoupling:
+   27    - Decoupled exports from database tables, ensuring they reflect the exact parameters stored in the optimization's 'inputs_json'.
+

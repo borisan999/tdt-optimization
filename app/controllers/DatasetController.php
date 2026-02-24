@@ -175,6 +175,12 @@ class DatasetController
         try {
             list($canonicalJson, $optId) = $this->initializeOptimization($datasetId);
             $this->markOptimizationAsRunning((int)$optId);
+
+            // Release session lock before long-running Python execution
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+
             list($returnCode, $stdout, $stderr) = $this->executePython($canonicalJson);
 
             if ($returnCode !== 0) {
@@ -263,17 +269,60 @@ class DatasetController
         $pythonScript = realpath(__DIR__ . "/../python/10/optimizer_canonical.py");
         if (!file_exists($pythonScript)) throw new Exception('Python optimizer script not found.');
 
-        $descriptorspec = [0 => ["pipe", "r"], 1 => ["pipe", "w"], 2 => ["pipe", "w"]];
+        $descriptorspec = [
+            0 => ["pipe", "r"], // stdin
+            1 => ["pipe", "w"], // stdout
+            2 => ["pipe", "w"]  // stderr
+        ];
+
         $process = proc_open("{$pythonBin} {$pythonScript}", $descriptorspec, $pipes);
         if (!is_resource($process)) throw new Exception('Failed to start Python process.');
 
+        // Set non-blocking mode for reading pipes
+        stream_set_blocking($pipes[1], false);
+        stream_set_blocking($pipes[2], false);
+
+        // Write input to stdin
         fwrite($pipes[0], $canonicalJson);
         fclose($pipes[0]);
-        $stdout = stream_get_contents($pipes[1]);
-        $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        return [proc_close($process), $stdout, $stderr];
+
+        $stdout = '';
+        $stderr = '';
+        $all_read_pipes = [$pipes[1], $pipes[2]];
+        $write = null;
+        $except = null;
+
+        // Concurrent read loop to avoid deadlocks
+        while (!empty($all_read_pipes)) {
+            $read = $all_read_pipes; // stream_select modifies this array
+            $changed = stream_select($read, $write, $except, 30); 
+            
+            if ($changed === false) {
+                error_log("Stream select failed.");
+                break;
+            } elseif ($changed === 0) {
+                error_log("Stream select timed out (30s).");
+                break;
+            }
+
+            foreach ($read as $pipe) {
+                $content = fread($pipe, 8192);
+                if ($pipe === $pipes[1]) {
+                    $stdout .= $content;
+                } else {
+                    $stderr .= $content;
+                }
+
+                if (feof($pipe)) {
+                    $index = array_search($pipe, $all_read_pipes);
+                    if ($index !== false) unset($all_read_pipes[$index]);
+                    fclose($pipe);
+                }
+            }
+        }
+
+        $returnCode = proc_close($process);
+        return [$returnCode, $stdout, $stderr];
     }
 
     private function finalizeOptimization(int $datasetId, int $optId, ?string $stdout, ?string $canonicalJson, ?array $pythonResult, bool $success, string $errorMessage = '')
