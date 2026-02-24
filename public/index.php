@@ -114,9 +114,6 @@ elseif (str_starts_with($path, '/dataset/') || str_starts_with($path, '/result/'
 elseif ($path === '/' || $path === '' || $path === '/dashboard') {
     require_once __DIR__ . '/dashboard.php';
 }
-elseif ($path === '/results' || $path === '/results.php') {
-    require_once __DIR__ . '/results.php';
-}
 elseif ($path === '/login' || $path === '/login.php') {
     require_once __DIR__ . '/login.php';
 }
@@ -165,9 +162,6 @@ elseif (preg_match('/^\/results-tree\/(\d+)$/', $path, $matches)) {
 }
 elseif ($path === '/results-tree' || $path === '/results_tree.php') {
     require_once __DIR__ . '/results_tree.php';
-}
-elseif ($path === '/results-history' || $path === '/results_history.php') {
-    require_once __DIR__ . '/results_history.php';
 }
 elseif ($path === '/export_input_excel.php') {
     require_once __DIR__ . '/export_input_excel.php';

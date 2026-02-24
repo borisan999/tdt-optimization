@@ -288,4 +288,11 @@ return [
     'defaults_updated_fail' => 'Error al actualizar los parámetros por defecto.',
     'new_user' => 'Nuevo Usuario',
     'username' => 'Usuario',
+    'password' => 'Contraseña',
+    'login_title' => 'Inicio de Sesión TDT - Optimización',
+    'invalid_credentials' => 'Credenciales inválidas',
+    'sign_in' => 'Ingresar',
+    'login_subtitle' => 'Por favor inicie sesión en su cuenta',
+    'username_placeholder' => 'Nombre de usuario',
+    'password_placeholder' => 'Contraseña',
 ];

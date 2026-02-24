@@ -288,4 +288,11 @@ return [
     'defaults_updated_fail' => 'Failed to update default parameters.',
     'new_user' => 'New User',
     'username' => 'Username',
+    'password' => 'Password',
+    'login_title' => 'Login TDT - Optimization',
+    'invalid_credentials' => 'Invalid credentials',
+    'sign_in' => 'Sign In',
+    'login_subtitle' => 'Please sign in to your account',
+    'username_placeholder' => 'Enter username',
+    'password_placeholder' => 'Enter password',
 ];

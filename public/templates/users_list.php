@@ -1,14 +1,14 @@
-<h2 class="section-title">Usuarios</h2>
+<h2 class="section-title"><?= __('manage_users') ?></h2>
 
 <a href="users.php?action=create" class="btn-primary">
-    Nuevo usuario
+    <?= __('new_user') ?>
 </a>
 
 <table class="table">
     <thead>
         <tr>
-            <th>Username</th>
-            <th>Acciones</th>
+            <th><?= __('username') ?></th>
+            <th><?= __('action') ?></th>
         </tr>
     </thead>
     <tbody>
@@ -18,13 +18,13 @@
                 <td>
                     <a href="users.php?action=edit&id=<?= (int)$u['user_id'] ?>"
                        class="btn-small">
-                        Editar
+                        <?= __('edit') ?>
                     </a>
 
                     <a href="users.php?action=disable&id=<?= (int)$u['user_id'] ?>"
                        class="btn-small"
-                       onclick="return confirm('¿Eliminar usuario?')">
-                        Eliminar
+                       onclick="return confirm('<?= __('confirm_delete') ?>')">
+                        <?= __('delete') ?>
                     </a>
                 </td>
             </tr>

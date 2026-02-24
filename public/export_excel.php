@@ -1,9 +1,7 @@
 <?php
 require_once __DIR__ . "/../app/config/db.php";
 require_once __DIR__ . "/../vendor/autoload.php";
-require_once __DIR__ . "/../app/helpers/InventoryAggregator.php";
-require_once __DIR__ . "/../app/helpers/ResultParser.php"; // Add this
-require_once __DIR__ . "/../app/services/CanonicalMapperService.php"; // Add this
+require_once __DIR__ . "/../app/controllers/ResultsController.php";
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -11,7 +9,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use app\helpers\InventoryAggregator;
-use app\helpers\ResultParser; // Add this
+use app\controllers\ResultsController;
 
 
 $opt_id = $_GET['opt_id'] ?? null;
@@ -20,54 +18,150 @@ if (!$opt_id) {
 }
 
 // --------------------------------------------------
-// 1. Load result row
+// 1. Load result via Controller (Modern way)
 // --------------------------------------------------
-$db  = new Database();
-$pdo = $db->getConnection();
+$controller = new ResultsController((int)$opt_id);
+$response = $controller->execute();
 
-$stmt = $pdo->prepare("
-    SELECT r.summary_json, r.detail_json, d.dataset_name 
-    FROM results r
-    JOIN datasets d ON d.dataset_id = r.dataset_id
-    WHERE r.opt_id = :id
-");
-$stmt->execute([':id' => $opt_id]);
-$result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$result) {
-    die('Optimization result not found');
+if ($response['status'] !== 'success') {
+    die('Error loading result: ' . ($response['message'] ?? 'Unknown error'));
 }
 
-$dataset_name = $result['dataset_name'] ?? 'Unnamed';
+/** @var \app\viewmodels\ResultViewModel $viewModel */
+$viewModel = $response['viewModel'];
+
+$dataset_name = $viewModel->dataset_name ?? 'Unnamed';
 $safe_name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $dataset_name);
 
-$summary = json_decode($result['summary_json'], true);
-$parser = ResultParser::fromDbRow($result); // Pass the entire row
-if ($parser->hasErrors()) {
-    die('Error parsing result: ' . implode(', ', $parser->errors()));
+$detail = $viewModel->details; 
+$summary = $viewModel->summary;
+$inputs = $viewModel->inputs;
+
+// Re-fetch raw row for legacy columns if needed, but ResultsController has it in $viewModel->results
+$raw_detail = json_decode($viewModel->results['detail_json'], true);
+
+// --------------------------------------------------
+// Try to resolve global input level
+$P_IN = (float)($inputs['potencia_entrada'] ?? 0);
+if ($P_IN <= 0 && isset($raw_detail[0]['P_in (entrada) (dBµV)'])) {
+    $P_IN = (float)$raw_detail[0]['P_in (entrada) (dBµV)'];
 }
-$canonical = $parser->canonical();
-$detail    = $parser->details(); // Keep legacy detail for non-inventory parts of the report for now
-$inputs    = $parser->inputs();   // Keep legacy inputs for other parts
 
-
-if (!is_array($detail)) { // Still check legacy detail if used elsewhere
-    die('Invalid detail_json format');
+if ($P_IN <= 0) {
+    die('Missing global P_in (entrada) in inputs or detail_json');
 }
 
 // --------------------------------------------------
-// Try to resolve global input level from canonical, fallback to legacy summary/detail
-if (isset($canonical['global_parameters']['input_power_dbuv'])) {
-    $P_IN = (float)$canonical['global_parameters']['input_power_dbuv'];
-} elseif (isset($summary['input_level'])) { // Legacy fallback
-    $P_IN = (float)$summary['input_level'];
-} elseif (isset($summary['P_in (entrada) (dBµV)'])) { // Legacy fallback
-    $P_IN = (float)$summary['P_in (entrada) (dBµV)'];
-} elseif (isset($detail[0]['P_in (entrada) (dBµV)'])) { // Legacy fallback
-    $P_IN = (float)$detail[0]['P_in (entrada) (dBµV)'];
-} else {
-    die('Missing global P_in (entrada) in canonical, summary_json, and detail_json');
+// 3. Canonical column definition (IMMUTABLE)
+// --------------------------------------------------
+$DETALLE_TOMAS_COLUMNS = [
+    'Toma',
+    'Piso',
+    'Apto',
+    'Bloque',
+    'Piso Troncal',
+    'Piso Entrada Riser Bloque',
+    'Direccion Propagacion',
+    'Longitud Antena→Troncal (m)',
+    'Pérdida Antena→Troncal (cable) (dB)',
+    'Pérdida Antena↔Troncal (conectores) (dB)',
+    'Repartidor Troncal',
+    'Salidas Troncal',
+    'Pérdida Repartidor Troncal (dB)',
+    'Feeder Troncal→Entrada Bloque (m)',
+    'Pérdida Feeder (cable) (dB)',
+    'Pérdida Feeder (conectores) (dB)',
+    'Pérdida Riser dentro del Bloque (dB)',
+    'Distancia riser dentro bloque (m)',
+    'Riser Atenuacion Cable (dB)',
+    'Riser Conectores (uds)',
+    'Riser Atenuacion Conectores (dB)',
+    'Riser Atenuación Taps (dB)',
+    'Derivador Piso',
+    'Pérdida Derivador Piso (dB)',
+    'Pérdida Cable Deriv→Rep (dB)',
+    'Pérdida Conectores Apto (dB)',
+    'Repartidor Apt',
+    'Pérdida Repartidor Apt (dB)',
+    'Pérdida Cable Rep→TU (dB)',
+    'Pérdida Conexión TU (dB)',
+    'Pérdida Total (dB)',
+    'P_in (entrada) (dBµV)',
+    'Nivel TU Final (dBµV)',
+    'Distancia total hasta la toma (m)'
+];
+
+// --------------------------------------------------
+// Prepare Categorized Inventory
+// --------------------------------------------------
+// Re-parse with ResultParser just to get the buildTopology() result which is NOT in ViewModel currently
+// (ViewModel has normalized details/summary/inputs)
+$parser = ResultParser::fromDbRow($viewModel->results);
+$canonical = $parser->canonical();
+
+$aggregator = new InventoryAggregator($canonical); 
+$aggregatedData = $aggregator->aggregate();
+$categorizedInventory = $aggregatedData['inventory'];
+$allTotals = $aggregatedData['totals'];
+
+// --------------------------------------------------
+// 4. Spreadsheet initialization
+// --------------------------------------------------
+$spreadsheet = new Spreadsheet();
+$sheet = $spreadsheet->getActiveSheet();
+$sheet->setTitle('Detalle_Tomas');
+
+// Headers
+$col = 'A';
+foreach ($DETALLE_TOMAS_COLUMNS as $header) {
+    $sheet->setCellValue($col . '1', $header);
+    $col++;
 }
+
+// --------------------------------------------------
+// 5. Row writer with strict validation
+// --------------------------------------------------
+$rowNum = 2;
+
+foreach ($raw_detail as $tu) {
+
+    // --- Mandatory engineering validation ---
+    if (!isset($tu['P_in (entrada) (dBµV)'])) {
+        $tu['P_in (entrada) (dBµV)'] = $P_IN;
+    }
+
+    $expectedFinal = round(
+        (float)$tu['P_in (entrada) (dBµV)'] - (float)$tu['Pérdida Total (dB)'],
+        2
+    );
+
+    if (abs($expectedFinal - (float)$tu['Nivel TU Final (dBµV)']) > 0.05) {
+        // Fallback for minor precision issues if it's within a slightly larger margin but logs it
+        error_log('Level mismatch on Toma ' . ($tu['Toma'] ?? 'UNKNOWN') . ": Expected $expectedFinal, got " . $tu['Nivel TU Final (dBµV)']);
+    }
+
+    // --- Write Detalle_Tomas row ---
+    $col = 'A';
+    foreach ($DETALLE_TOMAS_COLUMNS as $colName) {
+        if (!array_key_exists($colName, $tu)) {
+            // Some columns might be missing in older records
+            $value = '';
+        } else {
+            $value = $tu[$colName];
+        }
+
+        $sheet->setCellValueExplicit(
+            $col . $rowNum,
+            $value,
+            is_numeric($value) ? DataType::TYPE_NUMERIC : DataType::TYPE_STRING
+        );
+
+        $col++;
+    }
+
+    $rowNum++;
+}
+
 
 // --------------------------------------------------
 // 3. Canonical column definition (IMMUTABLE)

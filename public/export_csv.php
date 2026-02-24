@@ -75,12 +75,9 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once __DIR__ . '/../app/config/db.php';
-require_once __DIR__ . '/../app/helpers/InventoryAggregator.php';
-require_once __DIR__ . '/../app/helpers/ResultParser.php'; // Include ResultParser
-require_once __DIR__ . '/../app/services/CanonicalMapperService.php'; // Add this
+require_once __DIR__ . '/../app/controllers/ResultsController.php';
 use app\helpers\InventoryAggregator;
-use app\helpers\ResultParser; // Use ResultParser
+use app\controllers\ResultsController;
 
 $opt_id = intval($_GET['opt_id'] ?? 0);
 $type   = $_GET['type'] ?? '';
@@ -96,25 +93,20 @@ if (!in_array($type, $allowed, true)) {
     die('Invalid export type');
 }
 
-$DB  = new Database();
-$pdo = $DB->getConnection();
+// --------------------------------------------------
+// 1. Load result via Controller
+// --------------------------------------------------
+$controller = new ResultsController($opt_id);
+$response = $controller->execute();
 
-$sql = "
-    SELECT r.summary_json, r.detail_json, r.inputs_json, d.dataset_name 
-    FROM results r 
-    JOIN datasets d ON d.dataset_id = r.dataset_id
-    WHERE r.opt_id = :opt_id
-";
-$st  = $pdo->prepare($sql);
-$st->execute(['opt_id' => $opt_id]);
-$row = $st->fetch(PDO::FETCH_ASSOC);
-
-if (!$row) {
-    http_response_code(404);
-    die('Result not found');
+if ($response['status'] !== 'success') {
+    die('Error loading result: ' . ($response['message'] ?? 'Unknown error'));
 }
 
-$dataset_name = $row['dataset_name'] ?? 'Unnamed';
+/** @var \app\viewmodels\ResultViewModel $viewModel */
+$viewModel = $response['viewModel'];
+
+$dataset_name = $viewModel->dataset_name ?? 'Unnamed';
 $safe_name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $dataset_name);
 
 function csv_escape($v): string {
@@ -151,14 +143,11 @@ switch ($type) {
        INPUT PARAMETERS EXPORT
     ----------------------------------------------------- */
     case 'inputs':
-        if (empty($row['inputs_json'])) {
-            die('inputs_json is empty');
+        $inputs = $viewModel->inputs;
+        if (empty($inputs)) {
+            die('inputs data is empty');
         }
 
-        $inputs = json_decode($row['inputs_json'], true);
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($inputs)) {
-            die('Invalid inputs_json');
-        }
         echo "name,value\n";
         foreach ($inputs as $k => $v) {
             echo csv_escape($k) . "," . csv_escape($v) . "\n";
@@ -169,19 +158,14 @@ switch ($type) {
        DETAIL (PER TU) EXPORT
     ----------------------------------------------------- */
     case 'detail':
-        $parser = ResultParser::fromDbRow($row);
-        if ($parser->hasErrors()) {
-            die('Error parsing result: ' . implode(', ', $parser->errors()));
-        }
-        
-        // We use raw details because they contain all the columns from Python/Legacy
-        $details = $row['detail_json'] ? json_decode($row['detail_json'], true) : [];
+        // We use raw details because they contain all the columns from Python
+        $details = json_decode($viewModel->results['detail_json'], true);
 
         if (empty($details)) {
             die('No detail data available');
         }
 
-        // The specific 34 columns requested by the user
+        // The specific 34 columns
         $headers = [
             'Toma', 'Piso', 'Apto', 'Bloque', 'Piso Troncal', 'Piso Entrada Riser Bloque', 
             'Direccion Propagacion', 'Longitud Antena→Troncal (m)', 
@@ -204,16 +188,6 @@ switch ($type) {
             $line = [];
             foreach ($headers as $h) {
                 $value = $tu[$h] ?? '';
-                
-                // Consistency check: some fields might have different names in version 2 vs legacy
-                if ($value === '' || $value === null) {
-                    if ($h === 'Toma') $value = $tu['tu_id'] ?? '';
-                    if ($h === 'Piso') $value = $tu['piso'] ?? '';
-                    if ($h === 'Apto') $value = $tu['apto'] ?? '';
-                    if ($h === 'Bloque') $value = $tu['bloque'] ?? '';
-                    if ($h === 'Nivel TU Final (dBµV)') $value = $tu['nivel_tu'] ?? '';
-                }
-
                 if (is_float($value)) {
                     $value = number_format($value, 2, '.', '');
                 }
@@ -227,7 +201,7 @@ switch ($type) {
    INVENTORY EXPORT (DERIVED FROM DETAIL_JSON)
 ----------------------------------------------------- */
 case 'inventory':
-    $parser = ResultParser::fromDbRow($row);
+    $parser = \app\helpers\ResultParser::fromDbRow($viewModel->results);
     if ($parser->hasErrors()) {
         die('Error parsing result: ' . implode(', ', $parser->errors()));
     }

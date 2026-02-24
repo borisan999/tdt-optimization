@@ -2,20 +2,20 @@
 /** @var array $repartidores */
 ?>
 
-<h2 class="section-title">Repartidores</h2>
+<h2 class="section-title"><?= __('repartidores') ?></h2>
 
 <a href="repartidores.php?action=create" class="btn-primary">
-    Nuevo repartidor
+    <?= __('new_repartidor') ?>
 </a>
 
 <table class="table">
     <thead>
         <tr>
-            <th>Modelo</th>
-            <th>Salidas</th>
-            <th>Pérdida inserción (dB)</th>
-            <th>Frecuencia</th>
-            <th>Acciones</th>
+            <th><?= __('col_model') ?></th>
+            <th><?= __('col_outs') ?></th>
+            <th><?= __('col_ins_loss') ?></th>
+            <th><?= __('tech_params') ?></th>
+            <th><?= __('action') ?></th>
         </tr>
     </thead>
     <tbody>
@@ -28,13 +28,13 @@
                 <td>
                     <a class="btn-small"
                        href="repartidores.php?action=edit&id=<?= (int)$r['rep_id'] ?>">
-                        Editar
+                        <?= __('edit') ?>
                     </a>
 
                     <a class="btn-small"
                        href="repartidores.php?action=delete&id=<?= (int)$r['rep_id'] ?>"
-                       onclick="return confirm('¿Eliminar repartidor?')">
-                        Eliminar
+                       onclick="return confirm('<?= __('confirm_delete') ?>')">
+                        <?= __('delete') ?>
                     </a>
                 </td>
             </tr>

@@ -18,10 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_defaults'])) {
     }
 
     if ($genModel->saveDefaults($params)) {
-        $message = 'Default parameters updated successfully.';
+        $message = __('defaults_updated_success');
         $messageType = 'success';
     } else {
-        $message = 'Failed to update default parameters.';
+        $message = __('defaults_updated_fail');
         $messageType = 'danger';
     }
 }
@@ -31,38 +31,19 @@ $defaults = $genModel->getDefaults();
 include __DIR__ . '/templates/header.php';
 include __DIR__ . '/templates/navbar.php';
 
-$paramLabels = [
-    "Nivel_maximo" => "Nivel Máximo (dBuV)",
-    "Nivel_minimo" => "Nivel Mínimo (dBuV)",
-    "Piso_Maximo" => "Piso Máximo",
-    "Potencia_Objetivo_TU" => "Potencia Objetivo TU (dBuV)",
-    "apartamentos_por_piso" => "Apartamentos por Piso",
-    "atenuacion_cable_470mhz" => "Atenuación Cable 470MHz",
-    "atenuacion_cable_698mhz" => "Atenuación Cable 698MHz",
-    "atenuacion_cable_por_metro" => "Atenuación Cable por Metro",
-    "atenuacion_conector" => "Atenuación Conector",
-    "atenuacion_conexion_tu" => "Atenuación Conexión TU",
-    "conectores_por_union" => "Conectores por Unión",
-    "largo_cable_amplificador_ultimo_piso" => "Largo Cable Amplificador Último Piso (m)",
-    "largo_cable_entre_pisos" => "Largo Cable entre Pisos (m)",
-    "largo_cable_feeder_bloque" => "Largo Cable Feeder Bloque (m)",
-    "p_troncal" => "P Troncal",
-    "potencia_entrada" => "Potencia Entrada (dBuV)",
-];
-
 $categories = [
     [
-        'title' => 'Building Geometry',
+        'title' => __('cat_geometry'),
         'icon' => 'fa-building',
         'fields' => ['Piso_Maximo', 'apartamentos_por_piso', 'largo_cable_entre_pisos', 'largo_cable_amplificador_ultimo_piso', 'largo_cable_feeder_bloque']
     ],
     [
-        'title' => 'Signal Constraints',
+        'title' => __('cat_constraints'),
         'icon' => 'fa-signal',
         'fields' => ['potencia_entrada', 'Nivel_minimo', 'Nivel_maximo', 'Potencia_Objetivo_TU', 'p_troncal']
     ],
     [
-        'title' => 'Loss & Attenuation',
+        'title' => __('cat_attenuation'),
         'icon' => 'fa-chart-line',
         'fields' => ['atenuacion_cable_por_metro', 'atenuacion_cable_470mhz', 'atenuacion_cable_698mhz', 'atenuacion_conector', 'atenuacion_conexion_tu', 'conectores_por_union']
     ]
@@ -71,9 +52,9 @@ $categories = [
 
 <main class="container my-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0 text-primary"><i class="fas fa-tools me-2"></i>Global Default Parameters</h2>
+        <h2 class="mb-0 text-primary"><i class="fas fa-tools me-2"></i><?= __('global_defaults_title') ?></h2>
         <a href="configurations" class="btn btn-outline-secondary">
-            <i class="fas fa-chevron-left"></i> Back to Config
+            <i class="fas fa-chevron-left"></i> <?= __('back') ?>
         </a>
     </div>
 
@@ -85,7 +66,7 @@ $categories = [
     <?php endif; ?>
 
     <div class="alert alert-info shadow-sm">
-        <i class="fas fa-info-circle me-2"></i> These values are used as <strong>defaults</strong> when creating a new dataset. Changing them here will not affect existing datasets.
+        <i class="fas fa-info-circle me-2"></i> <?= __('defaults_info') ?>
     </div>
 
     <form method="POST" action="">
@@ -101,7 +82,7 @@ $categories = [
                         <div class="card-body">
                             <?php foreach ($cat['fields'] as $name): ?>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold mb-1"><?= $paramLabels[$name] ?? $name ?></label>
+                                    <label class="form-label small fw-bold mb-1"><?= __('param_' . $name) ?></label>
                                     <input type="number" step="any" class="form-control form-control-sm" 
                                            name="param_<?= $name ?>" value="<?= htmlspecialchars($defaults[$name] ?? '') ?>" required>
                                 </div>
@@ -115,7 +96,7 @@ $categories = [
         <div class="card shadow-sm border-0 mt-2">
             <div class="card-body d-flex justify-content-end gap-3">
                 <button type="submit" name="save_defaults" class="btn btn-primary px-5">
-                    <i class="fas fa-save me-2"></i> Save Global Defaults
+                    <i class="fas fa-save me-2"></i> <?= __('save_defaults_btn') ?>
                 </button>
             </div>
         </div>

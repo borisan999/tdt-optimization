@@ -2,10 +2,10 @@
 /** @var array $derivadores */
 ?>
 
-<h2 class="section-title">Derivadores</h2>
+<h2 class="section-title"><?= __('derivadores') ?></h2>
 
 <a href="derivadores.php?action=create" class="btn-primary">
-    Nuevo derivador
+    <?= __('new_derivador') ?>
 </a>
 
 <div class="card">
@@ -13,12 +13,12 @@
     <table>
         <thead>
             <tr>
-                <th>Modelo</th>
-                <th>Derivación (dB)</th>
-                <th>Paso (dB)</th>
-                <th>Salidas</th>
-                <th>Pérdida inserción (dB)</th>
-                <th>Acciones</th>
+                <th><?= __('col_model') ?></th>
+                <th><?= __('col_deriv') ?></th>
+                <th><?= __('col_pass') ?></th>
+                <th><?= __('col_outs') ?></th>
+                <th><?= __('col_ins_loss') ?></th>
+                <th><?= __('action') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -32,13 +32,13 @@
                     <td>
                         <a class="btn-small"
                            href="derivadores.php?action=edit&id=<?= (int)$d['deriv_id'] ?>">
-                            Editar
+                            <?= __('edit') ?>
                         </a>
 
                         <a class="btn-small btn-secondary"
                            href="derivadores.php?action=delete&id=<?= (int)$d['deriv_id'] ?>"
-                           onclick="return confirm('¿Eliminar derivador?')">
-                            Eliminar
+                           onclick="return confirm('<?= __('confirm_delete') ?>')">
+                            <?= __('delete') ?>
                         </a>
                     </td>
                 </tr>
