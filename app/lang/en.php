@@ -25,7 +25,7 @@ return [
     'dash_subtitle' => 'Engineering dashboard for distribution network optimization',
     'dash_enter_data_desc' => 'Upload Excel datasets or enter building data manually.',
     'dash_history_desc' => 'Browse previous datasets and optimization runs.',
-    'dash_config_desc' => 'Manage derivadores, repartidores, and system parameters.',
+    'dash_config_desc' => 'Manage derivators, splitters, and system parameters.',
     
     // Enter Data Page
     'data_config_title' => 'Data Configuration',
@@ -263,8 +263,8 @@ return [
     'col_value_m' => 'Value (m)',
 
     // Configurations Page
-    'manage_derivadores' => 'Manage Derivadores',
-    'manage_repartidores' => 'Manage Repartidores',
+    'manage_derivadores' => 'Manage Derivators',
+    'manage_repartidores' => 'Manage Splitters',
     'manage_params' => 'Manage Parameters',
     'manage_users' => 'Manage Users',
     'derivadores' => 'Derivators',
