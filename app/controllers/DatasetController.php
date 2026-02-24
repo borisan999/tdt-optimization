@@ -173,8 +173,12 @@ class DatasetController
         $errorMessage = '';
 
         try {
-            list($canonicalJson, $optId) = $this->initializeOptimization($datasetId);
-            $this->markOptimizationAsRunning((int)$optId);
+            list($canonicalJson, $optId, $status) = $this->initializeOptimization($datasetId);
+            
+            if ($status === 'running' || !$this->markOptimizationAsRunning((int)$optId)) {
+                $this->jsonResponse(['success' => true, 'message' => 'Optimization already in progress', 'opt_id' => (int)$optId]);
+                return;
+            }
 
             // Release session lock before long-running Python execution
             if (session_status() === PHP_SESSION_ACTIVE) {
@@ -221,7 +225,8 @@ class DatasetController
     {
         try {
             $this->pdo->beginTransaction();
-            $stmt = $this->pdo->prepare("SELECT canonical_json FROM datasets WHERE dataset_id = :id");
+            // EXCLUSIVE LOCK on the dataset to prevent concurrent initializations for the same dataset
+            $stmt = $this->pdo->prepare("SELECT canonical_json FROM datasets WHERE dataset_id = :id FOR UPDATE");
             $stmt->execute(['id' => $datasetId]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -230,11 +235,21 @@ class DatasetController
             }
             $canonicalJson = $row['canonical_json'];
 
+            // Check if there is already a queued or running optimization
+            $stmt = $this->pdo->prepare("SELECT opt_id, status FROM optimizations WHERE dataset_id = ? AND status IN ('queued', 'running')");
+            $stmt->execute([$datasetId]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                $this->pdo->commit();
+                return [$canonicalJson, (int)$existing['opt_id'], $existing['status']];
+            }
+
             $stmt = $this->pdo->prepare("UPDATE datasets SET status = 'processing' WHERE dataset_id = ?");
             $stmt->execute([$datasetId]);
 
-            // Enforce 1:1 Optimization per Dataset: Delete any previous optimization/results
-            $stmt = $this->pdo->prepare("DELETE FROM optimizations WHERE dataset_id = ?");
+            // Enforce 1:1 Optimization per Dataset: Delete only finished/failed previous ones
+            $stmt = $this->pdo->prepare("DELETE FROM optimizations WHERE dataset_id = ? AND status NOT IN ('queued', 'running')");
             $stmt->execute([$datasetId]);
 
             $stmt = $this->pdo->prepare("INSERT INTO optimizations (dataset_id, created_at, status, parameters_json) VALUES (?, NOW(), 'queued', '{}')");
@@ -242,21 +257,35 @@ class DatasetController
             $optId = $this->pdo->lastInsertId();
 
             $this->pdo->commit();
-            return [$canonicalJson, (int)$optId];
+            return [$canonicalJson, (int)$optId, 'queued'];
         } catch (PDOException $e) {
             if ($this->pdo->inTransaction()) $this->pdo->rollBack();
             throw new Exception('Failed to initialize optimization: ' . $e->getMessage());
         }
     }
 
-    private function markOptimizationAsRunning(int $optId)
+    private function markOptimizationAsRunning(int $optId): bool
     {
         try {
             $this->pdo->beginTransaction();
-            $stmt = $this->pdo->prepare("UPDATE optimizations SET status = 'running', started_at = NOW() WHERE opt_id = ? AND status = 'queued'");
+            // Check current status first
+            $stmt = $this->pdo->prepare("SELECT status FROM optimizations WHERE opt_id = ? FOR UPDATE");
             $stmt->execute([$optId]);
-            if ($stmt->rowCount() === 0) throw new Exception("Optimization {$optId} not queued.");
+            $status = $stmt->fetchColumn();
+
+            if ($status === 'running') {
+                $this->pdo->commit();
+                return false; // Already running
+            }
+
+            if ($status !== 'queued') {
+                throw new Exception("Optimization {$optId} is in status '{$status}', expected 'queued'.");
+            }
+
+            $stmt = $this->pdo->prepare("UPDATE optimizations SET status = 'running', started_at = NOW() WHERE opt_id = ?");
+            $stmt->execute([$optId]);
             $this->pdo->commit();
+            return true;
         } catch (PDOException $e) {
             if ($this->pdo->inTransaction()) $this->pdo->rollBack();
             throw new Exception('Failed to mark optimization as running: ' . $e->getMessage());
