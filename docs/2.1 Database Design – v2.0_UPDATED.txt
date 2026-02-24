@@ -1,0 +1,29 @@
+# 2.1 DATABASE DESIGN (UPDATED V2.0)
+
+## Entity Relationship Summary
+
+### 1. `users`
+- Stores authentication credentials.
+- `user_id`, `username`, `password_hash`.
+
+### 2. `datasets`
+- Represents a building configuration.
+- `dataset_id`, `dataset_name`, `uploaded_by`.
+- `canonical_json` (LONGTEXT): The authoritative building model.
+- `canonical_hash` (VARCHAR 64): SHA256 of the JSON for integrity verification.
+
+### 3. `optimizations`
+- Represents a specific attempt to solve a dataset.
+- `opt_id`, `dataset_id` (FK), `status` (queued, running, finished, failed).
+- `parameters_json`: Runtime constraints (time limit, gap).
+
+### 4. `results`
+- Immutable output of a successful optimization.
+- `result_id`, `opt_id` (FK), `dataset_id` (FK).
+- `summary_json`: High-level KPIs (Avg level, min/max).
+- `detail_json` (LONGTEXT): The **Output Canonical Data** (TUs, losses, levels).
+- `inputs_json`: Snapshot of the inputs used at the time of execution.
+
+### 5. `derivadores` / `repartidores`
+- Global equipment catalogs managed via the Configurations dashboard.
+- Includes models, attenuation values, and number of outputs.

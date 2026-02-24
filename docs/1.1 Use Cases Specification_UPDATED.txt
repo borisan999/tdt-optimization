@@ -1,0 +1,26 @@
+# 1.1 USE CASE SPECIFICATION (UPDATED V2.0)
+
+## UC-01: Model Building Topology
+**Actor:** Engineer
+**Description:** The user defines the building structure (floors, apartments per floor, outlets per unit).
+**Implementation:** Via the **Advanced Building Template Generator** or manual table entry. Produces an input Canonical JSON.
+
+## UC-02: Trigger Optimization
+**Actor:** Engineer / System
+**Description:** The user requests an optimal network design for a saved Dataset.
+**Implementation:** The system locks the dataset (`FOR UPDATE`), spawns the Python MILP solver, and stores the results as an immutable snapshot.
+
+## UC-03: Visualize Network Tree
+**Actor:** Engineer
+**Description:** View a deterministic, interactive diagram of the signal distribution hierarchy.
+**Implementation:** The `ResultsController` rehydrates the topology from the result snapshot and renders it using `vis-network`.
+
+## UC-04: Validate Compliance
+**Actor:** System / Engineer
+**Description:** Automatically identify outlets that are "Out of Spec."
+**Implementation:** The `ResultComplianceService` scans the canonical detail array and flags values outside the [47, 70] dBuV range.
+
+## UC-05: Generate Engineering Reports
+**Actor:** Engineer
+**Description:** Export the validated design to professional formats (XLSX, CSV, DOCX).
+**Implementation:** Export engines consume the `ResultViewModel` to ensure 100% data parity with the web view.

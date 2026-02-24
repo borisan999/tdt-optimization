@@ -1,0 +1,15 @@
+# 0. PROJECT OVERVIEW (UPDATED V2.0)
+
+## System Goal
+To provide a professional, web-based engineering environment for the design and mathematical optimization of Digital Terrestrial Television (TDT) distribution networks, ensuring full compliance with the RITEL standard.
+
+## Primary Objectives
+1.  **Automated Equipment Selection:** Use Mixed-Integer Linear Programming (MILP) to select the optimal combination of Taps (Derivadores) and Splitters (Repartidores) to achieve uniform signal levels across all outlets.
+2.  **Canonical Authority:** Maintain an immutable record of every design iteration through "Result Snapshots," preventing semantic drift between views and exports.
+3.  **Visualization & Validation:** Provide deterministic graphical feedback of the network topology and automated compliance checks against normative signal bands [47 dBuV - 70 dBuV].
+
+## Key Terminology
+- **Dataset:** A unique building configuration (geometry + parameters).
+- **Optimization:** A specific execution of the solver against a Dataset.
+- **Canonical JSON:** The standardized data format that connects the PHP UI, the Python Solver, and the Export Engines.
+- **Feasible Solution:** A network design where all outlets receive a valid signal level.

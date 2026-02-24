@@ -1,0 +1,59 @@
+# 4. PSEUDOCODE (UPDATED V2.0)
+
+## A. Optimization Trigger (PHP)
+```php
+FUNCTION runOptimization(dataset_id):
+    START TRANSACTION
+    SELECT dataset FOR UPDATE // Prevent race conditions
+    
+    IF status IS 'running' OR 'queued':
+        RETURN 'Already in progress'
+    
+    UPDATE dataset status = 'processing'
+    CREATE optimization record (status = 'queued')
+    COMMIT
+    
+    CLOSE SESSION // Release lock for other UI tabs
+    
+    // Spawn Python Process
+    STDOUT, STDERR, EXIT_CODE = EXEC('python3 optimizer_canonical.py', dataset.canonical_json)
+    
+    IF EXIT_CODE == 0:
+        RESULT_JSON = EXTRACT_LAST_JSON(STDOUT)
+        SAVE_RESULT(dataset_id, RESULT_JSON)
+        UPDATE status = 'finished'
+    ELSE:
+        LOG_ERROR(STDERR)
+        UPDATE status = 'failed'
+```
+
+## B. Visualization Rendering (PHP/JS)
+```php
+FUNCTION renderNetworkTree(opt_id):
+    SNAPSHOT = FETCH results.detail_json WHERE opt_id
+    VIEWMODEL = ResultParser.rehydrate(SNAPSHOT)
+    
+    // Deterministic Sort
+    SORT VIEWMODEL.details BY (Bloque, Piso, Apto, TU)
+    
+    PASS VIEWMODEL TO Frontend
+```
+```javascript
+// Frontend (vis-network)
+FUNCTION initGraph(nodes, edges):
+    CONFIG = { layout: { hierarchical: true } }
+    NETWORK = NEW vis.Network(CONTAINER, nodes, edges, CONFIG)
+```
+
+## C. Export Logic (PHP)
+```php
+FUNCTION exportToExcel(opt_id):
+    VIEWMODEL = ResultsController.execute(opt_id)
+    SPREADSHEET = NEW ExcelWriter()
+    
+    FOR EACH TU IN VIEWMODEL.details:
+        // No calculation here, just mapping
+        SPREADSHEET.addRow(TU.id, TU.piso, TU.nivel_tu, TU.cumple)
+    
+    OUTPUT SPREADSHEET
+```
