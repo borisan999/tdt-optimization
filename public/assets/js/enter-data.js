@@ -150,10 +150,10 @@ function addApartmentRow(piso = '', apto = '', tus = '', deriv = '') {
     if (!apartmentsBody) return;
     const newRowHtml = `
         <tr>
-            <td><input type="number" name="piso[]" class="form-control form-control-sm validate-field" data-field="piso" value="${piso}" required></td>
-            <td><input type="number" name="apartamento[]" class="form-control form-control-sm validate-field" data-field="apartamento" value="${apto}" required></td>
-            <td><input type="number" name="tus_requeridos[]" class="form-control form-control-sm validate-field" data-field="tus_requeridos" value="${tus}" title="${tableFieldHints.tus}" required></td>
-            <td><input type="number" name="largo_cable_derivador[]" class="form-control form-control-sm validate-field" data-field="largo_cable_derivador" step="any" value="${deriv}" title="${tableFieldHints.deriv_rep}" required></td>
+            <td><input type="number" name="piso[]" class="form-control form-control-sm validate-field" data-field="piso" value="${piso}" required title="${__('col_piso_tooltip')}"></td>
+            <td><input type="number" name="apartamento[]" class="form-control form-control-sm validate-field" data-field="apartamento" value="${apto}" required title="${__('col_apto_tooltip')}"></td>
+            <td><input type="number" name="tus_requeridos[]" class="form-control form-control-sm validate-field" data-field="tus_requeridos" value="${tus}" title="${__('col_tus_tooltip')}" required></td>
+            <td><input type="number" name="largo_cable_derivador[]" class="form-control form-control-sm validate-field" data-field="largo_cable_derivador" step="any" value="${deriv}" title="${__('col_deriv_len_tooltip')}" required></td>
             <td class="text-center">
                 <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('tr').remove(); checkFormValidity();">
                     <i class="fas fa-trash-alt"></i>
@@ -169,10 +169,10 @@ function addTuRow(piso = '', apto = '', idx = '', len = '') {
     if (!tuBody) return;
     const newRowHtml = `
         <tr>
-            <td><input type="number" name="tu_piso[]" class="form-control form-control-sm validate-field" data-field="piso" value="${piso}" required></td>
-            <td><input type="number" name="tu_apartamento[]" class="form-control form-control-sm validate-field" data-field="apartamento" value="${apto}" required></td>
-            <td><input type="number" name="tu_index[]" class="form-control form-control-sm validate-field" data-field="tu_index" value="${idx}" required></td>
-            <td><input type="number" name="largo_tu[]" class="form-control form-control-sm validate-field" data-field="largo_cable_tu" step="any" value="${len}" title="${tableFieldHints.rep_tu}" required></td>
+            <td><input type="number" name="tu_piso[]" class="form-control form-control-sm validate-field" data-field="piso" value="${piso}" required title="${__('col_piso_tooltip')}"></td>
+            <td><input type="number" name="tu_apartamento[]" class="form-control form-control-sm validate-field" data-field="apartamento" value="${apto}" required title="${__('col_apto_tooltip')}"></td>
+            <td><input type="number" name="tu_index[]" class="form-control form-control-sm validate-field" data-field="tu_index" value="${idx}" required title="${__('col_tu_idx_tooltip')}"></td>
+            <td><input type="number" name="largo_tu[]" class="form-control form-control-sm validate-field" data-field="largo_cable_tu" step="any" value="${len}" title="${__('col_length_tooltip')}" required></td>
             <td class="text-center">
                 <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('tr').remove(); checkFormValidity();">
                     <i class="fas fa-trash-alt"></i>

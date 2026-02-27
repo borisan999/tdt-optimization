@@ -14,7 +14,6 @@
             <th><?= __('col_model') ?></th>
             <th><?= __('col_outs') ?></th>
             <th><?= __('col_ins_loss') ?></th>
-            <th><?= __('tech_params') ?></th>
             <th><?= __('action') ?></th>
         </tr>
     </thead>
@@ -24,7 +23,6 @@
                 <td><?= htmlspecialchars($r['modelo']) ?></td>
                 <td><?= (int)$r['salidas'] ?></td>
                 <td><?= number_format($r['perdida_insercion'], 3) ?></td>
-                <td><?= htmlspecialchars($r['frecuencia']) ?></td>
                 <td>
                     <a class="btn-small"
                        href="repartidores.php?action=edit&id=<?= (int)$r['rep_id'] ?>">

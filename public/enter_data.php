@@ -9,7 +9,12 @@ include __DIR__ . '/templates/navbar.php';
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-edit text-primary"></i> <?= __('data_config_title') ?></h2>
-        <div id="status_badge" class="badge bg-secondary"><?= __('mode_new') ?></div>
+        <div class="d-flex gap-2 align-items-center">
+            <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal">
+                <i class="fas fa-question-circle me-1"></i> <?= __('help_guide') ?>
+            </button>
+            <div id="status_badge" class="badge bg-secondary"><?= __('mode_new') ?></div>
+        </div>
     </div>
 
     <!-- TAB NAVIGATION -->
@@ -61,7 +66,7 @@ include __DIR__ . '/templates/navbar.php';
                             <label class="form-label fw-bold mb-0 text-primary"><i class="fas fa-tag me-2"></i><?= __('dataset_name') ?></label>
                         </div>
                         <div class="col-md-9">
-                            <input type="text" id="dataset_name" name="dataset_name" class="form-control" placeholder="<?= __('dataset_placeholder') ?>" required>
+                            <input type="text" id="dataset_name" name="dataset_name" class="form-control" placeholder="<?= __('dataset_placeholder') ?>" required title="<?= __('dataset_name_tooltip') ?>">
                         </div>
                     </div>
                 </div>
@@ -95,15 +100,15 @@ include __DIR__ . '/templates/navbar.php';
                     <div class="row g-3 align-items-end">
                         <div class="col-md-3">
                             <label class="form-label small fw-bold"><?= __('source_floor') ?></label>
-                            <input type="number" name="sourceFloorId" class="form-control form-control-sm" placeholder="e.g. 1">
+                            <input type="number" name="sourceFloorId" class="form-control form-control-sm" placeholder="e.g. 1" title="<?= __('source_floor_tooltip') ?>">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold"><?= __('target_start') ?></label>
-                            <input type="number" name="targetStartFloor" class="form-control form-control-sm" placeholder="e.g. 2">
+                            <input type="number" name="targetStartFloor" class="form-control form-control-sm" placeholder="e.g. 2" title="<?= __('target_start_floor_tooltip') ?>">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold"><?= __('target_end') ?></label>
-                            <input type="number" name="targetEndFloor" class="form-control form-control-sm" placeholder="e.g. 10">
+                            <input type="number" name="targetEndFloor" class="form-control form-control-sm" placeholder="e.g. 10" title="<?= __('target_end_floor_tooltip') ?>">
                         </div>
                         <div class="col-md-3">
                             <button type="button" id="applyRepetitionBtn" class="btn btn-primary btn-sm w-100">
@@ -209,6 +214,35 @@ include __DIR__ . '/templates/navbar.php';
     </div>
 
 </main>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title fw-bold"><i class="fas fa-lightbulb me-2"></i><?= __('data_guide_title') ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6><strong><?= __('data_concept_1_title') ?></strong></h6>
+                <p><?= __('data_concept_1_desc') ?></p>
+                
+                <hr>
+                
+                <h6><strong><?= __('data_concept_2_title') ?></strong></h6>
+                <p><?= __('data_concept_2_desc') ?></p>
+                
+                <hr>
+                
+                <h6><strong><?= __('data_concept_3_title') ?></strong></h6>
+                <p><?= __('data_concept_3_desc') ?></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= __('got_it') ?></button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     // Pass translations to JS

@@ -20,13 +20,13 @@ $isEdit = isset($derivador) && is_array($derivador);
 
     <div class="form-group">
         <label>Derivación (dB)</label>
-        <input type="number" name="derivacion" required
+        <input type="number" name="derivacion" required step="any"
                value="<?= $derivador['derivacion'] ?? '' ?>">
     </div>
 
     <div class="form-group">
         <label>Paso (dB)</label>
-        <input type="number" name="paso" required
+        <input type="number" name="paso" required step="any"
                value="<?= $derivador['paso'] ?? '' ?>">
     </div>
 
@@ -36,11 +36,7 @@ $isEdit = isset($derivador) && is_array($derivador);
                value="<?= $derivador['salidas'] ?? '' ?>">
     </div>
 
-    <div class="form-group">
-        <label>Pérdida de inserción (dB)</label>
-        <input type="number" step="0.001" name="perdida_insercion" required
-               value="<?= $derivador['perdida_insercion'] ?? '' ?>">
-    </div>
+
 
     <div class="form-actions">
         <button type="submit" class="btn-primary">Guardar</button>

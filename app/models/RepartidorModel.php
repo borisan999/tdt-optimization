@@ -39,17 +39,15 @@ class RepartidorModel
     {
         $stmt = $this->pdo->prepare("
             INSERT INTO repartidores
-                (modelo, perdida_insercion, salidas, frecuencia, descripcion)
+                (modelo, perdida_insercion, salidas)
             VALUES
-                (?, ?, ?, ?, ?)
+                (?, ?, ?)
         ");
 
         $stmt->execute([
             $data['modelo'],
             $data['perdida_insercion'],
             $data['salidas'],
-            $data['frecuencia'],
-            $data['descripcion'],
         ]);
     }
 
@@ -60,9 +58,7 @@ class RepartidorModel
             SET
                 modelo = ?,
                 perdida_insercion = ?,
-                salidas = ?,
-                frecuencia = ?,
-                descripcion = ?
+                salidas = ?
             WHERE rep_id = ?
         ");
 
@@ -70,8 +66,6 @@ class RepartidorModel
             $data['modelo'],
             $data['perdida_insercion'],
             $data['salidas'],
-            $data['frecuencia'],
-            $data['descripcion'],
             $data['rep_id'],
         ]);
     }

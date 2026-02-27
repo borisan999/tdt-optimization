@@ -39,18 +39,7 @@ $isEdit = isset($repartidor) && is_array($repartidor);
                value="<?= htmlspecialchars($repartidor['perdida_insercion'] ?? '') ?>">
     </div>
 
-    <div class="form-group">
-        <label>Frecuencia</label>
-        <input type="text"
-               name="frecuencia"
-               required
-               value="<?= htmlspecialchars($repartidor['frecuencia'] ?? '') ?>">
-    </div>
 
-    <div class="form-group">
-        <label>Descripción</label>
-        <textarea name="descripcion" rows="3"><?= htmlspecialchars($repartidor['descripcion'] ?? '') ?></textarea>
-    </div>
 
     <div class="form-actions">
         <button type="submit" class="btn-primary">

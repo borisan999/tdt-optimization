@@ -30,8 +30,8 @@ class DerivadorModel
     {
         $stmt = $this->pdo->prepare("
             INSERT INTO derivadores
-                (modelo, derivacion, paso, salidas, perdida_insercion, descripcion)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (modelo, derivacion, paso, salidas, descripcion)
+            VALUES (?, ?, ?, ?, ?)
         ");
 
         $stmt->execute([
@@ -39,7 +39,6 @@ class DerivadorModel
             $d['derivacion'],
             $d['paso'],
             $d['salidas'],
-            $d['perdida_insercion'],
             $d['descripcion'],
         ]);
     }
@@ -52,7 +51,6 @@ class DerivadorModel
                 derivacion = ?,
                 paso = ?,
                 salidas = ?,
-                perdida_insercion = ?,
                 descripcion = ?
             WHERE deriv_id = ?
         ");
@@ -62,7 +60,6 @@ class DerivadorModel
             $d['derivacion'],
             $d['paso'],
             $d['salidas'],
-            $d['perdida_insercion'],
             $d['descripcion'],
             $d['deriv_id'],
         ]);

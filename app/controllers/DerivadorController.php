@@ -32,10 +32,9 @@ class DerivadorController
         $d = [
             'deriv_id'         => $_POST['deriv_id'] ?? null,
             'modelo'           => trim($_POST['modelo']),
-            'derivacion'       => (float)$_POST['derivacion'],
-            'paso'             => (float)$_POST['paso'],
+            'derivacion'       => (float)str_replace(',', '.', $_POST['derivacion']),
+            'paso'             => (float)str_replace(',', '.', $_POST['paso']),
             'salidas'          => (int)$_POST['salidas'],
-            'perdida_insercion'=> (float)$_POST['perdida_insercion'],
             'descripcion'      => trim($_POST['descripcion']),
         ];
 

@@ -63,7 +63,15 @@ return [
     'load_config_btn' => 'Cargar Configuración',
     'select_prev_config' => 'Seleccione una configuración previa',
     
-    // Parameter Labels (for JS)
+    // Help Modal for Enter Data
+    'data_guide_title' => 'Guía de Entrada de Datos',
+    'data_concept_1_title' => 'Métodos de Entrada: Manual vs. Excel',
+    'data_concept_1_desc' => 'Puede ingresar los datos del edificio manualmente usando los formularios estructurados provistos, o cargar un archivo Excel generado por el Generador de Plantillas. La entrada manual es ideal para ajustes pequeños o diseños simples, mientras que la carga de Excel es eficiente para estructuras complejas o prediseñadas.',
+    'data_concept_2_title' => 'Parámetros Generales (Configuración Global)',
+    'data_concept_2_desc' => 'Estos parámetros definen las características globales de su edificio y los requisitos de señal, como el piso máximo, apartamentos por piso, restricciones de señal (niveles mínimo/máximo) y atenuaciones de cable. Estos valores se aplican a todo el proyecto a menos que se especifique lo contrario.',
+    'data_concept_3_title' => 'Configuración de Topología (Apartamentos y TUs)',
+    'data_concept_3_desc' => 'Esta sección le permite definir la distribución de apartamentos dentro de cada piso y las longitudes específicas de cable para cada toma de TV (TU). Puede añadir filas para cada apartamento y TU, especificando su piso, número de apartamento y las longitudes de cable requeridas. La Utilidad de Repetición de Pisos puede duplicar rápidamente configuraciones en múltiples pisos.',
+    'got_it' => 'Entendido',
     'param_Nivel_maximo' => 'Nivel Máximo (dBuV)',
     'param_Nivel_minimo' => 'Nivel Mínimo (dBuV)',
     'param_Piso_Maximo' => 'Piso Máximo',

@@ -17,7 +17,6 @@
                 <th><?= __('col_deriv') ?></th>
                 <th><?= __('col_pass') ?></th>
                 <th><?= __('col_outs') ?></th>
-                <th><?= __('col_ins_loss') ?></th>
                 <th><?= __('action') ?></th>
             </tr>
         </thead>
@@ -28,7 +27,6 @@
                     <td><?= (int)$d['derivacion'] ?></td>
                     <td><?= (int)$d['paso'] ?></td>
                     <td><?= (int)$d['salidas'] ?></td>
-                    <td><?= number_format($d['perdida_insercion'], 3) ?></td>
                     <td>
                         <a class="btn-small"
                            href="derivadores.php?action=edit&id=<?= (int)$d['deriv_id'] ?>">

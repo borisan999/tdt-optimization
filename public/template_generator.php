@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             for (let i = 1; i <= numTus; i++) {
                 const col = document.createElement('div');
-                col.className = 'col';
+                col.className = 'col-6 col-sm-4 col-md-3';
                 col.innerHTML = `
                     <div class="input-group input-group-sm shadow-sm border rounded overflow-hidden">
                         <span class="input-group-text bg-light border-0 small fw-bold" style="width: 35px; justify-content: center;">#${i}</span>

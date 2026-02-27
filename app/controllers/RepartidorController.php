@@ -55,8 +55,6 @@ class RepartidorController
             'modelo'            => trim($_POST['modelo'] ?? ''),
             'salidas'           => (int)($_POST['salidas'] ?? 0),
             'perdida_insercion' => (float)($_POST['perdida_insercion'] ?? 0),
-            'frecuencia'        => trim($_POST['frecuencia'] ?? ''),
-            'descripcion'       => trim($_POST['descripcion'] ?? ''),
         ];
 
         // basic validation (engineering-safe)
