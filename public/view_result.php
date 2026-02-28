@@ -167,43 +167,55 @@ $isInventoryAvailable = $canonicalAvailable;
         <div class="text-muted small"><?= __('result_details') ?> • <?= __('dataset_id') ?>: #<?= htmlspecialchars((string)$viewModel->meta['dataset_id']) ?></div>
     </div>
 
-    <div class="mb-3 d-flex gap-2 flex-wrap">
-        <a class="btn btn-success btn-sm"
-           href="export_input_excel.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>">
-           <i class="fas fa-file-excel"></i> <?= __('export_xlsx') ?>
-        </a>
-        <a class="btn btn-outline-success btn-sm"
-           href="export_csv.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&type=detail">
-           <?= __('export_tu_csv') ?>
-        </a>
-        <a class="btn btn-info btn-sm"
-           href="results-tree/<?= urlencode((string)($viewModel->meta['opt_id'] ?? 0)) ?>">
-           <i class="fas fa-tree"></i> <?= __('view_tree_btn') ?>
-        </a>
-        <a class="btn btn-outline-secondary btn-sm <?= !$isInventoryAvailable ? 'disabled' : '' ?>"
-           href="<?= $isInventoryAvailable ? 'export_csv.php?opt_id=' . urlencode($viewModel->meta['opt_id'] ?? 0) . '&type=inventory' : '#' ?>"
-           <?= !$isInventoryAvailable ? 'title="' . __('inventory_not_available') . '"' : '' ?>>
-           <?= __('export_inventory_csv') ?>
-        </a>
-        <a class="btn btn-primary btn-sm"
-           href="export_docx.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>">
-           <?= __('export_docx') ?>
-        </a>
+    <div class="mb-4">
+        <div class="row g-2">
+            <div class="col-auto">
+                <div class="btn-group shadow-sm" role="group" aria-label="Download & Export">
+                    <a class="btn btn-outline-success btn-sm"
+                       href="export_input_excel.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>"
+                       title="<?= __('export_xlsx') ?>">
+                       <i class="fas fa-file-excel me-1"></i> <?= __('export_xlsx') ?>
+                    </a>
+                    <a class="btn btn-outline-success btn-sm"
+                       href="export_csv.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&type=detail"
+                       title="<?= __('export_tu_csv') ?>">
+                       <i class="fas fa-file-csv me-1"></i> <?= __('export_tu_csv') ?>
+                    </a>
+                    <a class="btn btn-outline-success btn-sm <?= !$isInventoryAvailable ? 'disabled' : '' ?>"
+                       href="<?= $isInventoryAvailable ? 'export_csv.php?opt_id=' . urlencode($viewModel->meta['opt_id'] ?? 0) . '&type=inventory' : '#' ?>"
+                       <?= !$isInventoryAvailable ? 'title="' . __('inventory_not_available') . '"' : 'title="' . __('export_inventory_csv') . '"' ?>>
+                       <i class="fas fa-boxes me-1"></i> <?= __('export_inventory_csv') ?>
+                    </a>
+                    <a class="btn btn-outline-primary btn-sm"
+                       href="export_docx.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>"
+                       title="<?= __('export_docx') ?>">
+                       <i class="fas fa-file-word me-1"></i> <?= __('export_docx') ?>
+                    </a>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group shadow-sm" role="group" aria-label="Interactive Tools">
+                    <a class="btn btn-info btn-sm text-white"
+                       href="results-tree/<?= urlencode((string)($viewModel->meta['opt_id'] ?? 0)) ?>"
+                       title="<?= __('view_tree_btn') ?>">
+                       <i class="fas fa-project-diagram me-1"></i> <?= __('view_tree_btn') ?>
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Summary Cards -->
-    <div class="row mb-4 text-center">
+    <div class="row mb-4 text-center justify-content-center">
     <?php 
         $summaryLabels = [
             'tu_total' => __('total_tus'),
             'compliance_pct' => __('compliance_pct_label'),
-            'tu_low' => __('below_min'),
-            'tu_high' => __('above_max'),
         ];
-        foreach (['tu_total','compliance_pct','tu_low','tu_high'] as $key): 
+        foreach (['tu_total','compliance_pct'] as $key): 
           $value = $summaryMetrics[$key] ?? '—';
-          $color = ($key==='tu_low') ? 'warning' : (($key==='tu_high') ? 'danger' : 'primary'); ?>
-        <div class="col-md-3">
+          $color = 'primary'; ?>
+        <div class="col-md-4">
             <div class="card shadow-sm border-<?= $color ?>">
                 <div class="card-body">
                     <div class="fw-bold text-muted"><?= htmlspecialchars($summaryLabels[$key]) ?></div>
@@ -236,11 +248,15 @@ $isInventoryAvailable = $canonicalAvailable;
 
         <!-- Summary Metrics -->
         <h4><?= __('summary_metrics') ?></h4>
-        <table class="table table-bordered table-sm">
+        <table class="table table-bordered table-sm shadow-sm">
             <tbody>
-            <?php foreach ($viewModel->summary as $k => $v): ?>
+            <?php foreach ($viewModel->summary as $k => $v): 
+                $label = __('metric_' . $k);
+                // If translation equals the key, it means it's missing, so use raw key as fallback
+                if ($label === 'metric_' . $k) $label = $k;
+            ?>
                 <tr>
-                    <th><?= htmlspecialchars($k) ?></th>
+                    <th class="bg-light" style="width: 40%;"><?= htmlspecialchars($label) ?></th>
                     <td><?= is_scalar($v) ? htmlspecialchars((string)$v) : htmlspecialchars(json_encode($v, JSON_UNESCAPED_UNICODE)) ?></td>
                 </tr>
             <?php endforeach; ?>
@@ -362,81 +378,108 @@ $isInventoryAvailable = $canonicalAvailable;
         </div>
 
         <!-- Inputs JSON -->
-        <details>
-            <summary><?= __('structured_inputs') ?></summary>
-            <div class="mt-2">
+        <div class="card shadow-sm mb-4 mt-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#structuredInputsCollapse">
+                <h5 class="mb-0 text-muted small"><i class="fas fa-cog me-2"></i><?= __('structured_inputs') ?></h5>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="structuredInputsCollapse" class="collapse">
+                <div class="card-body">
+                    <?php
+                    // Function to render all inputs structurally
+                    function renderStructuredInputs($data) {
+                        foreach ($data as $key => $value) {
+                            echo "<h6 class='mt-3 mb-2 fw-bold text-secondary'>" . htmlspecialchars($key) . "</h6>";
 
-                <?php
-                // Function to render all inputs structurally
-                function renderStructuredInputs($data) {
-                    foreach ($data as $key => $value) {
-                        echo "<h5 class='mt-3 mb-2'>" . htmlspecialchars($key) . "</h5>";
+                            if (is_array($value)) {
+                                $isTuTable = false;
 
-                        if (is_array($value)) {
-                            $isTuTable = false;
-
-                            // Detect TU table keys like "(1,1,1)"
-                            if (count($value) && preg_match('/^\(\d+,\d+,\d+\)$/', array_keys($value)[0])) {
-                                $isTuTable = true;
-                            }
-
-                            if ($isTuTable) {
-                                // TU table
-                                echo '<table class="table table-sm table-bordered mb-2">';
-                                echo '<thead><tr><th>' . __('col_piso') . '</th><th>' . __('col_apto') . '</th><th>' . __('col_tu_index') . '</th><th>' . __('col_value_m') . '</th></tr></thead><tbody>';
-                                foreach ($value as $tuple => $v) {
-                                    $parts = explode(',', trim($tuple, '()'));
-                                    echo '<tr>';
-                                    echo '<td>' . htmlspecialchars($parts[0]) . '</td>';
-                                    echo '<td>' . htmlspecialchars($parts[1]) . '</td>';
-                                    echo '<td>' . htmlspecialchars($parts[2]) . '</td>';
-                                    echo '<td>' . htmlspecialchars($v) . '</td>';
-                                    echo '</tr>';
+                                // Detect TU table keys like "(1,1,1)"
+                                if (count($value) && preg_match('/^\(\d+,\d+,\d+\)$/', array_keys($value)[0])) {
+                                    $isTuTable = true;
                                 }
-                                echo '</tbody></table>';
-                            } else {
-                                // Regular array of arrays / objects
-                                $firstRow = reset($value);
-                                if (is_array($firstRow) || is_object($firstRow)) {
-                                    $firstRow = (array)$firstRow;
-                                    echo '<table class="table table-sm table-bordered mb-2">';
-                                    echo '<thead><tr>';
-                                    foreach ($firstRow as $col => $_) {
-                                        echo '<th>' . htmlspecialchars($col) . '</th>';
-                                    }
-                                    echo '</tr></thead><tbody>';
-                                    foreach ($value as $row) {
-                                        $row = (array)$row;
+
+                                if ($isTuTable) {
+                                    // TU table
+                                    echo '<table class="table table-sm table-bordered mb-2 small">';
+                                    echo '<thead><tr><th>' . __('col_piso') . '</th><th>' . __('col_apto') . '</th><th>' . __('col_tu_index') . '</th><th>' . __('col_value_m') . '</th></tr></thead><tbody>';
+                                    foreach ($value as $tuple => $v) {
+                                        $parts = explode(',', trim($tuple, '()'));
                                         echo '<tr>';
-                                        foreach ($row as $cell) {
-                                            echo '<td>' . htmlspecialchars($cell) . '</td>';
-                                        }
+                                        echo '<td>' . htmlspecialchars($parts[0]) . '</td>';
+                                        echo '<td>' . htmlspecialchars($parts[1]) . '</td>';
+                                        echo '<td>' . htmlspecialchars($parts[2]) . '</td>';
+                                        echo '<td>' . htmlspecialchars($v) . '</td>';
                                         echo '</tr>';
                                     }
                                     echo '</tbody></table>';
                                 } else {
-                                    // Scalar array: show as table
-                                    echo '<table class="table table-sm table-bordered mb-2">';
-                                    echo '<tbody>';
-                                    foreach ($value as $i => $v) {
-                                        echo '<tr><td>' . htmlspecialchars($i) . '</td><td>' . htmlspecialchars($v) . '</td></tr>';
+                                    // Regular array of arrays / objects
+                                    $firstRow = reset($value);
+                                    if (is_array($firstRow) || is_object($firstRow)) {
+                                        $firstRow = (array)$firstRow;
+                                        echo '<table class="table table-sm table-bordered mb-2 small">';
+                                        echo '<thead><tr>';
+                                        foreach ($firstRow as $col => $_) {
+                                            echo '<th>' . htmlspecialchars($col) . '</th>';
+                                        }
+                                        echo '</tr></thead><tbody>';
+                                        foreach ($value as $row) {
+                                            $row = (array)$row;
+                                            echo '<tr>';
+                                            foreach ($row as $cell) {
+                                                echo '<td>' . htmlspecialchars($cell) . '</td>';
+                                            }
+                                            echo '</tr>';
+                                        }
+                                        echo '</tbody></table>';
+                                    } else {
+                                        // Scalar array: show as table
+                                        echo '<table class="table table-sm table-bordered mb-2 small">';
+                                        echo '<tbody>';
+                                        foreach ($value as $i => $v) {
+                                            echo '<tr><td>' . htmlspecialchars($i) . '</td><td>' . htmlspecialchars($v) . '</td></tr>';
+                                        }
+                                        echo '</tbody></table>';
                                     }
-                                    echo '</tbody></table>';
                                 }
-                            }
 
-                        } else {
-                            // Scalar value: show as key-value row
-                            echo '<table class="table table-sm table-bordered mb-2">';
-                            echo '<tbody><tr><td>' . htmlspecialchars($key) . '</td><td>' . htmlspecialchars($value) . '</td></tr></tbody></table>';
+                            } else {
+                                // Scalar value: show as key-value row
+                                echo '<table class="table table-sm table-bordered mb-2 small">';
+                                echo '<tbody><tr><td style="width: 40%">' . htmlspecialchars($key) . '</td><td>' . htmlspecialchars($value) . '</td></tr></tbody></table>';
+                            }
                         }
                     }
-                }
 
-                renderStructuredInputs($viewModel->inputs);
-                ?>
+                    renderStructuredInputs($viewModel->inputs);
+                    ?>
+                </div>
             </div>
-        </details>
+        </div>
+
+        <!-- Solver Info -->
+        <?php if (!empty($viewModel->meta['solver_status']) || !empty($viewModel->meta['solver_log'])): ?>
+        <div class="card shadow-sm mb-4 mt-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#solverInfoCollapse">
+                <h5 class="mb-0 text-muted small"><i class="fas fa-info-circle me-2"></i><?= __('solver_status_title') ?> (Debug)</h5>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="solverInfoCollapse" class="collapse">
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3 small"><?= __('solver_status_title') ?></dt>
+                        <dd class="col-sm-9"><span class="badge bg-secondary"><?= htmlspecialchars($viewModel->meta['solver_status'] ?? 'N/A') ?></span></dd>
+                    </dl>
+                    <?php if (!empty($viewModel->meta['solver_log'])): ?>
+                    <hr>
+                    <h6 class="small fw-bold"><?= __('solver_log_title') ?></h6>
+                    <pre class="bg-light p-2 rounded small" style="max-height: 300px; overflow-y: auto; font-size: 0.75rem;"><?= htmlspecialchars($viewModel->meta['solver_log']) ?></pre>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
     <?php endif; ?>
 
@@ -455,8 +498,24 @@ $(document).ready(function() {
     });
 
     // Summary Chart
-    const summaryLabels = <?= json_encode(array_keys($viewModel->summary)) ?>;
-    const summaryValues = <?= json_encode(array_values($viewModel->summary)) ?>;
+    const summaryData = <?= json_encode($viewModel->summary) ?>;
+    
+    // Helper to translate keys in JS (similar to PHP logic)
+    function translateKey(k) {
+        const translations = {
+            'contract_version': <?= json_encode(__('metric_contract_version')) ?>,
+            'piso_max': <?= json_encode(__('metric_piso_max')) ?>,
+            'total_tus': <?= json_encode(__('metric_total_tus')) ?>,
+            'status': <?= json_encode(__('metric_status')) ?>,
+            'avg_nivel_tu': <?= json_encode(__('metric_avg_nivel_tu')) ?>,
+            'min_nivel_tu': <?= json_encode(__('metric_min_nivel_tu')) ?>,
+            'max_nivel_tu': <?= json_encode(__('metric_max_nivel_tu')) ?>
+        };
+        return translations[k] || k;
+    }
+
+    const summaryLabels = Object.keys(summaryData).map(translateKey);
+    const summaryValues = Object.values(summaryData);
     const summaryEl = document.getElementById('summaryChart');
     if (summaryEl) {
         new Chart(summaryEl, {

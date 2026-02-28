@@ -73,6 +73,8 @@ class ResultsController
             if (isset($meta['created_at']) && $meta['created_at'] instanceof \DateTimeInterface) {
                 $meta['created_at'] = $meta['created_at']->format('Y-m-d H:i:s');
             }
+            // Merge the full database row into meta to include solver_status and solver_log
+            $meta = array_merge($row, $meta);
 
             return [
                 'status'    => 'success',
@@ -118,7 +120,7 @@ class ResultsController
 
         $sql = "
             SELECT
-                o.opt_id, o.dataset_id, o.status, o.created_at,
+                o.opt_id, o.dataset_id, o.status, o.created_at, o.solver_status, o.solver_log,
                 r.summary_json, r.detail_json, r.inputs_json,
                 d.dataset_name
             FROM optimizations o

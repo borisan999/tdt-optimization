@@ -35,7 +35,6 @@ class DerivadorController
             'derivacion'       => (float)str_replace(',', '.', $_POST['derivacion']),
             'paso'             => (float)str_replace(',', '.', $_POST['paso']),
             'salidas'          => (int)$_POST['salidas'],
-            'descripcion'      => trim($_POST['descripcion']),
         ];
 
         if ($d['deriv_id']) {

@@ -202,14 +202,17 @@ class DatasetController
                 throw new Exception('Malformed or missing JSON response from Python. Check error logs.');
             }
 
-            $this->finalizeOptimization($datasetId, (int)$optId, $stdout, $canonicalJson, $pythonResult, true);
+            $solverStatus = $pythonResult['solver_status'] ?? 'UNKNOWN';
+            $solverLog = $pythonResult['solver_log'] ?? null;
+
+            $this->finalizeOptimization($datasetId, (int)$optId, $stdout, $canonicalJson, $pythonResult, true, '', $solverStatus, $solverLog);
             $this->jsonResponse(['success' => true, 'result' => $pythonResult, 'opt_id' => (int)$optId]);
 
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             if ($optId !== null) {
                 try {
-                    $this->finalizeOptimization($datasetId, (int)$optId, null, null, null, false, $errorMessage);
+                    $this->finalizeOptimization($datasetId, (int)$optId, null, null, null, false, $errorMessage, null, null);
                 } catch (Exception $fe) {}
             } else {
                  try {
@@ -324,7 +327,7 @@ class DatasetController
         // Concurrent read loop to avoid deadlocks
         while (!empty($all_read_pipes)) {
             $read = $all_read_pipes; // stream_select modifies this array
-            $changed = stream_select($read, $write, $except, 30); 
+            $changed = stream_select($read, $write, $except, 90); 
             
             if ($changed === false) {
                 error_log("Stream select failed.");
@@ -354,13 +357,15 @@ class DatasetController
         return [$returnCode, $stdout, $stderr];
     }
 
-    private function finalizeOptimization(int $datasetId, int $optId, ?string $stdout, ?string $canonicalJson, ?array $pythonResult, bool $success, string $errorMessage = '')
+    private function finalizeOptimization(int $datasetId, int $optId, ?string $stdout, ?string $canonicalJson, ?array $pythonResult, bool $success, string $errorMessage = '', ?string $solverStatus = null, ?string $solverLog = null)
     {
         try {
             $this->pdo->beginTransaction();
             if ($success && $pythonResult) {
                 $summary = $pythonResult['summary'] ?? $pythonResult;
                 $detail = $pythonResult['detail'] ?? [];
+                $solverStatus = $pythonResult['solver_status'] ?? 'UNKNOWN';
+                $solverLog = $pythonResult['solver_log'] ?? null;
                 
                 $result = new Result();
                 $result->saveResult(
@@ -370,13 +375,22 @@ class DatasetController
                     json_encode($detail, JSON_UNESCAPED_UNICODE), 
                     $canonicalJson
                 );
-                $stmt = $this->pdo->prepare("UPDATE optimizations SET status = 'finished', finished_at = NOW() WHERE opt_id = ?");
-                $stmt->execute([$optId]);
+                $stmt = $this->pdo->prepare("UPDATE optimizations SET status = 'finished', finished_at = NOW(), solver_status = :solver_status, solver_log = :solver_log WHERE opt_id = :opt_id");
+                $stmt->execute([
+                    'solver_status' => $solverStatus,
+                    'solver_log' => $solverLog,
+                    'opt_id' => $optId
+                ]);
                 $stmt = $this->pdo->prepare("UPDATE datasets SET status = 'processed' WHERE dataset_id = ?");
                 $stmt->execute([$datasetId]);
             } else {
-                $stmt = $this->pdo->prepare("UPDATE optimizations SET status = 'failed', finished_at = NOW(), error_message = ? WHERE opt_id = ?");
-                $stmt->execute([$errorMessage, $optId]);
+                $stmt = $this->pdo->prepare("UPDATE optimizations SET status = 'failed', finished_at = NOW(), error_message = :error_message, solver_status = :solver_status, solver_log = :solver_log WHERE opt_id = :opt_id");
+                $stmt->execute([
+                    'error_message' => $errorMessage,
+                    'solver_status' => $solverStatus ?? 'FAILED',
+                    'solver_log' => $solverLog,
+                    'opt_id' => $optId
+                ]);
                 $stmt = $this->pdo->prepare("UPDATE datasets SET status = 'error' WHERE dataset_id = ?");
                 $stmt->execute([$datasetId]);
             }

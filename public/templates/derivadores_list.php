@@ -24,8 +24,8 @@
             <?php foreach ($derivadores as $d): ?>
                 <tr>
                     <td><?= htmlspecialchars($d['modelo']) ?></td>
-                    <td><?= (int)$d['derivacion'] ?></td>
-                    <td><?= (int)$d['paso'] ?></td>
+                    <td><?= number_format((float)$d['derivacion'], 3) ?></td>
+                    <td><?= number_format((float)$d['paso'], 3) ?></td>
                     <td><?= (int)$d['salidas'] ?></td>
                     <td>
                         <a class="btn-small"

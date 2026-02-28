@@ -72,6 +72,8 @@ class ResultParser
             'created_at' => isset($this->row['created_at'])
                 ? new DateTime($this->row['created_at'])
                 : null,
+            'solver_status' => $this->row['solver_status'] ?? null, // Add solver_status
+            'solver_log'    => $this->row['solver_log'] ?? null,    // Add solver_log
         ];
     }
 

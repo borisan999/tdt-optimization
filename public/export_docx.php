@@ -154,7 +154,7 @@ $GLOBAL_P_IN = $inputs['potencia_entrada'] ?? null;
 // DOCX generation
 // --------------------------------------------------
 $phpWord = new PhpWord();
-$section = $phpWord->addSection();
+$section = $phpWord->addSection(['orientation' => 'landscape']);
 
 //Page Header (Traceability)
 
@@ -181,8 +181,6 @@ if (!empty($canonicalWarnings)) {
     // Add explicit non-failure disclaimer
     $footer->addText('Estas notas no invalidan los resultados de ingeniería, pero indican datos inferidos o asumidos.', ['size' => 8, 'italic' => true]);
 }
-
-$section = $phpWord->addSection();
 
 // --------------------------------------------------
 // Title
