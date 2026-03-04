@@ -5,6 +5,7 @@ node_modules/
 .env.local
 .env.*.local
 app/config/env.php
+ast.dump
 *.log
 *.sql
 *.sqlite
