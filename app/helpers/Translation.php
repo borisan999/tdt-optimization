@@ -56,8 +56,14 @@ namespace app\helpers {
 }
 
 namespace {
-    // Global helper function for brevity
     if (!function_exists('__')) {
+        /**
+         * Global helper for translation.
+         *
+         * @param string $key
+         * @param array $placeholders
+         * @return string
+         */
         function __(string $key, array $placeholders = []): string
         {
             return \app\helpers\Translation::get($key, $placeholders);
