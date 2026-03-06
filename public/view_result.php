@@ -238,7 +238,7 @@ $isInventoryAvailable = $canonicalAvailable;
           $displayValue = is_numeric($value) ? number_format((float)$value, ($key === 'tu_total' ? 0 : 2)) : $value;
           ?>
         <div class="col-md-3">
-            <div class="card shadow-sm border-<?= $color ?>">
+            <div class="card shadow-sm border-start border-4 border-<?= $color ?>">
                 <div class="card-body">
                     <div class="fw-bold text-muted small mb-1"><?= htmlspecialchars($summaryLabels[$key]) ?></div>
                     <div class="fs-4 fw-bold"><?= htmlspecialchars($displayValue) ?><?= $key==='compliance_pct' ? '%' : '' ?><?= ($key === 'min_nivel_tu' || $key === 'max_nivel_tu') ? ' <small class="fs-6 text-muted">dBµV</small>' : '' ?></div>
@@ -254,6 +254,13 @@ $isInventoryAvailable = $canonicalAvailable;
     <?php endforeach; ?>
     </div>
 
+    <!-- Section Divider: Materiales -->
+    <div class="d-flex align-items-center my-4">
+        <hr class="flex-grow-1">
+        <span class="px-3 text-muted fw-bold">📦 <?= __('materials_section') ?? 'Materiales' ?></span>
+        <hr class="flex-grow-1">
+    </div>
+
     <!-- Materials & Inventory Section -->
     <?php if ($isInventoryAvailable && isset($canonical)): 
         $aggregator = new \app\helpers\InventoryAggregator($canonical);
@@ -263,7 +270,7 @@ $isInventoryAvailable = $canonicalAvailable;
     ?>
     <div class="row mb-4">
         <div class="col-lg-7">
-            <div class="card shadow-sm h-100 border-success">
+            <div class="card shadow-sm h-100 border-start border-4 border-warning">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="fas fa-boxes me-2"></i><?= __('material_summary_by_layer') ?? 'Resumen de Materiales por Capa' ?></h5>
                 </div>
@@ -318,40 +325,52 @@ $isInventoryAvailable = $canonicalAvailable;
             </div>
         </div>
         <div class="col-lg-5">
-            <div class="card shadow-sm h-100 border-secondary">
+            <div class="card shadow-sm h-100 border-start border-4 border-warning">
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0"><i class="fas fa-list-ul me-2"></i><?= __('equipment_breakdown') ?? 'Desglose de Equipos' ?></h5>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                        <table class="table table-hover table-sm mb-0 small">
-                            <thead class="table-light sticky-top">
-                                <tr>
-                                    <th><?= __('col_equipment') ?? 'Equipo' ?></th>
-                                    <th class="text-center"><?= __('col_quantity') ?? 'Cant.' ?></th>
-                                    <th><?= __('col_unit') ?? 'Unidad' ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                usort($equipmentBreakdown, function($a, $b) {
-                                    $typeOrder = ['Equipo' => 0, 'Cable' => 1, 'Conector' => 2, 'Otro' => 3];
-                                    $typeA = $typeOrder[$a['Tipo']] ?? 9;
-                                    $typeB = $typeOrder[$b['Tipo']] ?? 9;
-                                    if ($typeA !== $typeB) return $typeA <=> $typeB;
-                                    return strcmp($a['Componente'], $b['Componente']);
-                                });
-
-                                foreach ($equipmentBreakdown as $item): 
-                                ?>
-                                <tr>
-                                    <td class="ps-3"><?= htmlspecialchars($item['Componente']) ?></td>
-                                    <td class="text-center fw-bold"><?= is_float($item['Cantidad']) ? number_format($item['Cantidad'], 1) : $item['Cantidad'] ?></td>
-                                    <td><?= htmlspecialchars($item['Unidad']) ?></td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><?= __('equipment') ?? 'Equipos' ?></h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm small mb-0">
+                                    <tbody>
+                                    <?php 
+                                        $equipmentList = array_filter($equipmentBreakdown, fn($item) => $item['Tipo'] === 'Equipo');
+                                        usort($equipmentList, fn($a, $b) => strcmp($a['Componente'], $b['Componente']));
+                                        foreach ($equipmentList as $item):
+                                    ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($item['Componente']) ?></td>
+                                            <td class="text-end fw-bold"><?= is_float($item['Cantidad']) ? number_format($item['Cantidad'], 1) : $item['Cantidad'] ?></td>
+                                            <td><?= htmlspecialchars($item['Unidad']) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><?= __('cables_and_connectors') ?? 'Cableado y Conectores' ?></h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm small mb-0">
+                                    <tbody>
+                                    <?php 
+                                        $materialList = array_filter($equipmentBreakdown, fn($item) => $item['Tipo'] === 'Cable' || $item['Tipo'] === 'Conector');
+                                        usort($materialList, fn($a, $b) => strcmp($a['Componente'], $b['Componente']));
+                                        foreach ($materialList as $item):
+                                    ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($item['Componente']) ?></td>
+                                            <td class="text-end fw-bold"><?= is_float($item['Cantidad']) ? number_format($item['Cantidad'], 1) : $item['Cantidad'] ?></td>
+                                            <td><?= htmlspecialchars($item['Unidad']) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -359,8 +378,15 @@ $isInventoryAvailable = $canonicalAvailable;
     </div>
     <?php endif; ?>
 
+    <!-- Section Divider: Señal -->
+    <div class="d-flex align-items-center my-4">
+        <hr class="flex-grow-1">
+        <span class="px-3 text-muted fw-bold">📡 <?= __('signal_section') ?? 'Señal' ?></span>
+        <hr class="flex-grow-1">
+    </div>
+
     <!-- Signal Distribution Chain -->
-    <div class="card shadow-sm mb-4 border-primary">
+    <div class="card shadow-sm mb-4 border-start border-4 border-primary">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#signalChainCollapse">
             <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i><?= __('signal_distribution_chain') ?? 'Cadena de Distribución de Señal (para Dibujo Técnico)' ?></h5>
             <i class="fas fa-chevron-down"></i>
@@ -401,7 +427,15 @@ $isInventoryAvailable = $canonicalAvailable;
                                     <td class="ps-3"><?= __('trunk') ?> (P<?= $piso_troncal ?>)</td>
                                     <td><?= htmlspecialchars($first['Repartidor Troncal'] ?? 'N/A') ?></td>
                                     <td class="text-center"><?= number_format($p_in_troncal, 1) ?></td>
-                                    <td class="text-center"><?= number_format($p_out_troncal, 1) ?></td>
+                                    <td class="text-center">
+                                        <?php 
+                                            $badgeColor = 'success';
+                                            if ($p_out_troncal < ($complianceMin + 5) || $p_out_troncal > ($complianceMax - 5)) {
+                                                $badgeColor = 'warning';
+                                            }
+                                        ?>
+                                        <span class="badge bg-<?= $badgeColor ?>"><?= number_format($p_out_troncal, 1) ?></span>
+                                    </td>
                                 </tr>
 
                                 <?php 
@@ -422,7 +456,13 @@ $isInventoryAvailable = $canonicalAvailable;
                                         <td><?= htmlspecialchars($f['Derivador Piso'] ?? 'N/A') ?></td>
                                         <td class="text-center"><?= number_format($p_in_deriv, 1) ?></td>
                                         <td class="text-center">
-                                            <span class="text-primary"><?= number_format($p_deriv_out, 1) ?></span> <small class="text-muted">(deriv)</small>
+                                            <?php 
+                                                $badgeColor = 'success';
+                                                if ($p_deriv_out < ($complianceMin + 5) || $p_deriv_out > ($complianceMax - 5)) {
+                                                    $badgeColor = 'warning';
+                                                }
+                                            ?>
+                                            <span class="badge bg-<?= $badgeColor ?>"><?= number_format($p_deriv_out, 1) ?></span> <small class="text-muted">(deriv)</small>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -437,13 +477,26 @@ $isInventoryAvailable = $canonicalAvailable;
         </div>
     </div>
 
+    <!-- Section Divider: Instalación -->
+    <div class="d-flex align-items-center my-4">
+        <hr class="flex-grow-1">
+        <span class="px-3 text-muted fw-bold">🔌 <?= __('installation_section') ?? 'Instalación' ?></span>
+        <hr class="flex-grow-1">
+    </div>
+
     <!-- Cable Runs: Physical Topology -->
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4 border-start border-4 border-secondary">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#cableRunsCollapse">
             <h5 class="mb-0"><i class="fas fa-route me-2"></i><?= __('cable_runs_installation_plan') ?? 'Plan de Instalación de Cableado' ?></h5>
-            <i class="fas fa-chevron-down"></i>
+            <span class="small">
+                <?php
+                $num_pisos = count(array_unique(array_column($raw_details, 'Piso')));
+                echo sprintf('%d tomas en %d pisos — %s', count($raw_details), $num_pisos, 'Ver Plan de Cableado');
+                ?>
+                <i class="fas fa-chevron-down ms-2"></i>
+            </span>
         </div>
-        <div id="cableRunsCollapse" class="collapse show">
+        <div id="cableRunsCollapse" class="collapse <?= count($raw_details) < 20 ? 'show' : '' ?>">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover table-sm mb-0">

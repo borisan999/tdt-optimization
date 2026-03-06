@@ -375,4 +375,9 @@ return [
     'advanced_solver_diagnostics' => 'Diagnósticos Avanzados del Solver',
     'view_raw_summary_metrics' => 'Ver Métricas de Resumen Crudas',
     'export_technical_report' => 'Memoria Técnica',
+    'equipment' => 'Equipos',
+    'cables_and_connectors' => 'Cableado y Conectores',
+    'materials_section' => 'Materiales',
+    'signal_section' => 'Señal',
+    'installation_section' => 'Instalación',
 ];

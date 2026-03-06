@@ -377,4 +377,9 @@ return [
     'advanced_solver_diagnostics' => 'Advanced Solver Diagnostics',
     'view_raw_summary_metrics' => 'View Raw Summary Metrics',
     'export_technical_report' => 'Technical Report',
+    'equipment' => 'Equipment',
+    'cables_and_connectors' => 'Cables & Connectors',
+    'materials_section' => 'Materials',
+    'signal_section' => 'Signal',
+    'installation_section' => 'Installation',
     ];
