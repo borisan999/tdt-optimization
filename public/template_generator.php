@@ -206,6 +206,12 @@ include __DIR__ . '/templates/navbar.php';
     .range-preview .badge:hover { transform: scale(1.1); opacity: 1 !important; }
     .preset-btn { font-size: 0.75rem; padding: 0.1rem 0.5rem; }
     .tu-grid { background: #fdfdfd; border: 1px solid #eee; border-radius: 8px; padding: 12px; }
+    .tu-grid .form-control { font-size: 0.85rem; }
+    /* Chrome, Safari, Edge, Opera */
+    .tu-grid input::-webkit-outer-spin-button,
+    .tu-grid input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    /* Firefox */
+    .tu-grid input[type=number] { -moz-appearance: textfield; }
 </style>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
@@ -315,9 +321,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const col = document.createElement('div');
                 col.className = 'col-6 col-sm-4 col-md-3';
                 col.innerHTML = `
-                    <div class="input-group input-group-sm shadow-sm border rounded overflow-hidden">
-                        <span class="input-group-text bg-light border-0 small fw-bold" style="width: 35px; justify-content: center;">#${i}</span>
-                        <input type="number" class="form-control border-0" id="len-tu-${typeId}-${i}" value="5" step="any" required title="${__('tooltip_tu_dist', {i: i})}">
+                    <div class="input-group input-group-sm shadow-sm border rounded">
+                        <span class="input-group-text bg-light border-0 small fw-bold px-1" style="min-width: 32px; justify-content: center;">#${i}</span>
+                        <input type="number" class="form-control border-0 px-2" id="len-tu-${typeId}-${i}" value="5" step="any" required title="${__('tooltip_tu_dist', {i: i})}" style="min-width: 45px;">
                     </div>`;
                 grid.appendChild(col);
             }

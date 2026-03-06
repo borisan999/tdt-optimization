@@ -18,33 +18,47 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Config\AppConfig;
 
 try {
-    // 1. Get opt_id and fetch results
     $opt_id = intval($_GET['opt_id'] ?? 0);
-    if ($opt_id <= 0) {
+    $dataset_id = intval($_GET['dataset_id'] ?? 0);
+
+    if ($opt_id <= 0 && $dataset_id <= 0) {
         http_response_code(400);
-        die('opt_id is required');
+        die('opt_id or dataset_id is required');
     }
 
     $DB = new Database();
     $pdo = $DB->getConnection();
+    $filename_id = '';
 
-    // We fetch inputs_json which contains the canonical dataset
-    $sql = "
-        SELECT r.inputs_json, d.dataset_name 
-        FROM results r 
-        JOIN datasets d ON d.dataset_id = r.dataset_id
-        WHERE r.opt_id = :opt_id
-    ";
-    $st = $pdo->prepare($sql);
-    $st->execute(['opt_id' => $opt_id]);
-    $row = $st->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row || empty($row['inputs_json'])) {
-        http_response_code(404);
-        die('Result not found or inputs_json is empty');
+    if ($dataset_id > 0) {
+        // Fetch canonical_json directly from the dataset
+        $sql = "SELECT canonical_json, dataset_name FROM datasets WHERE dataset_id = :dataset_id";
+        $st = $pdo->prepare($sql);
+        $st->execute(['dataset_id' => $dataset_id]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        $jsonData = $row['canonical_json'] ?? '';
+        $filename_id = "dataset_{$dataset_id}";
+    } else {
+        // Fetch inputs_json from the result of an optimization
+        $sql = "
+            SELECT r.inputs_json, d.dataset_name 
+            FROM results r 
+            JOIN datasets d ON d.dataset_id = r.dataset_id
+            WHERE r.opt_id = :opt_id
+        ";
+        $st = $pdo->prepare($sql);
+        $st->execute(['opt_id' => $opt_id]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        $jsonData = $row['inputs_json'] ?? '';
+        $filename_id = "opt_{$opt_id}";
     }
 
-    $inputs = json_decode($row['inputs_json'], true);
+    if (!$row || empty($jsonData)) {
+        http_response_code(404);
+        die('Record not found or JSON data is empty');
+    }
+
+    $inputs = json_decode($jsonData, true);
     $dataset_name = $row['dataset_name'] ?? 'Unnamed';
     $safe_name = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $dataset_name);
 
@@ -202,7 +216,7 @@ try {
 
     // 3. Finalize and Download
     $spreadsheet->setActiveSheetIndex(0);
-    $filename = "tdt_inputs_{$safe_name}_opt_{$opt_id}.xlsx";
+    $filename = "tdt_inputs_{$safe_name}_{$filename_id}.xlsx";
 
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment;filename="' . $filename . '"');

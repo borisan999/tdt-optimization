@@ -10,6 +10,11 @@ class DerivadorModel
         $this->pdo = (new Database())->getConnection();
     }
 
+    public function getPdo(): PDO
+    {
+        return $this->pdo;
+    }
+
     public function getAll(): array
     {
         return $this->pdo

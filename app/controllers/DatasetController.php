@@ -46,6 +46,9 @@ class DatasetController
         } elseif ($method === 'POST' && preg_match('/^\/dataset\/run\/(\d+)$/', $path, $matches)) {
             $datasetId = (int)$matches[1];
             $this->runPython($datasetId);
+        } elseif ($method === 'GET' && preg_match('/^\/dataset\/delete\/(\d+)$/', $path, $matches)) {
+            $datasetId = (int)$matches[1];
+            $this->deleteDataset($datasetId);
         } else {
             $this->jsonResponse(['success' => false, 'message' => 'Endpoint not found or method not allowed'], 404);
         }
@@ -99,13 +102,14 @@ class DatasetController
     public function updateDataset()
     {
         try {
-            $input = json_decode(file_get_contents('php://input'), true);
-            $dataset_id = $_POST['dataset_id'] ?? $input['dataset_id'] ?? null;
-            $canonical  = $_POST['canonical'] ?? $input['canonical'] ?? null;
-            $dataset_name = $_POST['dataset_name'] ?? $input['dataset_name'] ?? null;
+            $jsonInput = json_decode(file_get_contents('php://input'), true) ?? [];
+            
+            $dataset_id = $jsonInput['dataset_id'] ?? $_POST['dataset_id'] ?? null;
+            $canonical  = $jsonInput['canonical'] ?? $_POST['canonical'] ?? null;
+            $dataset_name = $jsonInput['dataset_name'] ?? $_POST['dataset_name'] ?? null;
 
             if (!$dataset_id || !$canonical) {
-                throw new Exception("Missing dataset_id or canonical.");
+                throw new Exception("Missing dataset_id or canonical data.");
             }
 
             if (is_string($canonical)) {
@@ -152,7 +156,7 @@ class DatasetController
             $stmt = $this->pdo->prepare("DELETE FROM results WHERE dataset_id = :dataset_id");
             $stmt->execute(['dataset_id' => $dataset_id]);
 
-            $this->jsonResponse(['success' => true]);
+            $this->jsonResponse(['success' => true, 'data' => ['dataset_id' => $dataset_id]]);
 
         } catch (Exception $e) {
             $this->jsonResponse([
@@ -185,7 +189,7 @@ class DatasetController
                 session_write_close();
             }
 
-            list($returnCode, $stdout, $stderr) = $this->executePython($canonicalJson);
+            list($returnCode, $stdout, $stderr) = $this->executePython($canonicalJson, (int)$optId);
 
             if ($returnCode !== 0) {
                 throw new Exception("Python script failed with exit code {$returnCode}. Stderr: {$stderr}");
@@ -295,11 +299,30 @@ class DatasetController
         }
     }
 
-    private function executePython(string $canonicalJson): array
+    private function executePython(string $canonicalJson, int $optId): array
     {
         $pythonBin = "/usr/bin/python3";
         $pythonScript = realpath(__DIR__ . "/../python/10/optimizer_canonical.py");
         if (!file_exists($pythonScript)) throw new Exception('Python optimizer script not found.');
+
+        // --- Generate Log Filename ---
+        $stmt = $this->pdo->prepare("
+            SELECT d.dataset_name, o.created_at 
+            FROM optimizations o 
+            JOIN datasets d ON o.dataset_id = d.dataset_id 
+            WHERE o.opt_id = ?
+        ");
+        $stmt->execute([$optId]);
+        $info = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $datasetName = $info['dataset_name'] ?? 'dataset';
+        $timestamp = new DateTime($info['created_at'] ?? 'now');
+        $formattedDate = $timestamp->format('Y-m-d_H-i-s');
+        $safeName = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $datasetName);
+        $logFilename = "{$safeName}_{$formattedDate}_{$optId}.log";
+        // --- End Generate Log Filename ---
+
+        $command = "{$pythonBin} {$pythonScript} --log-file " . escapeshellarg($logFilename);
 
         $descriptorspec = [
             0 => ["pipe", "r"], // stdin
@@ -307,7 +330,7 @@ class DatasetController
             2 => ["pipe", "w"]  // stderr
         ];
 
-        $process = proc_open("{$pythonBin} {$pythonScript}", $descriptorspec, $pipes);
+        $process = proc_open($command, $descriptorspec, $pipes);
         if (!is_resource($process)) throw new Exception('Failed to start Python process.');
 
         // Set non-blocking mode for reading pipes
@@ -399,6 +422,34 @@ class DatasetController
             if ($this->pdo->inTransaction()) $this->pdo->rollBack();
             throw new Exception('Failed to finalize: ' . $e->getMessage());
         }
+    }
+
+    private function deleteDataset(int $datasetId)
+    {
+        // Basic auth check, should be improved with roles if needed
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: /login");
+            exit;
+        }
+
+        if ($datasetId > 0) {
+            try {
+                // The database schema uses ON DELETE CASCADE,
+                // so deleting from 'datasets' will automatically delete
+                // related entries in 'optimizations' and 'results'.
+                $sql = "DELETE FROM datasets WHERE dataset_id = :dataset_id";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute(['dataset_id' => $datasetId]);
+
+            } catch (PDOException $e) {
+                // Optional: Log the error, but for the user, just redirect.
+                error_log("Error deleting dataset: " . $e->getMessage());
+            }
+        }
+
+        // Redirect back to the history page
+        header("Location: /history");
+        exit;
     }
 
     private function jsonResponse(array $data, int $statusCode = 200)

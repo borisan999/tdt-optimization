@@ -185,7 +185,7 @@ include __DIR__ . '/templates/navbar.php';
                         <i class="fas fa-save"></i> <?= __('save_config_btn') ?>
                     </button>
                     
-                    <button id="runOptimizationBtn" class="btn btn-warning px-4 hidden">
+                    <button id="runOptimizationBtn" class="btn btn-warning px-4 hidden" type="button">
                         <i class="fas fa-play"></i> <?= __('run_opt_btn') ?>
                     </button>
                 </div>
@@ -236,6 +236,11 @@ include __DIR__ . '/templates/navbar.php';
                 
                 <h6><strong><?= __('data_concept_3_title') ?></strong></h6>
                 <p><?= __('data_concept_3_desc') ?></p>
+
+                <hr>
+
+                <h6><strong><?= __('data_concept_4_title') ?></strong></h6>
+                <p><?= __('data_concept_4_desc') ?></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= __('got_it') ?></button>

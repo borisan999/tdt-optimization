@@ -132,37 +132,14 @@ class ExcelProcessor
         $canonical['largo_cable_tu'] = $lctu;
 
         /* =====================================================
-        5️⃣ DERIVADORES_DATA (Source: Database)
+        5️⃣ DERIVADORES_DATA (Source: Excel or Database)
         ====================================================== */
-        $derivModel = new DerivadorModel();
-        $allDeriv = $derivModel->getAll();
-        $deriv = [];
-        foreach ($allDeriv as $d) {
-            $modelo = trim($d['modelo']);
-            if ($modelo === '') continue;
-            $deriv[$modelo] = [
-                'derivacion' => (float)$d['derivacion'],
-                'paso' => (float)$d['paso'],
-                'salidas' => (int)$d['salidas'],
-            ];
-        }
-        $canonical['derivadores_data'] = $deriv;
+        $canonical['derivadores_data'] = self::readDerivadoresFromExcel($spreadsheet);
 
         /* =====================================================
-        6️⃣ REPARTIDORES_DATA (Source: Database)
+        6️⃣ REPARTIDORES_DATA (Source: Excel or Database)
         ====================================================== */
-        $repModel = new RepartidorModel();
-        $allRep = $repModel->getAll();
-        $rep = [];
-        foreach ($allRep as $r) {
-            $modelo = trim($r['modelo']);
-            if ($modelo === '') continue;
-            $rep[$modelo] = [
-                'perdida_insercion' => (float)$r['perdida_insercion'],
-                'salidas' => (int)$r['salidas'],
-            ];
-        }
-        $canonical['repartidores_data'] = $rep;
+        $canonical['repartidores_data'] = self::readRepartidoresFromExcel($spreadsheet);
 
         // Final Safeguard: Ensure we actually have TU data (Task: Irreversible Doctrine)
         if (empty($canonical['largo_cable_tu'])) {
@@ -170,6 +147,173 @@ class ExcelProcessor
         }
 
         return $canonical;
+    }
+
+    /**
+     * Read derivadores from Excel spreadsheet
+     */
+    private static function readDerivadoresFromExcel($spreadsheet): array
+    {
+        $deriv = [];
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_DERIVADORES);
+        
+        if ($sheet) {
+            $rows = $sheet->toArray(null, true, true, false);
+            array_shift($rows); // Remove header
+            
+            foreach ($rows as $row) {
+                if (empty($row[0])) continue;
+                $deriv[trim($row[0])] = [
+                    'derivacion' => self::castNumeric($row[1]),
+                    'paso' => self::castNumeric($row[2]),
+                    'salidas' => (int)$row[3]
+                ];
+            }
+        }
+        
+        // If Excel sheet is empty, fall back to database
+        if (empty($deriv)) {
+            require_once __DIR__ . '/../models/DerivadorModel.php';
+            $derivModel = new DerivadorModel();
+            $allDeriv = $derivModel->getAll();
+            foreach ($allDeriv as $d) {
+                $modelo = trim($d['modelo']);
+                if ($modelo === '') continue;
+                $deriv[$modelo] = [
+                    'derivacion' => (float)$d['derivacion'],
+                    'paso' => (float)$d['paso'],
+                    'salidas' => (int)$d['salidas'],
+                ];
+            }
+        }
+        
+        return $deriv;
+    }
+
+    /**
+     * Read repartidores from Excel spreadsheet
+     */
+    private static function readRepartidoresFromExcel($spreadsheet): array
+    {
+        $rep = [];
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_REPARTIDORES);
+        
+        if ($sheet) {
+            $rows = $sheet->toArray(null, true, true, false);
+            array_shift($rows); // Remove header
+            
+            foreach ($rows as $row) {
+                if (empty($row[0])) continue;
+                $rep[trim($row[0])] = [
+                    'perdida_insercion' => self::castNumeric($row[1]),
+                    'salidas' => (int)$row[2]
+                ];
+            }
+        }
+        
+        // If Excel sheet is empty, fall back to database
+        if (empty($rep)) {
+            require_once __DIR__ . '/../models/RepartidorModel.php';
+            $repModel = new RepartidorModel();
+            $allRep = $repModel->getAll();
+            foreach ($allRep as $r) {
+                $modelo = trim($r['modelo']);
+                if ($modelo === '') continue;
+                $rep[$modelo] = [
+                    'perdida_insercion' => (float)$r['perdida_insercion'],
+                    'salidas' => (int)$r['salidas'],
+                ];
+            }
+        }
+        
+        return $rep;
+    }
+
+    /**
+     * Import derivadores and repartidores from Excel file to database as defaults
+     * 
+     * @param string $filePath Path to the Excel file
+     * @return array Result with counts of imported items
+     */
+    public static function importEquipmentCatalog(string $filePath): array
+    {
+        $spreadsheet = IOFactory::load($filePath);
+        $result = [
+            'derivadores_imported' => 0,
+            'derivadores_errors' => 0,
+            'repartidores_imported' => 0,
+            'repartidores_errors' => 0,
+            'errors' => []
+        ];
+
+        require_once __DIR__ . '/../models/DerivadorModel.php';
+        require_once __DIR__ . '/../models/RepartidorModel.php';
+
+        $derivModel = new DerivadorModel();
+        $repModel = new RepartidorModel();
+
+        // Import derivadores
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_DERIVADORES);
+        if ($sheet) {
+            try {
+                // Clear existing derivadores
+                $derivModel->getPdo()->exec("DELETE FROM derivadores");
+
+                $rows = $sheet->toArray(null, true, true, false);
+                $header = array_shift($rows); // Remove header
+                
+                foreach ($rows as $i => $row) {
+                    if (empty($row[0])) continue; // Skip empty rows
+                    
+                    try {
+                        $derivModel->insert([
+                            'modelo' => trim($row[0]),
+                            'derivacion' => self::castNumeric($row[1]),
+                            'paso' => self::castNumeric($row[2]),
+                            'salidas' => (int)$row[3]
+                        ]);
+                        $result['derivadores_imported']++;
+                    } catch (Exception $e) {
+                        $result['derivadores_errors']++;
+                        $result['errors'][] = "Derivador row " . ($i + 2) . ": " . $e->getMessage();
+                    }
+                }
+            } catch (Exception $e) {
+                $result['errors'][] = "Error reading derivadores sheet: " . $e->getMessage();
+            }
+        }
+
+        // Import repartidores
+        $sheet = $spreadsheet->getSheetByName(AppConfig::SHEET_REPARTIDORES);
+        if ($sheet) {
+            try {
+                // Clear existing repartidores
+                $repModel->getPdo()->exec("DELETE FROM repartidores");
+
+                $rows = $sheet->toArray(null, true, true, false);
+                $header = array_shift($rows); // Remove header
+                
+                foreach ($rows as $i => $row) {
+                    if (empty($row[0])) continue; // Skip empty rows
+                    
+                    try {
+                        $repModel->insert([
+                            'modelo' => trim($row[0]),
+                            'perdida_insercion' => self::castNumeric($row[1]),
+                            'salidas' => (int)$row[2]
+                        ]);
+                        $result['repartidores_imported']++;
+                    } catch (Exception $e) {
+                        $result['repartidores_errors']++;
+                        $result['errors'][] = "Repartidor row " . ($i + 2) . ": " . $e->getMessage();
+                    }
+                }
+            } catch (Exception $e) {
+                $result['errors'][] = "Error reading repartidores sheet: " . $e->getMessage();
+            }
+        }
+
+        return $result;
     }
 
     private static function castNumeric($value)

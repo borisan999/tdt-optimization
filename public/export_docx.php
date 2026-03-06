@@ -233,6 +233,62 @@ $titleTable->addCell()->addText((string)$numTomas);
 $section->addTextBreak(2);
 
 // --------------------------------------------------
+// Resumen de Materiales por Capa
+// --------------------------------------------------
+$section->addText(
+    'Resumen de Materiales por Capa',
+    ['bold' => true, 'size' => 12]
+);
+$section->addTextBreak(1);
+
+$summaryTable = $section->addTable([
+    'borderSize' => 6,
+    'borderColor' => '000000',
+    'cellMargin' => 80,
+    'width' => 100 * 50,
+    'unit' => \PhpOffice\PhpWord\SimpleType\TblWidth::PERCENT
+]);
+
+$summaryTable->addRow();
+$summaryTable->addCell(4000)->addText('Capa de Distribución', ['bold' => true]);
+$summaryTable->addCell(2000)->addText('Cable Total (m)', ['bold' => true], ['alignment' => 'center']);
+$summaryTable->addCell(2000)->addText('Equipos (uds)', ['bold' => true], ['alignment' => 'center']);
+$summaryTable->addCell(2000)->addText('Conectores (uds)', ['bold' => true], ['alignment' => 'center']);
+
+$scopeSummaries = $allTotals['Scope Summaries'] ?? [];
+$layers = [
+    'Vertical' => 'Distribución Vertical',
+    'Horizontal' => 'Distribución Horizontal',
+    'Apartamento' => 'Interior de Apartamento',
+];
+
+$grandTotalCable = 0;
+$grandTotalEquip = 0;
+$grandTotalConn = 0;
+
+foreach ($layers as $key => $label) {
+    $data = $scopeSummaries[$key] ?? ['cable_m' => 0, 'equipment_uds' => 0, 'connectors_uds' => 0];
+    $summaryTable->addRow();
+    $summaryTable->addCell()->addText($label, ['bold' => true]);
+    $summaryTable->addCell()->addText(number_format($data['cable_m'], 2) . ' m', [], ['alignment' => 'center']);
+    $summaryTable->addCell()->addText(number_format($data['equipment_uds'], 0), [], ['alignment' => 'center']);
+    $summaryTable->addCell()->addText(number_format($data['connectors_uds'], 0), [], ['alignment' => 'center']);
+    
+    $grandTotalCable += $data['cable_m'];
+    $grandTotalEquip += $data['equipment_uds'];
+    $grandTotalConn += $data['connectors_uds'];
+}
+
+$summaryTable->addRow();
+$summaryTable->addCell()->addText('TOTAL PROYECTO', ['bold' => true]);
+$summaryTable->addCell()->addText(number_format($grandTotalCable, 2) . ' m', ['bold' => true, 'color' => '0000FF'], ['alignment' => 'center']);
+$summaryTable->addCell()->addText(number_format($grandTotalEquip, 0), ['bold' => true, 'color' => '0000FF'], ['alignment' => 'center']);
+$summaryTable->addCell()->addText(number_format($grandTotalConn, 0), ['bold' => true, 'color' => '0000FF'], ['alignment' => 'center']);
+
+$section->addTextBreak(2);
+
+
+// --------------------------------------------------
 // Sección: Distribución Vertical
 // --------------------------------------------------
 $section->addText(
@@ -267,19 +323,28 @@ foreach ($categorizedInventory['Vertical Distribution'] as $item) {
     $verticalTable->addCell()->addText($item['Observación']);
 }
 
-// Add total row for Vertical Distribution
-$section->addTextBreak(1);
-$section->addText('Resumen total por capa de distribución:', ['italic' => true]);
+// Add total rows for Vertical Distribution
+$section->addText('Resumen total por capa de distribución:', ['italic' => true, 'bold' => true]);
+$verticalTotalTable = $section->addTable([
+    'borderSize' => 6,
+    'borderColor' => '000000',
+    'cellMargin' => 80,
+    'width' => 100 * 50,
+    'unit' => \PhpOffice\PhpWord\SimpleType\TblWidth::PERCENT
+]);
+
 foreach ($allTotals['Vertical Distribution'] as $totalItem) {
-    $verticalTable->addRow();
-    $verticalTable->addCell(1500)->addText('TOTAL', ['bold' => true]);
-    $verticalTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]); // Use Tipo
-    $verticalTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]); // Componente
-    $verticalTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]); // Unidad
-    $verticalTable->addCell(1500)->addText($totalItem['Cantidad'], ['bold' => true]); // Cantidad
-    $verticalTable->addCell(3000)->addText($totalItem['Observación'] ?? '', ['bold' => true]); // Observación from totalItem
+    $verticalTotalTable->addRow();
+    $verticalTotalTable->addCell(1500)->addText('TOTAL', ['bold' => true]);
+    $verticalTotalTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]);
+    $verticalTotalTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]);
+    $verticalTotalTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]);
+    $verticalTotalTable->addCell(1500)->addText((string)$totalItem['Cantidad'], ['bold' => true]);
+    $verticalTotalTable->addCell(3000)->addText($totalItem['Observación'] ?? '', ['bold' => true]);
 }
 $section->addTextBreak(2);
+
+
 
 // --------------------------------------------------
 // Sección: Distribución Horizontal
@@ -290,65 +355,85 @@ $section->addText(
 );
 $section->addTextBreak(1);
 
-$horizontalTable = $section->addTable([
+ksort($categorizedInventory['Horizontal Distribution']);
+foreach ($categorizedInventory['Horizontal Distribution'] as $piso => $items) {
+    $section->addText("Piso {$piso}:", ['bold' => true, 'italic' => true]);
+    $horizontalTable = $section->addTable([
+        'borderSize' => 6,
+        'borderColor' => '000000',
+        'cellMargin' => 80,
+        'width' => 100 * 50, // 100% width
+        'unit' => \PhpOffice\PhpWord\SimpleType\TblWidth::PERCENT
+    ]);
+
+    $horizontalTable->addRow();
+    $horizontalTable->addCell(1000)->addText('Piso', ['bold' => true]);
+    $horizontalTable->addCell(1500)->addText('Alcance', ['bold' => true]);
+    $horizontalTable->addCell(1500)->addText('Tipo', ['bold' => true]);
+    $horizontalTable->addCell(3000)->addText('Componente', ['bold' => true]);
+    $horizontalTable->addCell(1000)->addText('Unidad', ['bold' => true]);
+    $horizontalTable->addCell(1500)->addText('Cantidad', ['bold' => true]);
+    $horizontalTable->addCell(3000)->addText('Observación', ['bold' => true]);
+
+    foreach ($items as $item) {
+        $horizontalTable->addRow();
+        $horizontalTable->addCell(1000)->addText((string)$piso);
+        $horizontalTable->addCell(1500)->addText($item['Scope']);
+        $horizontalTable->addCell(1500)->addText($item['Tipo']);
+        $horizontalTable->addCell(3000)->addText($item['Componente']);
+        $horizontalTable->addCell(1000)->addText($item['Unidad']);
+        $horizontalTable->addCell(1500)->addText((string)$item['Cantidad']);
+        $horizontalTable->addCell(3000)->addText($item['Observación']);
+    }
+    
+    // Add per-floor subtotal as a separate block
+    if (isset($allTotals['Horizontal Floor Subtotals'][$piso]) && is_array($allTotals['Horizontal Floor Subtotals'][$piso])) {
+        $section->addText('Subtotal por Piso ' . $piso . ':', ['italic' => true, 'bold' => true]);
+        $subtotalTable = $section->addTable([
+            'borderSize' => 6,
+            'borderColor' => '000000',
+            'cellMargin' => 80,
+            'width' => 100 * 50,
+            'unit' => \PhpOffice\PhpWord\SimpleType\TblWidth::PERCENT
+        ]);
+        
+        foreach ($allTotals['Horizontal Floor Subtotals'][$piso] as $totalItem) {
+            $subtotalTable->addRow();
+            $subtotalTable->addCell(1000)->addText('SUBTOTAL PISO ' . $piso, ['bold' => true]);
+            $subtotalTable->addCell(1500)->addText($totalItem['Scope'], ['bold' => true]);
+            $subtotalTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]);
+            $subtotalTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]);
+            $subtotalTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]);
+            $subtotalTable->addCell(1500)->addText((string)$totalItem['Cantidad'], ['bold' => true]);
+            $subtotalTable->addCell(3000)->addText('', ['bold' => true]); 
+        }
+        $section->addTextBreak(1);
+    }
+}
+
+// Add global total row for Horizontal Distribution
+$section->addText('Resumen total por capa de distribución:', ['italic' => true, 'bold' => true]);
+$horizontalTotalTable = $section->addTable([
     'borderSize' => 6,
     'borderColor' => '000000',
     'cellMargin' => 80,
-    'width' => 100 * 50, // 100% width
+    'width' => 100 * 50,
     'unit' => \PhpOffice\PhpWord\SimpleType\TblWidth::PERCENT
 ]);
 
-$horizontalTable->addRow();
-$horizontalTable->addCell(1000)->addText('Piso', ['bold' => true]);
-$horizontalTable->addCell(1500)->addText('Alcance', ['bold' => true]);
-$horizontalTable->addCell(1500)->addText('Tipo', ['bold' => true]);
-$horizontalTable->addCell(3000)->addText('Componente', ['bold' => true]);
-$horizontalTable->addCell(1000)->addText('Unidad', ['bold' => true]);
-$horizontalTable->addCell(1500)->addText('Cantidad', ['bold' => true]);
-$horizontalTable->addCell(3000)->addText('Observación', ['bold' => true]);
-
-ksort($categorizedInventory['Horizontal Distribution']);
-foreach ($categorizedInventory['Horizontal Distribution'] as $piso => $items) {
-    foreach ($items as $item) {
-        $horizontalTable->addRow();
-        $horizontalTable->addCell()->addText($piso);
-        $horizontalTable->addCell()->addText($item['Scope']);
-        $horizontalTable->addCell()->addText($item['Tipo']);
-        $horizontalTable->addCell()->addText($item['Componente']);
-        $horizontalTable->addCell()->addText($item['Unidad']);
-        $horizontalTable->addCell()->addText($item['Cantidad']);
-        $horizontalTable->addCell()->addText($item['Observación']);
-    }
-    // Add per-floor subtotal
-    $section->addTextBreak(1);
-    $section->addText('Subtotal por Piso ' . $piso . ':', ['italic' => true]);
-    if (isset($allTotals['Horizontal Floor Subtotals'][$piso]) && is_array($allTotals['Horizontal Floor Subtotals'][$piso])) {
-        foreach ($allTotals['Horizontal Floor Subtotals'][$piso] as $totalItem) {
-            $horizontalTable->addRow();
-            $horizontalTable->addCell(1000)->addText('SUBTOTAL PISO ' . $piso, ['bold' => true]);
-            $horizontalTable->addCell(1500)->addText($totalItem['Scope'], ['bold' => true]);
-            $horizontalTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]);
-            $horizontalTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]);
-            $horizontalTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]);
-            $horizontalTable->addCell(1500)->addText($totalItem['Cantidad'], ['bold' => true]);
-            $horizontalTable->addCell(3000)->addText('', ['bold' => true]); // Empty observation
-        }
-    }
-}
-// Add global total row for Horizontal Distribution
-$section->addTextBreak(1);
-$section->addText('Resumen total por capa de distribución:', ['italic' => true]);
 foreach ($allTotals['Horizontal Distribution'] as $totalItem) {
-    $horizontalTable->addRow();
-    $horizontalTable->addCell(1000)->addText('TOTAL', ['bold' => true]);
-    $horizontalTable->addCell(1500)->addText($totalItem['Scope'], ['bold' => true]); // Scope
-    $horizontalTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]); // Tipo
-    $horizontalTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]); // Componente
-    $horizontalTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]); // Unidad
-    $horizontalTable->addCell(1500)->addText($totalItem['Cantidad'], ['bold' => true]); // Cantidad
-    $horizontalTable->addCell(3000)->addText('', ['bold' => true]); // Observación empty
+    $horizontalTotalTable->addRow();
+    $horizontalTotalTable->addCell(1000)->addText('TOTAL', ['bold' => true]);
+    $horizontalTotalTable->addCell(1500)->addText($totalItem['Scope'], ['bold' => true]);
+    $horizontalTotalTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]);
+    $horizontalTotalTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]);
+    $horizontalTotalTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]);
+    $horizontalTotalTable->addCell(1500)->addText((string)$totalItem['Cantidad'], ['bold' => true]);
+    $horizontalTotalTable->addCell(3000)->addText('', ['bold' => true]);
 }
 $section->addTextBreak(2);
+
+
 
 // --------------------------------------------------
 // Sección: Interior de Apartamentos
@@ -383,31 +468,40 @@ foreach ($categorizedInventory['Apartment Interior'] as $piso => $apts) {
     foreach ($apts as $apto => $items) {
         foreach ($items as $item) {
             $apartmentTable->addRow();
-            $apartmentTable->addCell()->addText($piso);
-            $apartmentTable->addCell()->addText($apto);
-            $apartmentTable->addCell()->addText($item['Scope']);
-            $apartmentTable->addCell()->addText($item['Tipo']);
-            $apartmentTable->addCell()->addText($item['Componente']);
-            $apartmentTable->addCell()->addText($item['Unidad']);
-            $apartmentTable->addCell()->addText($item['Cantidad']);
-            $apartmentTable->addCell()->addText($item['Observación']);
+            $apartmentTable->addCell(1000)->addText((string)$piso);
+            $apartmentTable->addCell(1000)->addText((string)$apto);
+            $apartmentTable->addCell(1500)->addText($item['Scope']);
+            $apartmentTable->addCell(1500)->addText($item['Tipo']);
+            $apartmentTable->addCell(3000)->addText($item['Componente']);
+            $apartmentTable->addCell(1000)->addText($item['Unidad']);
+            $apartmentTable->addCell(1500)->addText((string)$item['Cantidad']);
+            $apartmentTable->addCell(3000)->addText($item['Observación']);
         }
     }
 }
 // Add global total row for Apartment Interior
-$section->addTextBreak(1);
-$section->addText('Resumen total por capa de distribución:', ['italic' => true]);
+$section->addText('Resumen total por capa de distribución:', ['italic' => true, 'bold' => true]);
+$apartmentTotalTable = $section->addTable([
+    'borderSize' => 6,
+    'borderColor' => '000000',
+    'cellMargin' => 80,
+    'width' => 100 * 50,
+    'unit' => \PhpOffice\PhpWord\SimpleType\TblWidth::PERCENT
+]);
+
 foreach ($allTotals['Apartment Interior'] as $totalItem) {
-    $apartmentTable->addRow();
-    $apartmentTable->addCell(1000)->addText('TOTAL', ['bold' => true]);
-    $apartmentTable->addCell(1000)->addText($totalItem['Scope'], ['bold' => true]); // Scope
-    $apartmentTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]);
-    $apartmentTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]);
-    $apartmentTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]);
-    $apartmentTable->addCell(1500)->addText($totalItem['Cantidad'], ['bold' => true]);
-    $apartmentTable->addCell(3000)->addText('', ['bold' => true]); // Empty observation
+    $apartmentTotalTable->addRow();
+    $apartmentTotalTable->addCell(1000)->addText('TOTAL', ['bold' => true]);
+    $apartmentTotalTable->addCell(1000)->addText($totalItem['Scope'], ['bold' => true]);
+    $apartmentTotalTable->addCell(1500)->addText($totalItem['Tipo'], ['bold' => true]);
+    $apartmentTotalTable->addCell(3000)->addText($totalItem['Componente'], ['bold' => true]);
+    $apartmentTotalTable->addCell(1000)->addText($totalItem['Unidad'], ['bold' => true]);
+    $apartmentTotalTable->addCell(1500)->addText((string)$totalItem['Cantidad'], ['bold' => true]);
+    $apartmentTotalTable->addCell(3000)->addText('', ['bold' => true]);
 }
 $section->addTextBreak(2);
+
+
 
 
 

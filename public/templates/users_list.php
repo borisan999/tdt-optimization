@@ -1,6 +1,6 @@
 <h2 class="section-title"><?= __('manage_users') ?></h2>
 
-<a href="users.php?action=create" class="btn-primary">
+<a href="/tdt-optimization/users?action=create" class="btn-primary">
     <?= __('new_user') ?>
 </a>
 
@@ -16,12 +16,12 @@
             <tr>
                 <td><?= htmlspecialchars($u['username']) ?></td>
                 <td>
-                    <a href="users.php?action=edit&id=<?= (int)$u['user_id'] ?>"
+                    <a href="/tdt-optimization/users?action=edit&id=<?= (int)$u['user_id'] ?>"
                        class="btn-small">
                         <?= __('edit') ?>
                     </a>
 
-                    <a href="users.php?action=disable&id=<?= (int)$u['user_id'] ?>"
+                    <a href="/tdt-optimization/users?action=disable&id=<?= (int)$u['user_id'] ?>"
                        class="btn-small"
                        onclick="return confirm('<?= __('confirm_delete') ?>')">
                         <?= __('delete') ?>

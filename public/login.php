@@ -8,7 +8,7 @@ require_once __DIR__ . '/../app/models/User.php';
 
 // Redirect to dashboard if already logged in
 if (!empty($_SESSION['user_id'])) {
-    header('Location: /tdt-optimization/public/dashboard');
+    header('Location: /tdt-optimization/dashboard');
     exit;
 }
 
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['username'] = $user['username'];
 
-            header('Location: /tdt-optimization/public/dashboard');
+            header('Location: /tdt-optimization/dashboard');
             exit;
         }
     }

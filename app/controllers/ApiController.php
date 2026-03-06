@@ -56,15 +56,57 @@ class ApiController
             $this->deleteOptimization((int)$matches[1]);
         } elseif ($method === 'POST' && preg_match('/^\/api\/upload\/excel$/', $path)) {
             $this->uploadExcel();
+        } elseif ($method === 'POST' && preg_match('/^\/api\/import\/equipment$/', $path)) {
+            $this->importEquipmentFromExcel();
         } elseif ($method === 'POST' && preg_match('/^\/api\/template\/generate$/', $path)) {
             $this->generateFromTemplate();
         } elseif ($method === 'GET' && preg_match('/^\/api\/lang\/(en|es)$/', $path, $matches)) {
             $this->changeLanguage($matches[1]);
         } elseif ($method === 'GET' && preg_match('/^\/api\/catalogs$/', $path)) {
             $this->getCatalogs();
+        } elseif ($method === 'POST' && preg_match('/^\/api\/logs\/delete$/', $path)) {
+            $this->deleteLog();
+        } elseif ($method === 'POST' && preg_match('/^\/api\/logs\/delete-all$/', $path)) {
+            $this->deleteAllLogs();
         } else {
             $this->jsonResponse(false, null, ['code' => 'NOT_FOUND', 'message' => 'Endpoint not found'], 404);
         }
+    }
+
+    private function deleteLog()
+    {
+        $filename = $_POST['filename'] ?? '';
+        $logDir = realpath(__DIR__ . '/../../storage/optimization_logs');
+
+        // Security: prevent path traversal attacks
+        if (empty($filename) || basename($filename) !== $filename) {
+            header('Location: /optimization-logs.php?error=Invalid filename');
+            exit;
+        }
+
+        $filepath = $logDir . '/' . $filename;
+
+        if (file_exists($filepath)) {
+            unlink($filepath);
+        }
+
+        header('Location: /optimization-logs');
+        exit;
+    }
+
+    private function deleteAllLogs()
+    {
+        $logDir = realpath(__DIR__ . '/../../storage/optimization_logs');
+        $files = glob($logDir . '/*.log');
+
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                unlink($file);
+            }
+        }
+
+        header('Location: /optimization-logs');
+        exit;
     }
 
     private function generateFromTemplate()
@@ -278,6 +320,30 @@ class ApiController
 
         } catch (Exception $e) {
             $this->jsonResponse(false, null, ['code' => 'PROCESSING_ERROR', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    private function importEquipmentFromExcel()
+    {
+        if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {
+            $this->jsonResponse(false, null, ['code' => 'UPLOAD_ERROR', 'message' => 'No file uploaded'], 400);
+            return;
+        }
+
+        try {
+            require_once __DIR__ . '/../helpers/ExcelProcessor.php';
+            
+            $result = ExcelProcessor::importEquipmentCatalog($_FILES['excel_file']['tmp_name']);
+            
+            $this->jsonResponse(true, [
+                'message' => 'Equipment imported successfully',
+                'derivadores' => $result['derivadores_imported'],
+                'repartidores' => $result['repartidores_imported'],
+                'errors' => $result['errors']
+            ]);
+
+        } catch (Exception $e) {
+            $this->jsonResponse(false, null, ['code' => 'IMPORT_ERROR', 'message' => $e->getMessage()], 500);
         }
     }
 

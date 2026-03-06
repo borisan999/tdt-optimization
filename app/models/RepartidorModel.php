@@ -11,6 +11,11 @@ class RepartidorModel
         $this->pdo = (new Database())->getConnection();
     }
 
+    public function getPdo(): PDO
+    {
+        return $this->pdo;
+    }
+
     public function getAll(): array
     {
         $stmt = $this->pdo->query(

@@ -6,5 +6,5 @@ require_once __DIR__ . '/../app/auth/session.php';
 $_SESSION = [];
 session_destroy();
 
-header('Location: /tdt-optimization/public/login');
+header('Location: /tdt-optimization/login');
 exit;

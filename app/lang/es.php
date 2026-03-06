@@ -24,6 +24,7 @@ return [
     // Dashboard
     'dash_subtitle' => 'Panel de ingeniería para la optimización de redes de distribución',
     'dash_enter_data_desc' => 'Cargue datasets de Excel o ingrese datos del edificio manualmente.',
+    'dash_gen_desc' => 'Cree rápidamente estructuras de edificios complejas para su uso en optimizaciones.',
     'dash_history_desc' => 'Explore datasets previos y ejecuciones de optimización.',
     'dash_config_desc' => 'Gestione derivadores, repartidores y parámetros del sistema.',
     
@@ -71,6 +72,8 @@ return [
     'data_concept_2_desc' => 'Estos parámetros definen las características globales de su edificio y los requisitos de señal, como el piso máximo, apartamentos por piso, restricciones de señal (niveles mínimo/máximo) y atenuaciones de cable. Estos valores se aplican a todo el proyecto a menos que se especifique lo contrario.',
     'data_concept_3_title' => 'Configuración de Topología (Apartamentos y TUs)',
     'data_concept_3_desc' => 'Esta sección le permite definir la distribución de apartamentos dentro de cada piso y las longitudes específicas de cable para cada toma de TV (TU). Puede añadir filas para cada apartamento y TU, especificando su piso, número de apartamento y las longitudes de cable requeridas. La Utilidad de Repetición de Pisos puede duplicar rápidamente configuraciones en múltiples pisos.',
+    'data_concept_4_title' => 'Piso Troncal (Distribución Vertical)',
+    'data_concept_4_desc' => 'Define el piso donde se ubica el repartidor principal. Este punto recibe la señal de la antena y la distribuye a los bloques de pisos. Es fundamental para calcular las pérdidas por distancia vertical y asegurar un balance de señal óptimo en todo el edificio.',
     'got_it' => 'Entendido',
     'param_Nivel_maximo' => 'Nivel Máximo (dBuV)',
     'param_Nivel_minimo' => 'Nivel Mínimo (dBuV)',
@@ -111,7 +114,7 @@ return [
     'status_failed' => 'Fallido',
 
     // History Pages
-    'dataset_history' => 'Historial de Datasets',
+    'dataset_history' => 'Historial de base de datos',
     'opt_history' => 'Historial de Optimizaciones',
     'no_datasets' => 'No se encontraron datasets.',
     'view_result' => 'Ver Resultado',
@@ -278,6 +281,16 @@ return [
     'structured_inputs' => 'Entradas Estructuradas (Estilo Formulario)',
     'col_tu_index' => 'Índice TU',
     'col_value_m' => 'Valor (m)',
+    'material_summary_by_layer' => 'Resumen de Materiales por Capa',
+    'col_layer' => 'Capa de Distribución',
+    'col_cable_m' => 'Cable Total (m)',
+    'col_equipment_uds' => 'Equipos (uds)',
+    'col_connectors_uds' => 'Conectores (uds)',
+    'solver_execution_details' => 'Detalles de Ejecución del Solver',
+    'execution_time' => 'Tiempo de Ejecución',
+    'started_at_label' => 'Iniciado en',
+    'finished_at_label' => 'Finalizado en',
+    'view_solver_log' => 'Ver Registro Técnico del Solver',
 
     // Configurations Page
     'manage_derivadores' => 'Gestionar Derivadores',
@@ -325,4 +338,5 @@ return [
     'login_subtitle' => 'Por favor inicie sesión en su cuenta',
     'username_placeholder' => 'Nombre de usuario',
     'password_placeholder' => 'Contraseña',
+    'confirm_delete_dataset' => '¿Estás seguro de que quieres borrar este dataset? Esta acción no se puede deshacer y eliminará todas las optimizaciones y resultados asociados.',
 ];

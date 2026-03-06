@@ -120,7 +120,8 @@ class ResultsController
 
         $sql = "
             SELECT
-                o.opt_id, o.dataset_id, o.status, o.created_at, o.solver_status, o.solver_log,
+                o.opt_id, o.dataset_id, o.status, o.created_at, o.started_at, o.finished_at, 
+                o.solver_status, o.solver_log, o.error_message,
                 r.summary_json, r.detail_json, r.inputs_json,
                 d.dataset_name
             FROM optimizations o

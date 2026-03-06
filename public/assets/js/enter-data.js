@@ -567,13 +567,14 @@ document.addEventListener('DOMContentLoaded', async function () {
             const targetDatasetId = document.getElementById('current_dataset_id').value;
             const datasetName = document.getElementById('dataset_name').value;
 
-            const canonical = {};
+            const canonical = { ...(window.CANONICAL_DATA || {}) };
             document.querySelectorAll('#generalParamsContainer input[name^="param_"]').forEach(input => {
                 const name = input.name.replace('param_', '');
                 canonical[name] = Number(input.value);
             });
 
             buildMapsFromTables(canonical);
+            window.CANONICAL_DATA = canonical;
 
             try {
                 canonical.derivadores_data = JSON.parse(document.getElementById('derivadores_data_json').value);
@@ -610,21 +611,86 @@ document.addEventListener('DOMContentLoaded', async function () {
     const runBtn = document.getElementById('runOptimizationBtn');
     if (runBtn) {
         runBtn.addEventListener('click', async function () {
-            const datasetId = document.getElementById('current_dataset_id').value;
+            const manualInputForm = document.getElementById('manualInputForm');
+            if (!manualInputForm) return;
+
+            // Check form validity before proceeding
+            if (!manualInputForm.reportValidity()) {
+                return;
+            }
+
+            // 1. First, trigger the form submit logic to save the data
             this.disabled = true;
-            this.textContent = 'Running...';
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving & Running...';
+
+            // Extract data from form (logic duplicated from manualInputForm submit handler for control)
+            const targetDatasetId = document.getElementById('current_dataset_id').value;
+            const datasetName = document.getElementById('dataset_name').value;
+            
+            // Start with current state from memory to preserve catalogs
+            const canonical = { ...(window.CANONICAL_DATA || {}) };
+            
+            // Overlay scalar params from form
+            document.querySelectorAll('#generalParamsContainer input[name^="param_"]').forEach(input => {
+                const name = input.name.replace('param_', '');
+                canonical[name] = Number(input.value);
+            });
+            
+            // Build topology maps from tables
+            buildMapsFromTables(canonical);
+            
+            // Sync global state
+            window.CANONICAL_DATA = canonical;
+
             try {
-                const { json } = await fetchJson(`${DATASET_API}/run/${datasetId}`, { method: 'POST' });
+                canonical.derivadores_data = JSON.parse(document.getElementById('derivadores_data_json').value);
+                canonical.repartidores_data = JSON.parse(document.getElementById('repartidores_data_json').value);
+            } catch (e) { 
+                alert('Invalid JSON in catalogs.'); 
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-play"></i> ' + __('run_opt_btn');
+                return; 
+            }
+
+            try {
+                // Save first
+                let saveUrl = targetDatasetId ? `${DATASET_API}/update` : `${BASE_API}/datasets`;
+                const saveRes = await fetchJson(saveUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        dataset_id: targetDatasetId, 
+                        dataset_name: datasetName,
+                        canonical: canonical 
+                    })
+                });
+
+                if (!saveRes.json.success) {
+                    let msg = saveRes.json.error?.message || saveRes.json.message || 'Error';
+                    if (saveRes.json.error?.details) {
+                        msg += ':\n' + saveRes.json.error.details.map(d => `${d.field}: ${d.message}`).join('\n');
+                    }
+                    throw new Error(msg);
+                }
+
+                const finalDatasetId = saveRes.json.data?.dataset_id || targetDatasetId;
+                
+                // 2. Now run optimization
+                const { json } = await fetchJson(`${DATASET_API}/run/${finalDatasetId}`, { method: 'POST' });
                 const optId = json.result?.opt_id || json.opt_id;
+                
                 if (json.success && optId) {
                     window.location.href = `${BASE}view-result/${optId}`;
                 } else {
                     alert('Execution failed: ' + (json.error?.message || json.message || 'Error'));
                 }
             } catch (e) { 
-                alert('Run error: ' + e.message);
+                alert('Error: ' + e.message);
             }
-            finally { this.disabled = false; this.textContent = '▶ Run Optimization'; }
+            finally { 
+                this.disabled = false; 
+                this.innerHTML = '<i class="fas fa-play"></i> ' + __('run_opt_btn');
+            }
         });
     }
 });

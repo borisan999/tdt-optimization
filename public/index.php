@@ -16,9 +16,16 @@ require_once __DIR__ . "/../app/controllers/ApiController.php";
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $path = strtok($requestUri, '?');
 
-// 1. Detect and strip base path (subdirectory)
-$basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-if ($basePath !== '' && ($path === $basePath || str_starts_with($path, $basePath . '/'))) {
+// 1. Detect and strip base path (subdirectory or Alias)
+$scriptName = $_SERVER['SCRIPT_NAME'];
+$basePath = rtrim(dirname($scriptName), '/');
+
+// Handle the /tdt-optimization Alias prefix explicitly
+$aliasPrefix = '/tdt-optimization';
+
+if (str_starts_with($path, $aliasPrefix)) {
+    $path = '/' . ltrim(substr($path, strlen($aliasPrefix)), '/');
+} elseif ($basePath !== '' && ($path === $basePath || str_starts_with($path, $basePath . '/'))) {
     $path = substr($path, strlen($basePath));
 }
 
@@ -174,6 +181,12 @@ elseif ($path === '/export_csv.php') {
 }
 elseif ($path === '/export_docx.php') {
     require_once __DIR__ . '/export_docx.php';
+}
+elseif ($path === '/optimization-logs' || $path === '/optimization-logs.php') {
+    require_once __DIR__ . '/optimization-logs.php';
+}
+elseif ($path === '/optimization-logs-view' || $path === '/optimization-logs-view.php') {
+    require_once __DIR__ . '/optimization-logs-view.php';
 }
 else {
     http_response_code(404);

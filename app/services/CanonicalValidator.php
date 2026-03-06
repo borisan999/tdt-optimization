@@ -162,11 +162,9 @@ class CanonicalValidator
             return;
         }
 
-        // Strict Cardinality Check: Apartment Count
-        $expectedApartments = $this->data['Piso_Maximo'] * $this->data['apartamentos_por_piso'];
-        if (count($map) !== $expectedApartments) {
-            $this->addError('tus_requeridos_por_apartamento', "Apartment cardinality mismatch. Expected $expectedApartments entries, found " . count($map));
-        }
+        // Flexible cardinality: Allow different number of apartments per floor
+        // Only validate that Piso_Maximo matches the maximum floor number present
+        $maxPisoInData = 0;
 
         foreach ($map as $key => $tuCount) {
             if (!preg_match('/^\d+\|\d+$/', (string)$key)) {
@@ -182,46 +180,51 @@ class CanonicalValidator
 
             $parts = explode('|', $key);
             $floor = (int)$parts[0];
-            $this->computedMaxFloor = max($this->computedMaxFloor, $floor);
+            $apto = (int)$parts[1];
+            
+            // Validate floor is within Piso_Maximo range
+            if ($floor < 1 || $floor > $this->data['Piso_Maximo']) {
+                $this->addError("tus_requeridos_por_apartamento.$key", "Floor $floor exceeds Piso_Maximo ({$this->data['Piso_Maximo']})");
+            }
+            
+            // Validate apartment number is positive
+            if ($apto < 1) {
+                $this->addError("tus_requeridos_por_apartamento.$key", "Apartment number must be positive");
+            }
+            
+            $maxPisoInData = max($maxPisoInData, $floor);
             $this->apartmentSet[$key] = (int)$tuCount;
         }
 
-        if ($this->data['Piso_Maximo'] != $this->computedMaxFloor) {
-            $this->addError('Piso_Maximo', "Value ({$this->data['Piso_Maximo']}) does not match maximum floor in topology ({$this->computedMaxFloor})");
+        // Validate computed max floor matches Piso_Maximo
+        if ($maxPisoInData > 0 && $this->data['Piso_Maximo'] != $maxPisoInData) {
+            $this->addError('Piso_Maximo', "Value ({$this->data['Piso_Maximo']}) does not match maximum floor in topology ({$maxPisoInData})");
         }
     }
 
     private function validateCableMaps(): void
     {
-        // 1. Derivador-Repartidor Map Set Equality
+        // 1. Derivador-Repartidor Map: Each apartment in tus_requeridos must have an entry
         $cableMap = $this->data['largo_cable_derivador_repartidor'];
         if (!is_array($cableMap)) {
             $this->addError('largo_cable_derivador_repartidor', 'Must be an array');
         } else {
+            // Flexible: only check that apartments in topology have cable entries
             $diff1 = array_diff_key($this->apartmentSet, $cableMap);
-            $diff2 = array_diff_key($cableMap, $this->apartmentSet);
-
             foreach ($diff1 as $missingKey => $val) {
                 $this->addError('largo_cable_derivador_repartidor', "Missing entry for apartment '$missingKey'");
             }
-            foreach ($diff2 as $extraKey => $val) {
-                $this->addError('largo_cable_derivador_repartidor', "Unexpected entry for apartment '$extraKey'");
-            }
+            // Allow extra entries (some floors may have fewer apartments)
         }
 
-        // 2. TU Map Cardinality
+        // 2. TU Map: Flexible cardinality - allow different apartment counts per floor
         $tuCableMap = $this->data['largo_cable_tu'];
         if (!is_array($tuCableMap)) {
             $this->addError('largo_cable_tu', 'Must be an array');
             return;
         }
 
-        // Strict Cardinality Check: TU Density
-        $expectedTUs = array_sum($this->apartmentSet);
-        if (count($tuCableMap) !== $expectedTUs) {
-            $this->addError('largo_cable_tu', "TU tensor density mismatch. Expected $expectedTUs TUs based on apartment requirements, but found " . count($tuCableMap) . " cable lengths.");
-        }
-
+        // Validate each apartment's TU entries match tus_requeridos
         foreach ($this->apartmentSet as $aptKey => $expectedTus) {
             $prefix = $aptKey . '|';
             $actualTus = [];

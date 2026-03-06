@@ -1,0 +1,46 @@
+FROM docker.io/library/php:8.2-apache
+
+# Install system dependencies (including coinor-cbc solver)
+RUN apt-get update && apt-get install -y \
+    unzip \
+    zip \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libzip-dev \
+    python3 \
+    python3-pip \
+    python3-venv \
+    curl \
+    coinor-cbc \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd zip pdo pdo_mysql \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir --break-system-packages pulp pandas openpyxl
+
+# Copy application files (for initial build)
+WORKDIR /var/www/html
+COPY tdt-optimization/ .
+
+# Install Composer dependencies
+RUN composer install --no-dev --optimize-autoloader
+
+# Set permissions (including optimization_logs directory)
+RUN chown -R www-data:www-data /var/www/html/storage \
+    && chmod -R 775 /var/www/html/storage \
+    && mkdir -p /var/www/html/storage/optimization_logs \
+    && chown -R www-data:www-data /var/www/html/storage/optimization_logs
+
+# Enable Apache rewrite module
+RUN a2enmod rewrite
+
+# Copy Apache configuration
+COPY apache-vhost.conf /etc/apache2/sites-available/000-default.conf
+
+EXPOSE 80

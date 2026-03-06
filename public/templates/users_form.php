@@ -2,7 +2,7 @@
     <?= $user ? 'Editar usuario' : 'Nuevo usuario' ?>
 </h2>
 
-<form method="post" action="users.php?action=save">
+<form method="post" action="/tdt-optimization/users?action=save">
 
     <input type="hidden" name="mode" value="<?= $user ? 'edit' : 'create' ?>">
 
@@ -37,7 +37,7 @@
             Guardar
         </button>
 
-        <a href="users.php" class="btn-secondary">
+        <a href="/tdt-optimization/users" class="btn-secondary">
             Cancelar
         </a>
     </div>

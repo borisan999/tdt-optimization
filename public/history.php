@@ -50,13 +50,22 @@ $history = $datasetModel->getHistory(); // returns array (may be empty)
                                 <td class="text-end pe-3">
                                     <?php if ($d['latest_opt_id']): ?>
                                         <a href="view-result/<?= urlencode((string)$d['latest_opt_id']) ?>"
-                                           class="btn btn-primary btn-sm px-3">
+                                           class="btn btn-primary btn-sm px-2">
                                             <i class="fas fa-poll me-1"></i> <?= __('view_result') ?>
                                         </a>
                                     <?php endif; ?>
                                     <a href="view-dataset/<?= urlencode((string)$d['dataset_id']) ?>"
-                                       class="btn btn-outline-secondary btn-sm px-3 ms-1">
+                                       class="btn btn-outline-secondary btn-sm px-2 ms-1">
                                         <i class="fas fa-eye me-1"></i> <?= __('view_inputs') ?>
+                                    </a>
+                                    <a href="export_input_excel.php?dataset_id=<?= urlencode((string)$d['dataset_id']) ?>"
+                                       class="btn btn-outline-success btn-sm px-2 ms-1" title="Exportar Entradas a Excel">
+                                        <i class="fas fa-file-excel"></i>
+                                    </a>
+                                    <a href="/dataset/delete/<?= urlencode((string)$d['dataset_id']) ?>"
+                                       class="btn btn-outline-danger btn-sm px-2 ms-1"
+                                       onclick="return confirm('<?= __('confirm_delete_dataset') ?>');" title="Borrar Dataset">
+                                        <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
                             </tr>

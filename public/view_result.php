@@ -109,9 +109,14 @@ if (($response['status'] ?? 'error') === 'infeasible') {
                     <li><?= __('reason_min_high') ?></li>
                     <li><?= __('reason_max_low') ?></li>
                 </ul>
-                <a href="enter-data/<?= htmlspecialchars((string)($response['dataset_id'] ?? 0)) ?>" class="btn btn-primary mt-3">
-                    <i class="fas fa-edit"></i> <?= __('adjust_data_btn') ?>
-                </a>
+                <div class="mt-3">
+                    <a href="enter-data/<?= htmlspecialchars((string)($response['dataset_id'] ?? 0)) ?>" class="btn btn-primary me-2">
+                        <i class="fas fa-edit"></i> <?= __('adjust_data_btn') ?>
+                    </a>
+                    <a href="optimization-logs" class="btn btn-secondary">
+                        <i class="fas fa-file-alt"></i> Ver Logs del Solver
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -200,6 +205,11 @@ $isInventoryAvailable = $canonicalAvailable;
                        title="<?= __('view_tree_btn') ?>">
                        <i class="fas fa-project-diagram me-1"></i> <?= __('view_tree_btn') ?>
                     </a>
+                    <a class="btn btn-secondary btn-sm"
+                       href="optimization-logs"
+                       title="<?= __('solver_logs') ?>">
+                       <i class="fas fa-file-alt me-1"></i> <?= __('solver_logs') ?? 'Solver Logs' ?>
+                    </a>
                 </div>
             </div>
         </div>
@@ -231,6 +241,68 @@ $isInventoryAvailable = $canonicalAvailable;
         </div>
     <?php endforeach; ?>
     </div>
+
+    <!-- Segmented Material Summary (Inventory) -->
+    <?php if ($isInventoryAvailable && isset($canonical)): 
+        $aggregator = new \app\helpers\InventoryAggregator($canonical);
+        $inventoryData = $aggregator->aggregate();
+        $scopeSummaries = $inventoryData['totals']['Scope Summaries'] ?? [];
+    ?>
+    <div class="card shadow-sm mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-boxes me-2"></i><?= __('material_summary_by_layer') ?? 'Resumen de Materiales por Capa' ?></h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th><?= __('col_layer') ?? 'Capa de Distribución' ?></th>
+                            <th class="text-center"><?= __('col_cable_m') ?? 'Cable Total (m)' ?></th>
+                            <th class="text-center"><?= __('col_equipment_uds') ?? 'Equipos (uds)' ?></th>
+                            <th class="text-center"><?= __('col_connectors_uds') ?? 'Conectores (uds)' ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $layers = [
+                            'Vertical' => ['label' => 'Distribución Vertical', 'icon' => 'fa-arrows-alt-v'],
+                            'Horizontal' => ['label' => 'Distribución Horizontal', 'icon' => 'fa-arrows-alt-h'],
+                            'Apartamento' => ['label' => 'Interior de Apartamento', 'icon' => 'fa-home'],
+                        ];
+                        foreach ($layers as $key => $info): 
+                            $data = $scopeSummaries[$key] ?? ['cable_m' => 0, 'equipment_uds' => 0, 'connectors_uds' => 0];
+                        ?>
+                        <tr>
+                            <td><i class="fas <?= $info['icon'] ?> me-2 text-muted"></i><strong><?= $info['label'] ?></strong></td>
+                            <td class="text-center"><?= number_format($data['cable_m'], 2) ?> m</td>
+                            <td class="text-center"><?= number_format($data['equipment_uds'], 0) ?> uds.</td>
+                            <td class="text-center"><?= number_format($data['connectors_uds'], 0) ?> uds.</td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <?php 
+                        $grandTotal = ['cable' => 0, 'equip' => 0, 'conn' => 0];
+                        foreach ($scopeSummaries as $s) {
+                            $grandTotal['cable'] += $s['cable_m'];
+                            $grandTotal['equip'] += $s['equipment_uds'];
+                            $grandTotal['conn'] += $s['connectors_uds'];
+                        }
+                        ?>
+                        <tr>
+                            <td>TOTAL PROYECTO</td>
+                            <td class="text-center text-primary"><?= number_format($grandTotal['cable'], 2) ?> m</td>
+                            <td class="text-center text-primary"><?= number_format($grandTotal['equip'], 0) ?> uds.</td>
+                            <td class="text-center text-primary"><?= number_format($grandTotal['conn'], 0) ?> uds.</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
 
     <!-- Warnings -->
     <?php if (!empty($viewModel->warnings)): ?>
@@ -459,27 +531,68 @@ $isInventoryAvailable = $canonicalAvailable;
         </div>
 
         <!-- Solver Info -->
-        <?php if (!empty($viewModel->meta['solver_status']) || !empty($viewModel->meta['solver_log'])): ?>
-        <div class="card shadow-sm mb-4 mt-4">
+        <div class="card shadow-sm mb-4 mt-4 border-info">
             <div class="card-header bg-light d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#solverInfoCollapse">
-                <h5 class="mb-0 text-muted small"><i class="fas fa-info-circle me-2"></i><?= __('solver_status_title') ?> (Debug)</h5>
-                <i class="fas fa-chevron-down"></i>
+                <h5 class="mb-0 text-info small"><i class="fas fa-microchip me-2"></i><?= __('solver_execution_details') ?? 'Detalles de Ejecución del Solver' ?></h5>
+                <i class="fas fa-chevron-down text-info"></i>
             </div>
-            <div id="solverInfoCollapse" class="collapse">
+            <div id="solverInfoCollapse" class="collapse show">
                 <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-3 small"><?= __('solver_status_title') ?></dt>
-                        <dd class="col-sm-9"><span class="badge bg-secondary"><?= htmlspecialchars($viewModel->meta['solver_status'] ?? 'N/A') ?></span></dd>
-                    </dl>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="small text-muted fw-bold"><?= __('solver_status_title') ?? 'Estado del Solver' ?></div>
+                            <?php 
+                                $sStatus = $viewModel->meta['solver_status'] ?? 'N/A';
+                                $badgeClass = 'bg-secondary';
+                                if (stripos($sStatus, 'Optimal') !== false) $badgeClass = 'bg-success';
+                                elseif (stripos($sStatus, 'Infeasible') !== false) $badgeClass = 'bg-danger';
+                                elseif (stripos($sStatus, 'Feasible') !== false) $badgeClass = 'bg-primary';
+                            ?>
+                            <span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($sStatus) ?></span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted fw-bold"><?= __('execution_time') ?? 'Tiempo de Ejecución' ?></div>
+                            <?php
+                                $startTime = !empty($viewModel->meta['started_at']) ? new DateTime($viewModel->meta['started_at']) : null;
+                                $endTime = !empty($viewModel->meta['finished_at']) ? new DateTime($viewModel->meta['finished_at']) : null;
+                                if ($startTime && $endTime) {
+                                    $interval = $startTime->diff($endTime);
+                                    echo $interval->format('%H:%I:%S');
+                                } else {
+                                    echo 'N/A';
+                                }
+                            ?>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted fw-bold"><?= __('started_at_label') ?? 'Inicio' ?></div>
+                            <span class="small"><?= htmlspecialchars($viewModel->meta['started_at'] ?? 'N/A') ?></span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted fw-bold"><?= __('finished_at_label') ?? 'Fin' ?></div>
+                            <span class="small"><?= htmlspecialchars($viewModel->meta['finished_at'] ?? 'N/A') ?></span>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($viewModel->meta['error_message'])): ?>
+                        <div class="alert alert-danger py-2 small">
+                            <i class="fas fa-exclamation-circle me-1"></i> <?= htmlspecialchars($viewModel->meta['error_message']) ?>
+                        </div>
+                    <?php endif; ?>
+
                     <?php if (!empty($viewModel->meta['solver_log'])): ?>
-                    <hr>
-                    <h6 class="small fw-bold"><?= __('solver_log_title') ?></h6>
-                    <pre class="bg-light p-2 rounded small" style="max-height: 300px; overflow-y: auto; font-size: 0.75rem;"><?= htmlspecialchars($viewModel->meta['solver_log']) ?></pre>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-secondary btn-sm mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#solverLogContent">
+                            <i class="fas fa-terminal me-1"></i> <?= __('view_solver_log') ?? 'Ver Log Técnico del Solver' ?>
+                        </button>
+                        <div id="solverLogContent" class="collapse">
+                            <pre class="bg-dark text-light p-3 rounded small mt-2" style="max-height: 400px; overflow-y: auto; font-size: 0.7rem; border-left: 4px solid #17a2b8;"><?= htmlspecialchars($viewModel->meta['solver_log']) ?></pre>
+                        </div>
+                    </div>
                     <?php endif; ?>
                 </div>
             </div>
         </div>
-        <?php endif; ?>
+
 
     <?php endif; ?>
 

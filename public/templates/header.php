@@ -7,7 +7,14 @@ if (headers_sent()) {
 ?>
 <head>
     <meta charset="UTF-8">
-    <base href="<?= htmlspecialchars(rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/') ?>">
+    <?php
+    $baseHref = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    if (str_contains($_SERVER['REQUEST_URI'], '/tdt-optimization/')) {
+        $baseHref = '/tdt-optimization';
+    }
+    $baseHref .= '/';
+    ?>
+    <base href="<?= htmlspecialchars($baseHref) ?>">
     <title>TDT Optimization</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">

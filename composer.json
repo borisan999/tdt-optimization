@@ -1,5 +1,4 @@
 {
-    "name": "tdt/opt",
     "require": {
         "phpoffice/phpspreadsheet": "^5.2",
         "vlucas/phpdotenv": "^5.6",
@@ -9,11 +8,5 @@
         "psr-4": {
             "app\\": "app/"
         }
-    },
-    "require-dev": {
-        "phpdocumentor/phpdocumentor": "3.8.1"
-    },
-    "scripts": {
-        "docs": "vendor/bin/phpdoc -d app,public -t file://$(pwd)/docs/api --cache-folder file://$(pwd)/storage/cache/phpdoc --title 'TDT Optimization API Documentation'"
     }
 }

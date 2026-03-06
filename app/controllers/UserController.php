@@ -64,13 +64,13 @@ class UserController
             // Reactivate if inactive
             if ((int)$existing['is_active'] === 0) {
                 $this->model->reactivate((int)$existing['user_id'], $data);
-                header('Location: users.php?reactivated=1');
+                header('Location: /tdt-optimization/users?reactivated=1');
                 exit;
             }
 
             // Active username conflict (and not editing same user)
             if (empty($data['user_id']) || (int)$data['user_id'] !== (int)$existing['user_id']) {
-                header('Location: users.php?error=username_exists');
+                header('Location: /tdt-optimization/users?error=username_exists');
                 exit;
             }
         }
@@ -78,13 +78,13 @@ class UserController
         // 2️⃣ Update existing active user (edit form)
         if (!empty($data['user_id'])) {
             $this->model->update($data);
-            header('Location: users.php');
+            header('Location: /tdt-optimization/users');
             exit;
         }
 
         // 3️⃣ Insert brand-new user
         $this->model->insert($data);
-        header('Location: users.php');
+        header('Location: /tdt-optimization/users');
         exit;
     }
 
@@ -93,7 +93,7 @@ class UserController
     public function delete(int $id)
     {
         $this->model->delete($id);
-        header('Location: users.php');
+        header('Location: /tdt-optimization/users');
         exit;
     }
 
@@ -101,12 +101,12 @@ class UserController
     {
         if ($id === (int)$_SESSION['user_id']) {
             // Optional: flash message later
-            header('Location: users.php?error=self_disable');
+            header('Location: /tdt-optimization/users?error=self_disable');
             exit;
         }
 
         $this->model->disable($id);
-        header('Location: users.php');
+        header('Location: /tdt-optimization/users');
         exit;
     }
 

@@ -31,11 +31,43 @@ class InventoryAggregator
     {
         $this->processDetailForAggregation();
         $this->calculateGlobalTotals();
+        $this->calculateScopeSummaries(); // New step
         return [
             'inventory' => $this->aggregatedInventory,
             'totals'    => $this->allTotals,
         ];
     }
+
+    private function calculateScopeSummaries(): void
+    {
+        $this->allTotals['Scope Summaries'] = [
+            'Vertical' => ['cable_m' => 0, 'equipment_uds' => 0, 'connectors_uds' => 0],
+            'Horizontal' => ['cable_m' => 0, 'equipment_uds' => 0, 'connectors_uds' => 0],
+            'Apartamento' => ['cable_m' => 0, 'equipment_uds' => 0, 'connectors_uds' => 0],
+        ];
+
+        foreach ($this->allTotals['Vertical Distribution'] as $item) {
+            $this->accumulateToScope('Vertical', $item);
+        }
+        foreach ($this->allTotals['Horizontal Distribution'] as $item) {
+            $this->accumulateToScope('Horizontal', $item);
+        }
+        foreach ($this->allTotals['Apartment Interior'] as $item) {
+            $this->accumulateToScope('Apartamento', $item);
+        }
+    }
+
+    private function accumulateToScope(string $scope, array $item): void
+    {
+        if ($item['Tipo'] === 'Cable') {
+            $this->allTotals['Scope Summaries'][$scope]['cable_m'] += $item['Cantidad'];
+        } elseif ($item['Tipo'] === 'Equipo') {
+            $this->allTotals['Scope Summaries'][$scope]['equipment_uds'] += $item['Cantidad'];
+        } elseif ($item['Tipo'] === 'Conector') {
+            $this->allTotals['Scope Summaries'][$scope]['connectors_uds'] += $item['Cantidad'];
+        }
+    }
+
 
     /*
     private function processDetailForAggregation(): void
@@ -161,10 +193,9 @@ class InventoryAggregator
         }
         if (!empty($vd['vertical_splitters'])) {
             foreach ($vd['vertical_splitters'] as $splitter) {
-                $splitterModel = strtolower($splitter['splitter_model'] ?? '');
-                if (str_contains($splitterModel, 'repartidor troncal')) {
-                    $this->addComponent($verticalComponents, $scope, 'Repartidor Troncal', 'uds.', 1, 'Ubicado en el troncal');
-                }
+                $splitterModel = $splitter['splitter_model'] ?? 'Repartidor Troncal';
+                // In ResultParser, we already format it as "Repartidor Troncal (MODEL)"
+                $this->addComponent($verticalComponents, $scope, $splitterModel, 'uds.', 1, 'Ubicado en el troncal');
             }
         }
         if (($vd['total_riser_taps_count'] ?? 0) > 0) {
@@ -193,7 +224,8 @@ class InventoryAggregator
                 $this->addComponent($horizontalComponents[$piso], $scope, 'Conector F (Feeder)', 'uds.', $hd['horizontal_connectors_count'], '2 por tramo de cable');
             }
             if (($hd['total_floor_derivadores_count'] ?? 0) > 0) {
-                $this->addComponent($horizontalComponents[$piso], $scope, 'Derivador de Piso', 'uds.', $hd['total_floor_derivadores_count'], 'Ubicado en el piso');
+                $modelSuffix = !empty($hd['derivador_model']) ? " ({$hd['derivador_model']})" : "";
+                $this->addComponent($horizontalComponents[$piso], $scope, "Derivador de Piso{$modelSuffix}", 'uds.', $hd['total_floor_derivadores_count'], 'Ubicado en el piso');
             }
 
 
@@ -223,6 +255,10 @@ class InventoryAggregator
                     $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Conector F (Conexión TU)', 'uds.', $apartmentInternals['conexion_tu_connectors_count'], 'En la conexión final a la Toma de Usuario');
                 }
                 
+                if (!empty($apartmentInternals['repartidor_model'])) {
+                    $this->addComponent($apartmentComponents[$piso][$apto], $scope, "Repartidor Apartamento ({$apartmentInternals['repartidor_model']})", 'uds.', 1, 'Ubicado en el apartamento');
+                }
+
                 $tomas = $apartmentInternals['tomas'] ?? [];
                 if (!empty($tomas)) {
                     $this->addComponent($apartmentComponents[$piso][$apto], $scope, 'Toma de Usuario (TU)', 'uds.', count($tomas), 'Punto de conexión final');

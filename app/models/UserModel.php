@@ -38,7 +38,7 @@ class UserModel
     public function getById(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT user_id, username FROM users WHERE user_id = :id'
+            'SELECT user_id, username, email, is_active FROM users WHERE user_id = :id'
         );
         $stmt->execute(['id' => $id]);
         return $stmt->fetch() ?: null;

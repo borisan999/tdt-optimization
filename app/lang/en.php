@@ -24,7 +24,9 @@ return [
     // Dashboard
     'dash_subtitle' => 'Engineering dashboard for distribution network optimization',
     'dash_enter_data_desc' => 'Upload Excel datasets or enter building data manually.',
-    'dash_history_desc' => 'Browse previous datasets and optimization runs.',
+    'dash_gen_desc' => 'Quickly create complex building structures for use in optimizations.',
+    'dash_history_desc' => 'Explore previous datasets and optimization runs.',
+
     'dash_config_desc' => 'Manage derivators, splitters, and system parameters.',
     
     // Enter Data Page
@@ -70,7 +72,10 @@ return [
     'data_concept_2_title' => 'General Parameters (Global Settings)',
     'data_concept_2_desc' => 'These parameters define global characteristics of your building and signal requirements, such as maximum floor, apartments per floor, signal constraints (min/max levels), and cable attenuations. These values apply to the entire project unless specifically overridden.',
     'data_concept_3_title' => 'Topology Configuration (Apartments & TUs)',
-    'data_concept_3_desc' => 'This section allows you to define the layout of apartments within each floor and the specific cable lengths to each TV outlet (TU). You can add rows for each apartment and TU, specifying its floor, apartment number, and required cable lengths. The Floor Repetition Utility can quickly duplicate configurations across multiple floors.',
+    'data_concept_3_desc' => 'This section allows you to define the distribution of apartments within each floor and specific cable lengths for each TV outlet (TU). You can add rows for each apartment and TU, specifying its floor, apartment number, and required cable lengths. The Floor Repetition Utility can quickly duplicate configurations across multiple floors.',
+    'data_concept_4_title' => 'Trunk Floor (Vertical Distribution)',
+    'data_concept_4_desc' => 'Defines the floor where the main distributor is located. This point receives the signal from the antenna and distributes it to the blocks of floors. It is essential for calculating vertical distance losses and ensuring optimal signal balance throughout the building.',
+
     'got_it' => 'Got it',
     'param_Nivel_maximo' => 'Max Level (dBuV)',
     'param_Nivel_minimo' => 'Min Level (dBuV)',
@@ -278,6 +283,16 @@ return [
     'structured_inputs' => 'Structured Inputs (Form-style)',
     'col_tu_index' => 'TU Index',
     'col_value_m' => 'Value (m)',
+    'material_summary_by_layer' => 'Material Summary by Layer',
+    'col_layer' => 'Distribution Layer',
+    'col_cable_m' => 'Total Cable (m)',
+    'col_equipment_uds' => 'Equipment (uds)',
+    'col_connectors_uds' => 'Connectors (uds)',
+    'solver_execution_details' => 'Solver Execution Details',
+    'execution_time' => 'Execution Time',
+    'started_at_label' => 'Started At',
+    'finished_at_label' => 'Finished At',
+    'view_solver_log' => 'View Technical Solver Log',
 
     // Configurations Page
     'manage_derivadores' => 'Manage Derivators',
@@ -325,4 +340,5 @@ return [
     'login_subtitle' => 'Please sign in to your account',
     'username_placeholder' => 'Enter username',
     'password_placeholder' => 'Enter password',
+    'confirm_delete_dataset' => 'Are you sure you want to delete this dataset? This action cannot be undone and will delete all associated optimizations and results.',
 ];

@@ -1,0 +1,26 @@
+# Simple Containerfile for TDT Optimization
+FROM docker.io/library/php:8.2-apache
+
+# Install minimal system dependencies
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libzip-dev \
+    coinor-cbc \
+    python3 \
+    python3-pip \
+    && docker-php-ext-install gd zip pdo pdo_mysql \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install python dependencies
+RUN pip3 install pandas pulp openpyxl
+
+# DocumentRoot and rewrite
+COPY apache-vhost.conf /etc/apache2/sites-available/000-default.conf
+RUN a2enmod rewrite
+
+# The actual code is mounted via volumes in the script, 
+# so we don't need to COPY it here for development.
+
+WORKDIR /var/www/html
+EXPOSE 80
