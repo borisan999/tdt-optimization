@@ -92,13 +92,13 @@ $potencia_cabecera = $inputs['potencia_entrada'] ?? 0;
 $id_cabecera = "Cabecera_Master";
 $node_cabecera = [
     "id" => $id_cabecera,
-    "label" => "CABECERA\n(Piso $max_piso)\n$potencia_cabecera dBµV",
-    "title" => "Origen Señal TDT",
+    "label" => "CABECERA\n" . number_format((float)$potencia_cabecera, 1) . " dBµV",
+    "title" => "Origen Señal TDT (Input Principal)",
     "color" => $C_CABECERA,
     "level" => 0,
     "shape" => "diamond",
-    "size" => 55,
-    "font" => ["color" => "black", "face" => "arial", "size" => 12, "vadjust" => -75]
+    "size" => 40,
+    "font" => ["color" => "black", "face" => "arial", "size" => 14, "vadjust" => -60]
 ];
 
 // NIVEL 1: TRONCAL
@@ -110,21 +110,33 @@ $decoded_detail = json_decode($original_row['detail_json'] ?? '[]', true);
 $first_tu_raw = $decoded_detail[0] ?? [];
 
 $modelo_rep_troncal = $first_tu_raw['Repartidor Troncal'] ?? 'N/A';
-$spec_troncal = $specs_repartidores[$modelo_rep_troncal] ?? ['perdida_insercion' => '?'];
+$spec_troncal = $specs_repartidores[$modelo_rep_troncal] ?? ['perdida_insercion' => 0];
 
-$title_troncal = "Repartidor Troncal, Modelo: $modelo_rep_troncal, Pérdida Inserción: " . ($spec_troncal['perdida_insercion'] ?? '?') . " dB";
+// Calculation of intermediate levels
+$p_in_general = (float)($first_tu_raw['P_in (entrada) (dBµV)'] ?? 0);
+$loss_ant_cable = (float)($first_tu_raw['Pérdida Antena→Troncal (cable) (dB)'] ?? 0);
+$loss_ant_conn  = (float)($first_tu_raw['Pérdida Antena↔Troncal (conectores) (dB)'] ?? 0);
+$loss_trunk_rep = (float)($first_tu_raw['Pérdida Repartidor Troncal (dB)'] ?? 0);
+
+$p_in_troncal = $p_in_general - $loss_ant_cable - $loss_ant_conn;
+$p_out_troncal = $p_in_troncal - $loss_trunk_rep;
+
+$title_troncal = "Repartidor Troncal: $modelo_rep_troncal\n"
+               . "Input: " . number_format((float)$p_in_troncal, 1) . " dBµV\n"
+               . "Output: " . number_format((float)$p_out_troncal, 1) . " dBµV\n"
+               . "Pérdida Inserción: " . $loss_trunk_rep . " dB";
+
 $len_ant = $first_tu_raw['Longitud Antena→Troncal (m)'] ?? $inputs['largo_cable_amplificador_ultimo_piso'] ?? 0;
-
-$loss_ant_total = ($first_tu_raw['Pérdida Antena→Troncal (cable) (dB)'] ?? 0) + ($first_tu_raw['Pérdida Antena↔Troncal (conectores) (dB)'] ?? 0);
+$loss_ant_total = $loss_ant_cable + $loss_ant_conn;
 
 $node_troncal = [
     "id" => $id_troncal,
-    "label" => "TRONCAL\n(Piso $piso_troncal)",
+    "label" => "TRONCAL (P$piso_troncal)\nIN: " . number_format((float)$p_in_troncal, 1) . " | OUT: " . number_format((float)$p_out_troncal, 1),
     "title" => $title_troncal,
     "color" => $C_TRONCAL,
     "level" => 1,
     "shape" => "box",
-    "font" => ["color" => "black"]
+    "font" => ["color" => "black", "size" => 12]
 ];
 add_child($hierarchy_map, $id_cabecera, $node_troncal, [
     "from" => $id_cabecera,
@@ -142,17 +154,22 @@ foreach($decoded_detail as $row) {
     
     $piso_in = $row['Piso Entrada Riser Bloque'] ?? '??';
     $len_feed = $row['Feeder Troncal→Entrada Bloque (m)'] ?? 0;
-    $loss_feed_total = ($row['Pérdida Feeder (cable) (dB)'] ?? 0) + ($row['Pérdida Feeder (conectores) (dB)'] ?? 0);
+    $loss_feed_cable = (float)($row['Pérdida Feeder (cable) (dB)'] ?? 0);
+    $loss_feed_conn  = (float)($row['Pérdida Feeder (conectores) (dB)'] ?? 0);
+    $loss_feed_total = $loss_feed_cable + $loss_feed_conn;
+    
     $id_bloque = "Bloque_$b_id";
     
+    $p_in_bloque = $p_out_troncal - $loss_feed_total;
+
     $node_bloque = [
         "id" => $id_bloque,
-        "label" => "BLOQUE $b_id\nPiso $piso_in",
-        "title" => "Entrada Riser: P$piso_in",
+        "label" => "BLOQUE $b_id\nIN: " . number_format((float)$p_in_bloque, 1) . " dBµV",
+        "title" => "Entrada Riser: Piso $piso_in\nNivel: " . number_format((float)$p_in_bloque, 1) . " dBµV",
         "color" => $C_BLOQUE,
         "level" => 2,
         "shape" => "box",
-        "font" => ["color" => "black"]
+        "font" => ["color" => "black", "size" => 12]
     ];
     add_child($hierarchy_map, $id_troncal, $node_bloque, [
         "from" => $id_troncal,
@@ -186,39 +203,60 @@ foreach($decoded_detail as $row) {
     $id_toma = $codigo;
 
     // Distances and losses
-    $d_riser = $row['Distancia riser dentro bloque (m)'] ?? 0;
-    $l_riser = $row['Pérdida Riser dentro del Bloque (dB)'] ?? 0;
-    $d_total = $row['Distancia total hasta la toma (m)'] ?? 0;
+    $d_riser = (float)($row['Distancia riser dentro bloque (m)'] ?? 0);
+    $l_riser = (float)($row['Pérdida Riser dentro del Bloque (dB)'] ?? 0);
+    $l_taps  = (float)($row['Riser Atenuación Taps (dB)'] ?? 0);
     
-    $d_upstream = ($row['Longitud Antena→Troncal (m)'] ?? 0) + ($row['Feeder Troncal→Entrada Bloque (m)'] ?? 0) + $d_riser;
-    $d_remaining = max(0, $d_total - $d_upstream);
+    // Exact cable lengths from inputs
+    $d_piso_apto = (float)($inputs['largo_cable_derivador_repartidor']["{$piso}|{$apto}"] ?? 0);
     
-    $l_piso_apto = $row['Pérdida Cable Deriv→Rep (dB)'] ?? 0;
-    $l_apto_toma = $row['Pérdida Cable Rep→TU (dB)'] ?? 0;
+    // Better TU index extraction from tu_id or Toma
+    $tu_idx = 1;
+    // Common formats: TU1, P01A01TU1, etc.
+    if (preg_match('/TU(\d+)$/i', $codigo, $m)) {
+        $tu_idx = (int)$m[1];
+    } elseif (preg_match('/(\d+)$/', $codigo, $m)) {
+        $tu_idx = (int)$m[1];
+    }
     
-    $total_local_loss = $l_piso_apto + $l_apto_toma;
-    $d_piso_apto = $total_local_loss > 0 ? ($l_piso_apto / $total_local_loss) * $d_remaining : $d_remaining / 2;
-    $d_apto_toma = $total_local_loss > 0 ? ($l_apto_toma / $total_local_loss) * $d_remaining : $d_remaining / 2;
+    $d_apto_toma = (float)($inputs['largo_cable_tu']["{$piso}|{$apto}|{$tu_idx}"] ?? 0);
+    
+    $l_piso_apto = (float)($row['Pérdida Cable Deriv→Rep (dB)'] ?? 0);
+    $l_apto_conn = (float)($row['Pérdida Conectores Apto (dB)'] ?? 0);
+    $l_apto_toma = (float)($row['Pérdida Cable Rep→TU (dB)'] ?? 0);
+    $l_tu_conn   = (float)($row['Pérdida Conexión TU (dB)'] ?? 0);
 
+    // Intermediate Calculations for this TU path
+    $p_in_bloque_path = $p_out_troncal - (($row['Pérdida Feeder (cable) (dB)'] ?? 0) + ($row['Pérdida Feeder (conectores) (dB)'] ?? 0));
+    $p_in_deriv = $p_in_bloque_path - $l_riser - $l_taps;
+    
+    $l_deriv_piso = (float)($row['Pérdida Derivador Piso (dB)'] ?? 0);
+    $p_deriv_out = $p_in_deriv - $l_deriv_piso;
+    
     // NODO PISO (DERIVADOR)
     if (!isset($pisos_creados[$id_piso])) {
         $modelo_deriv = $row['Derivador Piso'] ?? 'N/A';
-        $spec_deriv = $specs_derivadores[$modelo_deriv] ?? ['derivacion' => '?', 'paso' => '?'];
-        $title_piso = "Piso $piso, Derivador: $modelo_deriv, Pérdida Paso: " . ($spec_deriv['paso'] ?? '?') . " dB, Pérdida Derivación: " . ($spec_deriv['derivacion'] ?? '?') . " dB";
+        // Note: For pass-through level we'd need specs or it might be calculated if we had all TUs.
+        // For now we show the derivation level which is critical for the unifilar.
+        
+        $title_piso = "Piso $piso, Derivador: $modelo_deriv\n"
+                    . "Input: " . number_format((float)$p_in_deriv, 1) . " dBµV\n"
+                    . "Salida Derivación: " . number_format((float)$p_deriv_out, 1) . " dBµV\n"
+                    . "Pérdida Derivación: " . $l_deriv_piso . " dB";
         
         $node_piso = [
             "id" => $id_piso,
-            "label" => "Piso $piso",
+            "label" => "P$piso (DER)\nIN:" . number_format((float)$p_in_deriv, 1) . "\nOUT:" . number_format((float)$p_deriv_out, 1),
             "title" => $title_piso,
             "color" => $C_PISO,
             "level" => 3,
             "shape" => "ellipse",
-            "font" => ["color" => "black"]
+            "font" => ["color" => "black", "size" => 11]
         ];
         add_child($hierarchy_map, $id_bloque_parent, $node_piso, [
             "from" => $id_bloque_parent,
             "to" => $id_piso,
-            "label" => $d_riser . "m\n-" . number_format((float)$l_riser, 1) . "dB"
+            "label" => $d_riser . "m\n-" . number_format((float)($l_riser + $l_taps), 1) . "dB"
         ]);
         $pisos_creados[$id_piso] = true;
     }
@@ -226,19 +264,26 @@ foreach($decoded_detail as $row) {
     // NODO APTO (REPARTIDOR)
     if (!isset($aptos_creados[$id_apto])) {
         $modelo_rep_apt = $row['Repartidor Apt'] ?? 'N/A';
-        $spec_rep_apt = $specs_repartidores[$modelo_rep_apt] ?? ['perdida_insercion' => '?'];
-        $title_apto = "Apto $apto, Repartidor: $modelo_rep_apt, Pérdida Inserción: " . ($spec_rep_apt['perdida_insercion'] ?? '?') . " dB";
+        $p_in_rep = $p_deriv_out - $l_piso_apto - $l_apto_conn;
+        $l_rep_apt_loss = (float)($row['Pérdida Repartidor Apt (dB)'] ?? 0);
+        $p_out_rep = $p_in_rep - $l_rep_apt_loss;
+
+        $title_apto = "Apto $apto, Repartidor: $modelo_rep_apt\n"
+                    . "Input: " . number_format((float)$p_in_rep, 1) . " dBµV\n"
+                    . "Output: " . number_format((float)$p_out_rep, 1) . " dBµV\n"
+                    . "Pérdida Inserción: " . $l_rep_apt_loss . " dB";
         
         $node_apto = [
             "id" => $id_apto,
-            "label" => "Apto $apto",
+            "label" => "A$apto (REP)\nIN:" . number_format((float)$p_in_rep, 1) . "\nOUT:" . number_format((float)$p_out_rep, 1),
             "title" => $title_apto,
             "color" => $C_APTO,
             "level" => 4,
             "shape" => "dot",
-            "size" => 15
+            "size" => 15,
+            "font" => ["size" => 10]
         ];
-        $l_piso_apto_total = $l_piso_apto + (2 * 0.2); // Add connector loss
+        $l_piso_apto_total = $l_piso_apto + $l_apto_conn;
         add_child($hierarchy_map, $id_piso, $node_apto, [
             "from" => $id_piso,
             "to" => $id_apto,
@@ -248,21 +293,22 @@ foreach($decoded_detail as $row) {
     }
 
     // NODO TOMA
-    $nivel = $row['Nivel TU Final (dBµV)'] ?? 0;
+    $nivel = (float)($row['Nivel TU Final (dBµV)'] ?? 0);
     $min_n = $inputs['Nivel_minimo'] ?? 47;
     $max_n = $inputs['Nivel_maximo'] ?? 77;
     $color_toma = ($nivel >= $min_n && $nivel <= $max_n) ? $C_OK : $C_BAD;
     
     $node_toma = [
         "id" => $id_toma,
-        "label" => "TU$toma_num\n" . number_format((float)$nivel, 1) . "dB",
-        "title" => "Toma: $codigo, Pérdida TU: 1 dBµV",
+        "label" => "TU$toma_num\n" . number_format((float)$nivel, 1) . " dBµV",
+        "title" => "Toma: $codigo\nNivel Final: " . number_format((float)$nivel, 1) . " dBµV",
         "color" => $color_toma,
         "level" => 5,
         "shape" => "dot",
-        "size" => 10
+        "size" => 10,
+        "font" => ["size" => 10, "vadjust" => 25]
     ];
-    $l_apto_toma_total = $l_apto_toma + (2 * 0.2); // Add connector loss
+    $l_apto_toma_total = $l_apto_toma + $l_tu_conn;
     add_child($hierarchy_map, $id_apto, $node_toma, [
         "from" => $id_apto,
         "to" => $id_toma,

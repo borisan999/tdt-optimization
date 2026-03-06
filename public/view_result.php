@@ -329,29 +329,156 @@ $isInventoryAvailable = $canonicalAvailable;
             ?>
                 <tr>
                     <th class="bg-light" style="width: 40%;"><?= htmlspecialchars($label) ?></th>
-                    <td><?= is_scalar($v) ? htmlspecialchars((string)$v) : htmlspecialchars(json_encode($v, JSON_UNESCAPED_UNICODE)) ?></td>
-                </tr>
+                    <td><?= is_numeric($v) && $label === __('metric_avg_nivel_tu') ? number_format((float)$v, 2) : (is_scalar($v) ? htmlspecialchars((string)$v) : htmlspecialchars(json_encode($v, JSON_UNESCAPED_UNICODE))) ?></td>                </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
 
         <!-- Charts in Cards -->
         <div class="row mb-4">
-            <div class="col-md-6 mb-3">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title"><?= __('summary_kpis') ?></h5>
-                        <canvas id="summaryChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-12 mb-3">
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title"><?= __('tu_histogram') ?></h5>
-                        <canvas id="nivelChart" height="120"></canvas>
+                        <canvas id="nivelChart" height="80"></canvas>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Unifilar Summary: Signal Chain -->
+        <div class="card shadow-sm mb-4 border-primary">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i><?= __('unifilar_summary') ?> — <?= __('for_drawing_plan') ?? 'Para Dibujo de Plano' ?></h5>
+                <span class="badge bg-white text-primary"><?= __('signal_chain') ?? 'Cadena de Señal' ?></span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th><?= __('col_node') ?></th>
+                                <th><?= __('col_equipment') ?></th>
+                                <th class="text-center"><?= __('col_input_level') ?></th>
+                                <th class="text-center"><?= __('col_output_level') ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php 
+                            $raw_details = json_decode($viewModel->results['detail_json'] ?? '[]', true);
+                            if (!empty($raw_details)): 
+                                $first = $raw_details[0];
+                                $piso_troncal = $viewModel->inputs['p_troncal'] ?? 0;
+                                
+                                $p_in_general = (float)($first['P_in (entrada) (dBµV)'] ?? 0);
+                                $loss_ant_cable = (float)($first['Pérdida Antena→Troncal (cable) (dB)'] ?? 0);
+                                $loss_ant_conn  = (float)($first['Pérdida Antena↔Troncal (conectores) (dB)'] ?? 0);
+                                $p_in_troncal = $p_in_general - $loss_ant_cable - $loss_ant_conn;
+                                $p_out_troncal = $p_in_troncal - (float)($first['Pérdida Repartidor Troncal (dB)'] ?? 0);
+                            ?>
+                                <!-- Headend & Trunk -->
+                                <tr class="table-info">
+                                    <td><strong><?= __('headend') ?></strong></td>
+                                    <td>—</td>
+                                    <td class="text-center">—</td>
+                                    <td class="text-center"><strong><?= number_format($p_in_general, 1) ?></strong></td>
+                                </tr>
+                                <tr>
+                                    <td><?= __('trunk') ?> (P<?= $piso_troncal ?>)</td>
+                                    <td><?= htmlspecialchars($first['Repartidor Troncal'] ?? 'N/A') ?></td>
+                                    <td class="text-center"><?= number_format($p_in_troncal, 1) ?></td>
+                                    <td class="text-center"><?= number_format($p_out_troncal, 1) ?></td>
+                                </tr>
+
+                                <?php 
+                                // Group by floor for summarized unifilar view
+                                $floors = [];
+                                foreach ($raw_details as $row) {
+                                    $p = $row['Piso'] ?? $row['piso'] ?? 0;
+                                    if (!isset($floors[$p])) $floors[$p] = $row;
+                                }
+                                krsort($floors);
+
+                                foreach ($floors as $p => $f):
+                                    $p_in_bloque_path = $p_out_troncal - ((float)($f['Pérdida Feeder (cable) (dB)'] ?? 0) + (float)($f['Pérdida Feeder (conectores) (dB)'] ?? 0));
+                                    $p_in_deriv = $p_in_bloque_path - (float)($f['Pérdida Riser dentro del Bloque (dB)'] ?? 0) - (float)($f['Riser Atenuación Taps (dB)'] ?? 0);
+                                    $p_deriv_out = $p_in_deriv - (float)($f['Pérdida Derivador Piso (dB)'] ?? 0);
+                                ?>
+                                    <tr class="bg-light">
+                                        <td><strong><?= __('floor') ?> <?= $p ?> (DER)</strong></td>
+                                        <td><?= htmlspecialchars($f['Derivador Piso'] ?? 'N/A') ?></td>
+                                        <td class="text-center"><?= number_format($p_in_deriv, 1) ?></td>
+                                        <td class="text-center">
+                                            <span class="text-primary"><?= number_format($p_deriv_out, 1) ?></span> <small class="text-muted">(deriv)</small>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cable Runs: Physical Topology -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-route me-2"></i><?= __('cable_runs_summary') ?? 'Resumen de Trayectos de Cable' ?></h5>
+                <span class="badge bg-secondary"><?= __('physical_topology') ?? 'Topología Física' ?></span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th><?= __('col_piso') ?></th>
+                                <th><?= __('col_apto') ?></th>
+                                <th><?= __('col_repartidor_model') ?? 'Modelo REP' ?></th>
+                                <th class="text-center"><?= __('seg1_m') ?? 'Seg1 (m)' ?> <i class="fas fa-info-circle text-muted" title="Derivador → Repartidor"></i></th>
+                                <th class="text-center"><?= __('seg2_m') ?? 'Seg2 (m)' ?> <i class="fas fa-info-circle text-muted" title="Repartidor → TU"></i></th>
+                                <th class="text-center"><?= __('col_tu_id') ?></th>
+                                <th class="text-center"><?= __('output_signal') ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php 
+                            if (!empty($raw_details)): 
+                                foreach ($raw_details as $row):
+                                    $p = $row['Piso'] ?? $row['piso'] ?? 0;
+                                    $a = $row['Apto'] ?? $row['apto'] ?? 0;
+                                    $tu_code = $row['Toma'] ?? $row['tu_id'] ?? '—';
+                                    
+                                    // Get lengths from inputs
+                                    $d_seg1 = (float)($viewModel->inputs['largo_cable_derivador_repartidor']["{$p}|{$a}"] ?? 0);
+                                    
+                                    $tu_idx = 1;
+                                    if (preg_match('/TU(\d+)$/i', $tu_code, $m)) {
+                                        $tu_idx = (int)$m[1];
+                                    } elseif (preg_match('/(\d+)$/', $tu_code, $m)) {
+                                        $tu_idx = (int)$m[1];
+                                    }
+                                    
+                                    $d_seg2 = (float)($viewModel->inputs['largo_cable_tu']["{$p}|{$a}|{$tu_idx}"] ?? 0);
+                                    
+                                    $nivel_final = (float)($row['Nivel TU Final (dBµV)'] ?? 0);
+                            ?>
+                                <tr>
+                                    <td><?= $p ?></td>
+                                    <td><?= $a ?></td>
+                                    <td><small><?= htmlspecialchars($row['Repartidor Apt'] ?? 'N/A') ?></small></td>
+                                    <td class="text-center"><?= number_format($d_seg1, 1) ?></td>
+                                    <td class="text-center"><?= number_format($d_seg2, 1) ?></td>
+                                    <td class="text-center"><small><?= htmlspecialchars($tu_code) ?></small></td>
+                                    <td class="text-center"><strong><?= number_format($nivel_final, 1) ?></strong></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white small text-muted">
+                <i class="fas fa-info-circle me-1"></i> <?= __('cable_run_hint') ?? 'Seg1: Derivador de piso a repartidor de apto. Seg2: Repartidor de apto a toma (TU).' ?>
             </div>
         </div>
 
@@ -609,34 +736,6 @@ $(document).ready(function() {
         ordering: true,
         autoWidth: false
     });
-
-    // Summary Chart
-    const summaryData = <?= json_encode($viewModel->summary) ?>;
-    
-    // Helper to translate keys in JS (similar to PHP logic)
-    function translateKey(k) {
-        const translations = {
-            'contract_version': <?= json_encode(__('metric_contract_version')) ?>,
-            'piso_max': <?= json_encode(__('metric_piso_max')) ?>,
-            'total_tus': <?= json_encode(__('metric_total_tus')) ?>,
-            'status': <?= json_encode(__('metric_status')) ?>,
-            'avg_nivel_tu': <?= json_encode(__('metric_avg_nivel_tu')) ?>,
-            'min_nivel_tu': <?= json_encode(__('metric_min_nivel_tu')) ?>,
-            'max_nivel_tu': <?= json_encode(__('metric_max_nivel_tu')) ?>
-        };
-        return translations[k] || k;
-    }
-
-    const summaryLabels = Object.keys(summaryData).map(translateKey);
-    const summaryValues = Object.values(summaryData);
-    const summaryEl = document.getElementById('summaryChart');
-    if (summaryEl) {
-        new Chart(summaryEl, {
-            type: 'bar',
-            data: { labels: summaryLabels, datasets:[{ label: <?= json_encode(__('summary_kpis')) ?>, data: summaryValues }] },
-            options: { responsive:true, scales:{ y:{ beginAtZero:true } } }
-        });
-    }
 
     // TU Histogram (nivelChart) with per-bin violation coloring
     const nivelValues = <?= json_encode(array_map(fn($d)=>(float)($d['nivel_tu'] ?? 0), $viewModel->details)) ?>;
