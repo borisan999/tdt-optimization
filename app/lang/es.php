@@ -374,4 +374,5 @@ return [
     'engineering_input_parameters' => 'Parámetros de Entrada de Ingeniería',
     'advanced_solver_diagnostics' => 'Diagnósticos Avanzados del Solver',
     'view_raw_summary_metrics' => 'Ver Métricas de Resumen Crudas',
+    'export_technical_report' => 'Memoria Técnica',
 ];

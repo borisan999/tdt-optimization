@@ -155,10 +155,7 @@ $canonicalAvailable = false;
 if (!empty($viewModel->results)) {
     $parser = ResultParser::fromDbRow($viewModel->results);
     if (!$parser->hasErrors()) {
-        $canonical = $parser->canonical(); // <-- This is where $canonical is defined
-        /*echo '<pre>Canonical data for debugging:';
-        print_r($canonical);
-        echo '</pre>';*/
+        $canonical = $parser->canonical(); 
         $canonicalAvailable = !empty($canonical) && isset($canonical['vertical_distribution']) && isset($canonical['floors']);
     }
 }
@@ -196,6 +193,11 @@ $isInventoryAvailable = $canonicalAvailable;
                        title="<?= __('export_docx') ?>">
                        <i class="fas fa-file-word me-1"></i> <?= __('export_docx') ?>
                     </a>
+                    <a class="btn btn-primary btn-sm"
+                       href="export_docx.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&mode=report"
+                       title="<?= __('export_technical_report') ?? 'Exportar Memoria Técnica' ?>">
+                       <i class="fas fa-file-invoice me-1"></i> <?= __('export_technical_report') ?? 'Memoria Técnica' ?>
+                    </a>
                 </div>
             </div>
             <div class="col-auto">
@@ -224,7 +226,6 @@ $isInventoryAvailable = $canonicalAvailable;
             'min_nivel_tu' => __('metric_min_nivel_tu'),
             'max_nivel_tu' => __('metric_max_nivel_tu'),
         ];
-        // Ensure we have min/max from summary if not in summaryMetrics
         $summaryMetrics['min_nivel_tu'] = $viewModel->summary['min_nivel_tu'] ?? '—';
         $summaryMetrics['max_nivel_tu'] = $viewModel->summary['max_nivel_tu'] ?? '—';
 
@@ -333,7 +334,6 @@ $isInventoryAvailable = $canonicalAvailable;
                             </thead>
                             <tbody>
                                 <?php 
-                                // Sort breakdown: Equipment first, then Cables, then Connectors
                                 usort($equipmentBreakdown, function($a, $b) {
                                     $typeOrder = ['Equipo' => 0, 'Cable' => 1, 'Conector' => 2, 'Otro' => 3];
                                     $typeA = $typeOrder[$a['Tipo']] ?? 9;
@@ -405,7 +405,6 @@ $isInventoryAvailable = $canonicalAvailable;
                                 </tr>
 
                                 <?php 
-                                // Group by floor for summarized unifilar view
                                 $floors = [];
                                 foreach ($raw_details as $row) {
                                     $p = $row['Piso'] ?? $row['piso'] ?? 0;
@@ -467,7 +466,6 @@ $isInventoryAvailable = $canonicalAvailable;
                                     $a = $row['Apto'] ?? $row['apto'] ?? 0;
                                     $tu_code = $row['Toma'] ?? $row['tu_id'] ?? '—';
                                     
-                                    // Get lengths from inputs
                                     $d_seg1 = (float)($viewModel->inputs['largo_cable_derivador_repartidor']["{$p}|{$a}"] ?? 0);
                                     
                                     $tu_idx = 1;
@@ -545,6 +543,7 @@ $isInventoryAvailable = $canonicalAvailable;
     <?php endif; ?>
 
     <!-- Detail TUs Table -->
+    <?php if (!empty($viewModel->details)): ?>
     <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
         <h4 class="mb-0"><?= __('detail_tus') ?> (<?= count($viewModel->details) ?>)</h4>
     </div>
@@ -609,6 +608,7 @@ $isInventoryAvailable = $canonicalAvailable;
             </tbody>
         </table>
     </div>
+    <?php endif; ?>
 
     <hr class="my-5">
 
@@ -633,7 +633,6 @@ $isInventoryAvailable = $canonicalAvailable;
                             if (is_array($value)) {
                                 $isTuTable = false;
 
-                                // Detect TU table keys like "(1,1,1)" or "1|1|1"
                                 if (count($value) > 0) {
                                     $firstKey = (string)array_keys($value)[0];
                                     if (preg_match('/^\(\d+,\d+,\d+\)$/', $firstKey) || preg_match('/^\d+\|\d+\|\d+$/', $firstKey)) {
@@ -642,7 +641,6 @@ $isInventoryAvailable = $canonicalAvailable;
                                 }
 
                                 if ($isTuTable) {
-                                    // TU table
                                     echo '<table class="table table-sm table-bordered mb-2 small">';
                                     echo '<thead><tr><th>' . __('col_piso') . '</th><th>' . __('col_apto') . '</th><th>' . __('col_tu_index') . '</th><th>' . __('col_value_m') . '</th></tr></thead><tbody>';
                                     foreach ($value as $tuple => $v) {
@@ -656,7 +654,6 @@ $isInventoryAvailable = $canonicalAvailable;
                                     }
                                     echo '</tbody></table>';
                                 } else {
-                                    // Regular array of arrays / objects
                                     $firstRow = reset($value);
                                     if (is_array($firstRow) || is_object($firstRow)) {
                                         $firstRow = (array)$firstRow;
@@ -676,7 +673,6 @@ $isInventoryAvailable = $canonicalAvailable;
                                         }
                                         echo '</tbody></table>';
                                     } else {
-                                        // Scalar array: show as table
                                         echo '<table class="table table-sm table-bordered mb-2 small">';
                                         echo '<tbody>';
                                         foreach ($value as $i => $v) {
@@ -687,7 +683,6 @@ $isInventoryAvailable = $canonicalAvailable;
                                 }
 
                             } else {
-                                // Scalar value: show as key-value row
                                 echo '<table class="table table-sm table-bordered mb-2 small">';
                                 echo '<tbody><tr><td style="width: 40%">' . htmlspecialchars((string)$key) . '</td><td>' . htmlspecialchars((string)$value) . '</td></tr></tbody></table>';
                             }
@@ -786,101 +781,10 @@ $isInventoryAvailable = $canonicalAvailable;
         </div>
     </div>
 
-    <?php endif; ?>
-
 </div>
 
 <?php include __DIR__ . '/templates/footer.php'; ?>
 <script>
-$(document).ready(function() {
-    // Initialize DataTable
-    $('#detailTable').DataTable({
-        pageLength: 15,
-        lengthMenu: [15, 30, 50],
-        scrollX: true,
-        ordering: true,
-        autoWidth: false
-    });
-
-    // TU Histogram (nivelChart) with per-bin violation coloring
-    const nivelValues = <?= json_encode(array_map(fn($d)=>(float)($d['nivel_tu'] ?? 0), $viewModel->details)) ?>;
-    const COMPLIANCE_MIN = <?= $complianceMin ?>;
-    const COMPLIANCE_MAX = <?= $complianceMax ?>;
-
-    function buildHistogram(values, binSize=1){
-        const bins = {};
-        values.forEach(v => {
-            const b = Math.floor(v/binSize)*binSize;
-            if (!bins[b]) bins[b] = { count: 0, values: [] };
-            bins[b].count += 1;
-            bins[b].values.push(v);
-        });
-        const keys = Object.keys(bins).map(Number).sort((a,b)=>a-b);
-        return {
-            labels: keys.map(k=>`${k}–${k+binSize}`),
-            data: keys.map(k=>bins[k].count),
-            values: keys.map(k=>bins[k].values), // keep TU values per bin for coloring
-            keys
-        };
-    }
-
-    const hist = buildHistogram(nivelValues, 1);
-    const nivelEl = document.getElementById('nivelChart'); // Get the canvas element
-
-    if (nivelEl) { // Check if the element exists
-        const ctx = nivelEl.getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: hist.labels,
-                datasets: [{
-                    label: <?= json_encode(__('total_tus')) ?>,
-                    data: hist.data,
-                    backgroundColor: hist.values.map(binVals => {
-                        if (binVals.some(v => v < COMPLIANCE_MIN)) return 'rgba(255,193,7,0.8)'; // LOW
-                        if (binVals.some(v => v > COMPLIANCE_MAX)) return 'rgba(220,53,69,0.8)'; // HIGH
-                        return 'rgba(13,110,253,0.8)'; // OK
-                    })
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    title: {
-                        display: true,
-                        text: <?= json_encode(__('tu_histogram') . ' (dBµV)') ?>
-                    },
-                    annotation: {
-                        annotations: {
-                            minLine: {
-                                type: 'line',
-                                xMin: COMPLIANCE_MIN,
-                                xMax: COMPLIANCE_MIN,
-                                borderColor: 'yellow',
-                                borderWidth: 2,
-                                label: { content: 'Min', enabled: true, position: 'start' }
-                            },
-                            maxLine: {
-                                type: 'line',
-                                xMin: COMPLIANCE_MAX,
-                                xMax: COMPLIANCE_MAX,
-                                borderColor: 'red',
-                                borderWidth: 2,
-                                label: { content: 'Max', enabled: true, position: 'start' }
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: { beginAtZero: true, title: { display:true, text: <?= json_encode(__('total_tus')) ?> } },
-                    x: { title: { display:true, text: <?= json_encode(__('col_tu_id') . ' (dBµV)') ?> } }
-                }
-            }
-        });
-    }
-});
-</script><script>
 $(document).ready(function() {
     // Initialize DataTable
     $('#detailTable').DataTable({
