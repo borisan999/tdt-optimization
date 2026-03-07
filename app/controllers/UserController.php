@@ -54,7 +54,7 @@ class UserController
             'username' => trim($_POST['username']),
             'email'    => $_POST['email'] ?? null,
             'password' => $_POST['password'] ?? null,
-            'role'     => $_POST['role'] ?? 'engineer',
+            'role'     => in_array($_POST['role'] ?? '', ['admin', 'engineer']) ? $_POST['role'] : 'engineer',
             'is_active'=> $_POST['is_active'] ?? 1,
         ];
         $mode = $_POST['mode'] ?? 'create';

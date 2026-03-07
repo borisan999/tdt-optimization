@@ -11,7 +11,7 @@ include __DIR__ . '/templates/header.php';
 include __DIR__ . '/templates/navbar.php';
 
 $datasetModel = new Dataset();
-$history = $datasetModel->getHistory(); // returns array (may be empty)
+$history = $datasetModel->getHistory(isAdmin() ? null : $_SESSION['user_id']); 
 ?>
 
 <div class="container mt-4">

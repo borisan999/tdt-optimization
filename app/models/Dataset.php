@@ -62,25 +62,41 @@ class Dataset
     }
 
     /**
-     * List all datasets
+     * List all datasets (optionally filtered by user)
      */
-    public function getAll()
+    public function getAll($user_id = null)
     {
+        if ($user_id) {
+            $sql = "SELECT * FROM datasets WHERE uploaded_by = :uid ORDER BY created_at DESC";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(['uid' => $user_id]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         $sql = "SELECT * FROM datasets ORDER BY created_at DESC";
         $stmt = $this->pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Return all datasets for History screen with their latest optimization ID
+     * Return datasets for History screen (optionally filtered by user)
      */
-    public function getHistory()
+    public function getHistory($user_id = null)
     {
+        $where = "";
+        $params = [];
+        if ($user_id) {
+            $where = "WHERE d.uploaded_by = :uid";
+            $params = ['uid' => $user_id];
+        }
+
         $sql = "SELECT d.*, 
                 (SELECT opt_id FROM optimizations WHERE dataset_id = d.dataset_id ORDER BY created_at DESC LIMIT 1) as latest_opt_id
                 FROM datasets d 
+                $where
                 ORDER BY d.created_at DESC";
-        $stmt = $this->pdo->query($sql);
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
