@@ -55,6 +55,12 @@ class InventoryAggregator
 
         foreach ($aptInventory as $piso => $apts) {
             foreach ($apts as $apto => $components) {
+                // Ensure consistent types for quantities to avoid json_encode mismatches
+                foreach ($components as &$c) {
+                    $c['Cantidad'] = (float)$c['Cantidad'];
+                }
+                unset($c);
+
                 // Sort components by name to ensure consistent fingerprint
                 usort($components, fn($a, $b) => strcmp($a['Componente'], $b['Componente']));
                 $fingerprint = json_encode($components);

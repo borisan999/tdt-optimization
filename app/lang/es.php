@@ -483,4 +483,7 @@ return [
     'xls_overall_status' => 'Estado General',
     'xls_pass' => 'PASA',
     'xls_fail' => 'FALLA',
+    'xls_sheet_resumido' => 'Detalle_Resumido',
+    'xls_col_num_tus' => 'Cant. TUs',
+    'xls_col_range' => 'Rango Señal (dBµV)',
 ];

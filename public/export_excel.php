@@ -14,6 +14,8 @@ use app\controllers\ResultsController;
 use app\helpers\ResultParser;
 
 $opt_id = $_GET['opt_id'] ?? null;
+$mode   = $_GET['mode'] ?? 'detail'; // 'detail' or 'resumido'
+
 if (!$opt_id) {
     die('Missing opt_id');
 }
@@ -75,43 +77,74 @@ $allTotals = $aggregatedData['totals'];
 // --------------------------------------------------
 $spreadsheet = new Spreadsheet();
 
-// --- SHEET 1: Detalle_Tomas ---
+// --- SHEET 1: Detail Sheet ---
 $sheet = $spreadsheet->getActiveSheet();
-$sheet->setTitle(__('xls_sheet_detail'));
 
-$DETALLE_TOMAS_COLUMNS = [
-    'Toma', 'Piso', 'Apto', 'Bloque', 'Piso Troncal', 'Piso Entrada Riser Bloque',
-    'Direccion Propagacion', 'Longitud Antena→Troncal (m)', 'Pérdida Antena→Troncal (cable) (dB)',
-    'Pérdida Antena↔Troncal (conectores) (dB)', 'Repartidor Troncal', 'Salidas Troncal',
-    'Pérdida Repartidor Troncal (dB)', 'Feeder Troncal→Entrada Bloque (m)',
-    'Pérdida Feeder (cable) (dB)', 'Pérdida Feeder (conectores) (dB)',
-    'Pérdida Riser dentro del Bloque (dB)', 'Distancia riser dentro bloque (m)',
-    'Riser Atenuacion Cable (dB)', 'Riser Conectores (uds)', 'Riser Atenuacion Conectores (dB)',
-    'Riser Atenuación Taps (dB)', 'Derivador Piso', 'Pérdida Derivador Piso (dB)',
-    'Pérdida Cable Deriv→Rep (dB)', 'Pérdida Conectores Apto (dB)', 'Repartidor Apt',
-    'Pérdida Repartidor Apt (dB)', 'Pérdida Cable Rep→TU (dB)', 'Pérdida Conexión TU (dB)',
-    'Pérdida Total (dB)', 'P_in (entrada) (dBµV)', 'Nivel TU Final (dBµV)',
-    'Distancia total hasta la toma (m)'
-];
+if ($mode === 'resumido') {
+    $sheet->setTitle(__('xls_sheet_resumido'));
+    $headers = [__('xls_col_piso'), __('xls_col_apto'), __('xls_col_num_tus'), __('xls_col_range'), __('xls_overall_status')];
+    $sheet->fromArray($headers, null, 'A1');
 
-$col = 'A';
-foreach ($DETALLE_TOMAS_COLUMNS as $header) {
-    $sheet->setCellValue($col . '1', $header);
-    $col++;
-}
-
-$rowNum = 2;
-foreach ($raw_detail as $tu) {
-    if (!isset($tu['P_in (entrada) (dBµV)'])) {
-        $tu['P_in (entrada) (dBµV)'] = $P_IN;
+    // Group TUs by Apartment
+    $aptGroups = [];
+    foreach ($detail as $tu) {
+        $key = $tu['piso'] . '|' . $tu['apto'];
+        if (!isset($aptGroups[$key])) {
+            $aptGroups[$key] = ['piso' => $tu['piso'], 'apto' => $tu['apto'], 'levels' => [], 'cumple' => true];
+        }
+        $aptGroups[$key]['levels'][] = (float)$tu['nivel_tu'];
+        if (!($tu['cumple'] ?? false)) $aptGroups[$key]['cumple'] = false;
     }
+
+    $rowNum = 2;
+    foreach ($aptGroups as $g) {
+        $minL = min($g['levels']);
+        $maxL = max($g['levels']);
+        $range = number_format($minL, 1) . ' - ' . number_format($maxL, 1);
+        
+        $sheet->setCellValue('A' . $rowNum, $g['piso']);
+        $sheet->setCellValue('B' . $rowNum, $g['apto']);
+        $sheet->setCellValue('C' . $rowNum, count($g['levels']));
+        $sheet->setCellValue('D' . $rowNum, $range);
+        $sheet->setCellValue('E' . $rowNum, $g['cumple'] ? __('xls_pass') : __('xls_fail'));
+        $rowNum++;
+    }
+} else {
+    $sheet->setTitle(__('xls_sheet_detail'));
+    $DETALLE_TOMAS_COLUMNS = [
+        'Toma', 'Piso', 'Apto', 'Bloque', 'Piso Troncal', 'Piso Entrada Riser Bloque',
+        'Direccion Propagacion', 'Longitud Antena→Troncal (m)', 'Pérdida Antena→Troncal (cable) (dB)',
+        'Pérdida Antena↔Troncal (conectores) (dB)', 'Repartidor Troncal', 'Salidas Troncal',
+        'Pérdida Repartidor Troncal (dB)', 'Feeder Troncal→Entrada Bloque (m)',
+        'Pérdida Feeder (cable) (dB)', 'Pérdida Feeder (conectores) (dB)',
+        'Pérdida Riser dentro del Bloque (dB)', 'Distancia riser dentro bloque (m)',
+        'Riser Atenuacion Cable (dB)', 'Riser Conectores (uds)', 'Riser Atenuacion Conectores (dB)',
+        'Riser Atenuación Taps (dB)', 'Derivador Piso', 'Pérdida Derivador Piso (dB)',
+        'Pérdida Cable Deriv→Rep (dB)', 'Pérdida Conectores Apto (dB)', 'Repartidor Apt',
+        'Pérdida Repartidor Apt (dB)', 'Pérdida Cable Rep→TU (dB)', 'Pérdida Conexión TU (dB)',
+        'Pérdida Total (dB)', 'P_in (entrada) (dBµV)', 'Nivel TU Final (dBµV)',
+        'Distancia total hasta la toma (m)'
+    ];
+
     $col = 'A';
-    foreach ($DETALLE_TOMAS_COLUMNS as $colName) {
-        $value = $tu[$colName] ?? '';
-        $sheet->setCellValueExplicit($col . $rowNum, $value, is_numeric($value) ? DataType::TYPE_NUMERIC : DataType::TYPE_STRING);
+    foreach ($DETALLE_TOMAS_COLUMNS as $header) {
+        $sheet->setCellValue($col . '1', $header);
         $col++;
     }
-    $rowNum++;
+
+    $rowNum = 2;
+    foreach ($raw_detail as $tu) {
+        if (!isset($tu['P_in (entrada) (dBµV)'])) {
+            $tu['P_in (entrada) (dBµV)'] = $P_IN;
+        }
+        $col = 'A';
+        foreach ($DETALLE_TOMAS_COLUMNS as $colName) {
+            $value = $tu[$colName] ?? '';
+            $sheet->setCellValueExplicit($col . $rowNum, $value, is_numeric($value) ? DataType::TYPE_NUMERIC : DataType::TYPE_STRING);
+            $col++;
+        }
+        $rowNum++;
+    }
 }
 
 // --- SHEET 2: Vertical Distribution ---
@@ -270,7 +303,7 @@ $spreadsheet->setActiveSheetIndex(0);
 // --------------------------------------------------
 // 4. Output
 // --------------------------------------------------
-$filename = "tdt_export_{$safe_name}_opt_{$opt_id}.xlsx";
+$filename = "tdt_export_{$safe_name}_opt_{$opt_id}" . ($mode === 'resumido' ? "_resumido" : "") . ".xlsx";
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Cache-Control: max-age=0');

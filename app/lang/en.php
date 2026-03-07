@@ -485,4 +485,7 @@ return [
     'xls_overall_status' => 'Overall Status',
     'xls_pass' => 'PASS',
     'xls_fail' => 'FAIL',
+    'xls_sheet_resumido' => 'Summary_Detail',
+    'xls_col_num_tus' => 'Outlet Qty',
+    'xls_col_range' => 'Signal Range (dBµV)',
 ];

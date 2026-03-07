@@ -179,6 +179,16 @@ $isInventoryAvailable = $canonicalAvailable;
                        <i class="fas fa-file-excel me-1"></i> <?= __('export_xlsx') ?>
                     </a>
                     <a class="btn btn-outline-success btn-sm"
+                       href="export_excel.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&mode=detail"
+                       title="<?= __('xls_sheet_detail') ?>">
+                       <i class="fas fa-table me-1"></i> <?= __('xls_sheet_detail') ?>
+                    </a>
+                    <a class="btn btn-outline-success btn-sm"
+                       href="export_excel.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&mode=resumido"
+                       title="<?= __('xls_sheet_resumido') ?>">
+                       <i class="fas fa-list-alt me-1"></i> <?= __('xls_sheet_resumido') ?>
+                    </a>
+                    <a class="btn btn-outline-success btn-sm"
                        href="export_csv.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&type=detail"
                        title="<?= __('export_tu_csv') ?>">
                        <i class="fas fa-file-csv me-1"></i> <?= __('export_tu_csv') ?>
