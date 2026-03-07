@@ -147,126 +147,129 @@ if ($mode === 'resumido') {
     }
 }
 
-// --- SHEET 2: Vertical Distribution ---
-$verticalSheet = $spreadsheet->createSheet();
-$verticalSheet->setTitle(__('xls_sheet_vertical'));
-$verticalSheet->fromArray([__('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity'), __('xls_col_obs')], null, 'A1');
-$row = 2;
-foreach ($categorizedInventory['Vertical Distribution'] as $item) {
-    $verticalSheet->setCellValue('A' . $row, $item['Scope']);
-    $verticalSheet->setCellValue('B' . $row, $item['Tipo']);
-    $verticalSheet->setCellValue('C' . $row, $item['Componente']);
-    $verticalSheet->setCellValue('D' . $row, $item['Unidad']);
-    $verticalSheet->setCellValue('E' . $row, $item['Cantidad']);
-    $verticalSheet->setCellValue('F' . $row, $item['Observación']);
-    $row++;
-}
-$row++;
-$totalRowStart = $row;
-foreach ($allTotals['Vertical Distribution'] as $totalItem) {
-    $verticalSheet->setCellValue('A' . $row, __('xls_total'));
-    $verticalSheet->setCellValue('B' . $row, __('xls_dist_vertical'));
-    $verticalSheet->setCellValue('C' . $row, $totalItem['Tipo']);
-    $verticalSheet->setCellValue('D' . $row, $totalItem['Componente']);
-    $verticalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
-    $verticalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
-    $row++;
-}
-$verticalSheet->getStyle('A' . $totalRowStart . ':F' . ($row - 1))->getFont()->setBold(true);
-
-// --- SHEET 3: Horizontal Distribution ---
-$horizontalSheet = $spreadsheet->createSheet();
-$horizontalSheet->setTitle(__('xls_sheet_horizontal'));
-$horizontalSheet->fromArray([__('xls_col_piso'), __('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity'), __('xls_col_obs')], null, 'A1');
-$row = 2;
-ksort($categorizedInventory['Horizontal Distribution']);
-foreach ($categorizedInventory['Horizontal Distribution'] as $piso => $items) {
-    foreach ($items as $item) {
-        $horizontalSheet->setCellValue('A' . $row, $piso);
-        $horizontalSheet->setCellValue('B' . $row, $item['Scope']);
-        $horizontalSheet->setCellValue('C' . $row, $item['Tipo']);
-        $horizontalSheet->setCellValue('D' . $row, $item['Componente']);
-        $horizontalSheet->setCellValue('E' . $row, $item['Unidad']);
-        $horizontalSheet->setCellValue('F' . $row, $item['Cantidad']);
-        $horizontalSheet->setCellValue('G' . $row, $item['Observación']);
+// Only include inventory sheets in 'detail' mode
+if ($mode !== 'resumido') {
+    // --- SHEET 2: Vertical Distribution ---
+    $verticalSheet = $spreadsheet->createSheet();
+    $verticalSheet->setTitle(__('xls_sheet_vertical'));
+    $verticalSheet->fromArray([__('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity'), __('xls_col_obs')], null, 'A1');
+    $row = 2;
+    foreach ($categorizedInventory['Vertical Distribution'] as $item) {
+        $verticalSheet->setCellValue('A' . $row, $item['Scope']);
+        $verticalSheet->setCellValue('B' . $row, $item['Tipo']);
+        $verticalSheet->setCellValue('C' . $row, $item['Componente']);
+        $verticalSheet->setCellValue('D' . $row, $item['Unidad']);
+        $verticalSheet->setCellValue('E' . $row, $item['Cantidad']);
+        $verticalSheet->setCellValue('F' . $row, $item['Observación']);
         $row++;
     }
     $row++;
-    $subtotalRowStart = $row;
-    if (isset($allTotals['Horizontal Floor Subtotals'][$piso])) {
-        foreach ($allTotals['Horizontal Floor Subtotals'][$piso] as $totalItem) {
-            $horizontalSheet->setCellValue('A' . $row, __('xls_subtotal', ['piso' => $piso]));
-            $horizontalSheet->setCellValue('B' . $row, $totalItem['Scope']);
-            $horizontalSheet->setCellValue('C' . $row, $totalItem['Tipo']);
-            $horizontalSheet->setCellValue('D' . $row, $totalItem['Componente']);
-            $horizontalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
-            $horizontalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
+    $totalRowStart = $row;
+    foreach ($allTotals['Vertical Distribution'] as $totalItem) {
+        $verticalSheet->setCellValue('A' . $row, __('xls_total'));
+        $verticalSheet->setCellValue('B' . $row, __('xls_dist_vertical'));
+        $verticalSheet->setCellValue('C' . $row, $totalItem['Tipo']);
+        $verticalSheet->setCellValue('D' . $row, $totalItem['Componente']);
+        $verticalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
+        $verticalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
+        $row++;
+    }
+    $verticalSheet->getStyle('A' . $totalRowStart . ':F' . ($row - 1))->getFont()->setBold(true);
+
+    // --- SHEET 3: Horizontal Distribution ---
+    $horizontalSheet = $spreadsheet->createSheet();
+    $horizontalSheet->setTitle(__('xls_sheet_horizontal'));
+    $horizontalSheet->fromArray([__('xls_col_piso'), __('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity'), __('xls_col_obs')], null, 'A1');
+    $row = 2;
+    ksort($categorizedInventory['Horizontal Distribution']);
+    foreach ($categorizedInventory['Horizontal Distribution'] as $piso => $items) {
+        foreach ($items as $item) {
+            $horizontalSheet->setCellValue('A' . $row, $piso);
+            $horizontalSheet->setCellValue('B' . $row, $item['Scope']);
+            $horizontalSheet->setCellValue('C' . $row, $item['Tipo']);
+            $horizontalSheet->setCellValue('D' . $row, $item['Componente']);
+            $horizontalSheet->setCellValue('E' . $row, $item['Unidad']);
+            $horizontalSheet->setCellValue('F' . $row, $item['Cantidad']);
+            $horizontalSheet->setCellValue('G' . $row, $item['Observación']);
+            $row++;
+        }
+        $row++;
+        $subtotalRowStart = $row;
+        if (isset($allTotals['Horizontal Floor Subtotals'][$piso])) {
+            foreach ($allTotals['Horizontal Floor Subtotals'][$piso] as $totalItem) {
+                $horizontalSheet->setCellValue('A' . $row, __('xls_subtotal', ['piso' => $piso]));
+                $horizontalSheet->setCellValue('B' . $row, $totalItem['Scope']);
+                $horizontalSheet->setCellValue('C' . $row, $totalItem['Tipo']);
+                $horizontalSheet->setCellValue('D' . $row, $totalItem['Componente']);
+                $horizontalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
+                $horizontalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
+                $row++;
+            }
+        }
+        $horizontalSheet->getStyle('A' . $subtotalRowStart . ':G' . ($row - 1))->getFont()->setBold(true);
+        $row++;
+    }
+    $row++;
+    $globalTotalRowStart = $row;
+    foreach ($allTotals['Horizontal Distribution'] as $totalItem) {
+        $horizontalSheet->setCellValue('A' . $row, __('xls_total'));
+        $horizontalSheet->setCellValue('B' . $row, __('xls_dist_horizontal'));
+        $horizontalSheet->setCellValue('C' . $row, $totalItem['Tipo']);
+        $horizontalSheet->setCellValue('D' . $row, $totalItem['Componente']);
+        $horizontalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
+        $horizontalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
+        $row++;
+    }
+    $horizontalSheet->getStyle('A' . $globalTotalRowStart . ':G' . ($row - 1))->getFont()->setBold(true);
+
+    // --- SHEET 4: Apartment Interior ---
+    $apartmentSheet = $spreadsheet->createSheet();
+    $apartmentSheet->setTitle(__('xls_sheet_apartment'));
+    $apartmentSheet->fromArray([__('xls_col_location'), __('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity'), __('xls_col_obs')], null, 'A1');
+    $row = 2;
+    $groupedApts = $categorizedInventory['Grouped Apartment Interior'] ?? [];
+    foreach ($groupedApts as $group) {
+        foreach ($group['Components'] as $item) {
+            $apartmentSheet->setCellValue('A' . $row, $group['Location']);
+            $apartmentSheet->setCellValue('B' . $row, $item['Scope']);
+            $apartmentSheet->setCellValue('C' . $row, $item['Tipo']);
+            $apartmentSheet->setCellValue('D' . $row, $item['Componente']);
+            $apartmentSheet->setCellValue('E' . $row, $item['Unidad']);
+            $apartmentSheet->setCellValue('F' . $row, $item['Cantidad']);
+            $apartmentSheet->setCellValue('G' . $row, $item['Observación']);
             $row++;
         }
     }
-    $horizontalSheet->getStyle('A' . $subtotalRowStart . ':G' . ($row - 1))->getFont()->setBold(true);
     $row++;
-}
-$row++;
-$globalTotalRowStart = $row;
-foreach ($allTotals['Horizontal Distribution'] as $totalItem) {
-    $horizontalSheet->setCellValue('A' . $row, __('xls_total'));
-    $horizontalSheet->setCellValue('B' . $row, __('xls_dist_horizontal'));
-    $horizontalSheet->setCellValue('C' . $row, $totalItem['Tipo']);
-    $horizontalSheet->setCellValue('D' . $row, $totalItem['Componente']);
-    $horizontalSheet->setCellValue('E' . $row, $totalItem['Unidad']);
-    $horizontalSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
-    $row++;
-}
-$horizontalSheet->getStyle('A' . $globalTotalRowStart . ':G' . ($row - 1))->getFont()->setBold(true);
-
-// --- SHEET 4: Apartment Interior ---
-$apartmentSheet = $spreadsheet->createSheet();
-$apartmentSheet->setTitle(__('xls_sheet_apartment'));
-$apartmentSheet->fromArray([__('xls_col_location'), __('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity'), __('xls_col_obs')], null, 'A1');
-$row = 2;
-$groupedApts = $categorizedInventory['Grouped Apartment Interior'] ?? [];
-foreach ($groupedApts as $group) {
-    foreach ($group['Components'] as $item) {
-        $apartmentSheet->setCellValue('A' . $row, $group['Location']);
-        $apartmentSheet->setCellValue('B' . $row, $item['Scope']);
-        $apartmentSheet->setCellValue('C' . $row, $item['Tipo']);
-        $apartmentSheet->setCellValue('D' . $row, $item['Componente']);
-        $apartmentSheet->setCellValue('E' . $row, $item['Unidad']);
-        $apartmentSheet->setCellValue('F' . $row, $item['Cantidad']);
-        $apartmentSheet->setCellValue('G' . $row, $item['Observación']);
+    $globalTotalRowStart = $row;
+    foreach ($allTotals['Apartment Interior'] as $totalItem) {
+        $apartmentSheet->setCellValue('A' . $row, __('xls_total'));
+        $apartmentSheet->setCellValue('B' . $row, __('xls_dist_apartment'));
+        $apartmentSheet->setCellValue('C' . $row, $totalItem['Tipo']);
+        $apartmentSheet->setCellValue('D' . $row, $totalItem['Componente']);
+        $apartmentSheet->setCellValue('E' . $row, $totalItem['Unidad']);
+        $apartmentSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
         $row++;
     }
-}
-$row++;
-$globalTotalRowStart = $row;
-foreach ($allTotals['Apartment Interior'] as $totalItem) {
-    $apartmentSheet->setCellValue('A' . $row, __('xls_total'));
-    $apartmentSheet->setCellValue('B' . $row, __('xls_dist_apartment'));
-    $apartmentSheet->setCellValue('C' . $row, $totalItem['Tipo']);
-    $apartmentSheet->setCellValue('D' . $row, $totalItem['Componente']);
-    $apartmentSheet->setCellValue('E' . $row, $totalItem['Unidad']);
-    $apartmentSheet->setCellValue('F' . $row, $totalItem['Cantidad']);
-    $row++;
-}
-$apartmentSheet->getStyle('A' . $globalTotalRowStart . ':H' . ($row - 1))->getFont()->setBold(true);
+    $apartmentSheet->getStyle('A' . $globalTotalRowStart . ':H' . ($row - 1))->getFont()->setBold(true);
 
-// --- SHEET 5: Grand Total ---
-$grandTotalSheet = $spreadsheet->createSheet();
-$grandTotalSheet->setTitle(__('xls_sheet_grand_total'));
-$grandTotalSheet->fromArray([__('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity')], null, 'A1');
-$row = 2;
-foreach ($allTotals['Grand Total'] as $totalItem) {
-    $grandTotalSheet->setCellValue('A' . $row, $totalItem['Scope']);
-    $grandTotalSheet->setCellValue('B' . $row, $totalItem['Tipo']);
-    $grandTotalSheet->setCellValue('C' . $row, $totalItem['Componente']);
-    $grandTotalSheet->setCellValue('D' . $row, $totalItem['Unidad']);
-    $grandTotalSheet->setCellValue('E' . $row, $totalItem['Cantidad']);
-    $row++;
+    // --- SHEET 5: Grand Total ---
+    $grandTotalSheet = $spreadsheet->createSheet();
+    $grandTotalSheet->setTitle(__('xls_sheet_grand_total'));
+    $grandTotalSheet->fromArray([__('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity')], null, 'A1');
+    $row = 2;
+    foreach ($allTotals['Grand Total'] as $totalItem) {
+        $grandTotalSheet->setCellValue('A' . $row, $totalItem['Scope']);
+        $grandTotalSheet->setCellValue('B' . $row, $totalItem['Tipo']);
+        $grandTotalSheet->setCellValue('C' . $row, $totalItem['Componente']);
+        $grandTotalSheet->setCellValue('D' . $row, $totalItem['Unidad']);
+        $grandTotalSheet->setCellValue('E' . $row, $totalItem['Cantidad']);
+        $row++;
+    }
+    $grandTotalSheet->getStyle('A2:E' . ($row - 1))->getFont()->setBold(true);
 }
-$grandTotalSheet->getStyle('A2:E' . ($row - 1))->getFont()->setBold(true);
 
-// --- SHEET 6: Resumen_Ingenieria ---
+// --- SHEET 6: Resumen_Ingenieria (Always included) ---
 $summarySheet = $spreadsheet->createSheet();
 $summarySheet->setTitle(__('xls_sheet_summary'));
 

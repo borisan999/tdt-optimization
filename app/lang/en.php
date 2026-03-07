@@ -488,4 +488,6 @@ return [
     'xls_sheet_resumido' => 'Summary_Detail',
     'xls_col_num_tus' => 'Outlet Qty',
     'xls_col_range' => 'Signal Range (dBµV)',
+    'xls_btn_detail' => 'Full Detail',
+    'xls_btn_resumido' => 'Summary Detail',
 ];

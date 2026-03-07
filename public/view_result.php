@@ -180,13 +180,13 @@ $isInventoryAvailable = $canonicalAvailable;
                     </a>
                     <a class="btn btn-outline-success btn-sm"
                        href="export_excel.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&mode=detail"
-                       title="<?= __('xls_sheet_detail') ?>">
-                       <i class="fas fa-table me-1"></i> <?= __('xls_sheet_detail') ?>
+                       title="<?= __('xls_btn_detail') ?>">
+                       <i class="fas fa-table me-1"></i> <?= __('xls_btn_detail') ?>
                     </a>
                     <a class="btn btn-outline-success btn-sm"
                        href="export_excel.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&mode=resumido"
-                       title="<?= __('xls_sheet_resumido') ?>">
-                       <i class="fas fa-list-alt me-1"></i> <?= __('xls_sheet_resumido') ?>
+                       title="<?= __('xls_btn_resumido') ?>">
+                       <i class="fas fa-list-alt me-1"></i> <?= __('xls_btn_resumido') ?>
                     </a>
                     <a class="btn btn-outline-success btn-sm"
                        href="export_csv.php?opt_id=<?= urlencode($viewModel->meta['opt_id'] ?? 0) ?>&type=detail"

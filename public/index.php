@@ -170,15 +170,19 @@ elseif ($path === '/' || $path === '' || $path === '/dashboard') {
     require_once __DIR__ . '/results_tree.php';
 }
 elseif ($path === '/export_input_excel.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/export_input_excel.php';
 }
 elseif ($path === '/export_excel.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/export_excel.php';
 }
 elseif ($path === '/export_csv.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/export_csv.php';
 }
 elseif ($path === '/export_docx.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/export_docx.php';
 }
 elseif ($path === '/optimization-logs' || $path === '/optimization-logs.php') {

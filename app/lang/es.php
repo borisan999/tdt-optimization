@@ -486,4 +486,6 @@ return [
     'xls_sheet_resumido' => 'Detalle_Resumido',
     'xls_col_num_tus' => 'Cant. TUs',
     'xls_col_range' => 'Rango Señal (dBµV)',
+    'xls_btn_detail' => 'Detalle Completo',
+    'xls_btn_resumido' => 'Detalle Resumido',
 ];
