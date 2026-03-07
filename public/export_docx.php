@@ -152,9 +152,19 @@ if ($mode === 'report') {
     $kpiTable->addCell()->addText('Cumplimiento Normativo (%)');
     $kpiTable->addCell()->addText("{$pct}%", ['bold' => true, 'color' => $pct >= 100 ? '00B050' : 'FF0000']);
 
+    // Extract frequencies from input keys if they follow the standard naming
+    $freqs = [];
+    foreach ($inputs as $key => $val) {
+        if (preg_match('/atenuacion_cable_(\d+)mhz/i', $key, $m)) {
+            $freqs[] = $m[1];
+        }
+    }
+    sort($freqs);
+    $freqStr = !empty($freqs) ? implode(' / ', $freqs) : "470 / 698";
+
     $kpiTable->addRow();
     $kpiTable->addCell()->addText('Frecuencias de Análisis (MHz)');
-    $kpiTable->addCell()->addText("470 / 698", ['bold' => true]);
+    $kpiTable->addCell()->addText($freqStr, ['bold' => true]);
 
     $kpiTable->addRow();
     $kpiTable->addCell()->addText('Nivel Mínimo Detectado (dBµV)');
