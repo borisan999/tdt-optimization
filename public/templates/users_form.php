@@ -32,6 +32,14 @@
         <input type="password" name="password">
     </div>
 
+    <div class="form-group">
+        <label>Role</label>
+        <select name="role" required>
+            <option value="engineer" <?= ($user['role'] ?? 'engineer') === 'engineer' ? 'selected' : '' ?>>Engineer</option>
+            <option value="admin" <?= ($user['role'] ?? '') === 'admin' ? 'selected' : '' ?>>Admin</option>
+        </select>
+    </div>
+
     <div class="form-actions">
         <button type="submit" class="btn-primary">
             Guardar

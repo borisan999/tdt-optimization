@@ -8,6 +8,7 @@
     <thead>
         <tr>
             <th><?= __('username') ?></th>
+            <th>Rol</th>
             <th><?= __('action') ?></th>
         </tr>
     </thead>
@@ -15,6 +16,13 @@
         <?php foreach ($users as $u): ?>
             <tr>
                 <td><?= htmlspecialchars($u['username']) ?></td>
+                <td>
+                    <?php if (($u['role'] ?? 'engineer') === 'admin'): ?>
+                        <span class="badge bg-danger">Admin</span>
+                    <?php else: ?>
+                        <span class="badge bg-secondary">Engineer</span>
+                    <?php endif; ?>
+                </td>
                 <td>
                     <a href="/tdt-optimization/users?action=edit&id=<?= (int)$u['user_id'] ?>"
                        class="btn-small">

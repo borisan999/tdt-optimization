@@ -15,7 +15,7 @@ class UserModel
     {
         return $this->pdo
             ->query(
-                'SELECT user_id, username, email, is_active
+                'SELECT user_id, username, email, is_active, role
                 FROM users
                 WHERE is_active = 1
                 ORDER BY username'
@@ -27,7 +27,7 @@ class UserModel
     {
         return $this->pdo
             ->query(
-                'SELECT user_id, username, email, is_active
+                'SELECT user_id, username, email, is_active, role
                 FROM users
                 ORDER BY username'
             )
@@ -38,7 +38,7 @@ class UserModel
     public function getById(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT user_id, username, email, is_active FROM users WHERE user_id = :id'
+            'SELECT user_id, username, email, is_active, role FROM users WHERE user_id = :id'
         );
         $stmt->execute(['id' => $id]);
         return $stmt->fetch() ?: null;
@@ -47,8 +47,8 @@ class UserModel
     public function insert(array $data): void
     {
         $sql = "
-            INSERT INTO users (username, email, password_hash, is_active)
-            VALUES (:username, :email, :password_hash, :is_active)
+            INSERT INTO users (username, email, password_hash, is_active, role)
+            VALUES (:username, :email, :password_hash, :is_active, :role)
         ";
 
         $stmt = $this->pdo->prepare($sql);
@@ -58,6 +58,7 @@ class UserModel
             ':email'         => $data['email'] ?? null,
             ':password_hash' => password_hash($data['password'], PASSWORD_DEFAULT),
             ':is_active'     => 1,
+            ':role'          => $data['role'] ?? 'engineer',
         ]);
     }
 
@@ -68,12 +69,14 @@ class UserModel
             'username = :username',
             'email = :email',
             'is_active = :is_active',
+            'role = :role',
         ];
 
         $params = [
             ':username'  => $data['username'],
             ':email'     => $data['email'] ?? null,
             ':is_active' => $data['is_active'] ?? 1,
+            ':role'      => $data['role'] ?? 'engineer',
             ':user_id'   => $data['user_id'],
         ];
 
