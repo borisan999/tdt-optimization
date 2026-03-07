@@ -1,7 +1,7 @@
 <footer class="app-footer">
     <div class="container">
         <small>
-            © <?php echo date('Y'); ?> TDT Optimization
+            © <?php echo date('Y'); ?> TDT Optimization | 1.3 beta
         </small>
     </div>
 </footer>

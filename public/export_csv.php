@@ -76,6 +76,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../app/controllers/ResultsController.php';
+require_once __DIR__ . '/../app/auth/require_login.php';
 use app\helpers\InventoryAggregator;
 use app\controllers\ResultsController;
 
@@ -86,6 +87,10 @@ if ($opt_id <= 0) {
     http_response_code(400);
     die('opt_id is required');
 }
+
+$db = new Database();
+$pdo = $db->getConnection();
+ensureResultAccess($opt_id, $pdo);
 
 $allowed = ['inputs', 'detail', 'inventory'];
 if (!in_array($type, $allowed, true)) {

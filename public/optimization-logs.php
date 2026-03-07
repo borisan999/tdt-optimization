@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../app/auth/require_login.php';
-
+if (!isAdmin()) {
+    header('Location: /tdt-optimization/dashboard?error=admin_only');
+    exit;
+}
 $logDir = '/var/www/html/storage/optimization_logs';
 $files = [];
 

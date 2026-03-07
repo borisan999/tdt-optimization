@@ -1,6 +1,10 @@
 <?php
 // public/general_params.php
 require_once __DIR__ . '/../app/auth/require_login.php';
+if (!isAdmin()) {
+    header('Location: /tdt-optimization/dashboard?error=admin_only');
+    exit;
+}
 require_once __DIR__ . '/../app/config/db.php';
 require_once __DIR__ . '/../app/models/GeneralParams.php';
 

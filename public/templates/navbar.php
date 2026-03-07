@@ -4,7 +4,9 @@
         <a href="enter-data"><?= __('enter_data') ?></a>
         <a href="history"><?= __('history') ?></a>
         <a href="template-generator"><?= __('template_generator') ?></a>
-        <a href="configurations"><?= __('configurations') ?></a>
+        <?php if (isAdmin()): ?>
+            <a href="configurations"><?= __('configurations') ?></a>
+        <?php endif; ?>
     </div>
     <div class="d-flex align-items-center me-3">
         <div class="lang-switcher me-3">

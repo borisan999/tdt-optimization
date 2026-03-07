@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace app\controllers;
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../auth/require_login.php';
 require_once __DIR__ . '/../helpers/ResultParser.php';
 require_once __DIR__ . '/../services/ResultComplianceService.php';
 require_once __DIR__ . '/../viewmodels/ResultViewModel.php';
@@ -28,6 +29,10 @@ class ResultsController
     public function execute(): array
     {
         try {
+            $DB  = new \Database();
+            $pdo = $DB->getConnection();
+            ensureResultAccess($this->opt_id, $pdo);
+
             // STEP 0.2 — Validation & Fetching
             $resultId = $this->opt_id;
             if (!$resultId) {

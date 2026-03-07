@@ -60,8 +60,14 @@ class DatasetController
     private function listDatasets()
     {
         try {
-            $datasetModel = new Dataset();
-            $datasets = $datasetModel->getAll();
+            if (($_SESSION['role'] ?? 'admin') === 'admin') {
+                $datasetModel = new Dataset();
+                $datasets = $datasetModel->getAll();
+            } else {
+                $stmt = $this->pdo->prepare("SELECT dataset_id, dataset_name, status, created_at FROM datasets WHERE uploaded_by = :uid ORDER BY created_at DESC");
+                $stmt->execute(['uid' => $_SESSION['user_id']]);
+                $datasets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
             $this->jsonResponse(['success' => true, 'datasets' => $datasets]);
         } catch (Exception $e) {
             $this->jsonResponse(['success' => false, 'message' => 'Failed to list datasets'], 500);
@@ -73,6 +79,7 @@ class DatasetController
      */
     private function getDataset(int $datasetId)
     {
+        ensureDatasetAccess($datasetId, $this->pdo);
         $stmt = $this->pdo->prepare("SELECT canonical_json, dataset_name FROM datasets WHERE dataset_id = :id");
         $stmt->execute(['id' => $datasetId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -105,6 +112,9 @@ class DatasetController
             $jsonInput = json_decode(file_get_contents('php://input'), true) ?? [];
             
             $dataset_id = $jsonInput['dataset_id'] ?? $_POST['dataset_id'] ?? null;
+            if ($dataset_id) {
+                ensureDatasetAccess((int)$dataset_id, $this->pdo);
+            }
             $canonical  = $jsonInput['canonical'] ?? $_POST['canonical'] ?? null;
             $dataset_name = $jsonInput['dataset_name'] ?? $_POST['dataset_name'] ?? null;
 
@@ -171,6 +181,7 @@ class DatasetController
 
     private function runPython(int $datasetId)
     {
+        ensureDatasetAccess($datasetId, $this->pdo);
         $canonicalJson = '';
         $optId = null;
         $pythonResult = null;
@@ -426,12 +437,7 @@ class DatasetController
 
     private function deleteDataset(int $datasetId)
     {
-        // Basic auth check, should be improved with roles if needed
-        if (!isset($_SESSION['user_id'])) {
-            header("Location: /login");
-            exit;
-        }
-
+        ensureDatasetAccess($datasetId, $this->pdo);
         if ($datasetId > 0) {
             try {
                 // The database schema uses ON DELETE CASCADE,
@@ -462,6 +468,7 @@ class DatasetController
 
     public function getHistory(int $datasetId)
     {
+        ensureDatasetAccess($datasetId, $this->pdo);
         try {
             $stmt = $this->pdo->prepare("
                 SELECT o.opt_id, o.status, o.started_at, o.finished_at, r.result_id, (r.result_id IS NOT NULL) AS has_result, r.summary_json, o.created_at AS optimization_created_at
@@ -484,6 +491,7 @@ class DatasetController
 
     public function getResult(int $optId)
     {
+        ensureResultAccess($optId, $this->pdo);
         try {
             $stmt = $this->pdo->prepare("SELECT result_id, opt_id, dataset_id, summary_json, detail_json, inputs_json, meta_json, created_at FROM results WHERE opt_id = :opt_id LIMIT 1");
             $stmt->execute(['opt_id' => $optId]);

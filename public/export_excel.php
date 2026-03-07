@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../app/config/db.php";
 require_once __DIR__ . "/../vendor/autoload.php";
+require_once __DIR__ . "/../app/auth/require_login.php";
 require_once __DIR__ . "/../app/controllers/ResultsController.php";
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -16,6 +17,10 @@ $opt_id = $_GET['opt_id'] ?? null;
 if (!$opt_id) {
     die('Missing opt_id');
 }
+
+$db = new Database();
+$pdo = $db->getConnection();
+ensureResultAccess((int)$opt_id, $pdo);
 
 // --------------------------------------------------
 // 1. Load result via Controller (Modern way)

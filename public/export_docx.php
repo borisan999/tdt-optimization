@@ -14,6 +14,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/config/db.php';
+require_once __DIR__ . '/../app/auth/require_login.php';
 require_once __DIR__ . '/../app/helpers/InventoryAggregator.php';
 require_once __DIR__ . '/../app/helpers/ResultParser.php';
 require_once __DIR__ . '/../app/services/CanonicalMapperService.php';
@@ -38,6 +39,8 @@ if ($opt_id <= 0) {
 // --------------------------------------------------
 $db  = new Database();
 $pdo = $db->getConnection();
+
+ensureResultAccess($opt_id, $pdo);
 
 // --------------------------------------------------
 // Load results

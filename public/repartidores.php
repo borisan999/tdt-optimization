@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/../app/auth/require_login.php';
+if (!isAdmin()) {
+    header('Location: /tdt-optimization/dashboard?error=admin_only');
+    exit;
+}
 include __DIR__ . '/templates/header.php';
 include __DIR__ . '/templates/navbar.php';
 

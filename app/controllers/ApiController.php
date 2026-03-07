@@ -6,6 +6,7 @@ error_reporting(E_ALL);
 ini_set('serialize_precision', -1);
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../auth/require_login.php";
 require_once __DIR__ . "/../models/Dataset.php"; 
 require_once __DIR__ . "/../helpers/ExcelProcessor.php";
 require_once __DIR__ . "/../services/CanonicalValidator.php";
@@ -75,6 +76,10 @@ class ApiController
 
     private function deleteLog()
     {
+        if (!isAdmin()) {
+            header('Location: /optimization-logs?error=Forbidden');
+            exit;
+        }
         $filename = $_POST['filename'] ?? '';
         $logDir = realpath(__DIR__ . '/../../storage/optimization_logs');
 
@@ -96,6 +101,10 @@ class ApiController
 
     private function deleteAllLogs()
     {
+        if (!isAdmin()) {
+            header('Location: /optimization-logs?error=Forbidden');
+            exit;
+        }
         $logDir = realpath(__DIR__ . '/../../storage/optimization_logs');
         $files = glob($logDir . '/*.log');
 
@@ -150,7 +159,7 @@ class ApiController
             // Persistence
             $dataset_name = $input['project_name'] ?? 'Template Dataset';
             $datasetModel = new Dataset();
-            $uploadedBy = $_SESSION['user_id'] ?? 3;
+            $uploadedBy = (int)$_SESSION['user_id'];
             $datasetId = $datasetModel->createWithCanonical($canonical, $uploadedBy, 'pending', $dataset_name);
 
             $this->jsonResponse(true, ['dataset_id' => (int)$datasetId, 'message' => 'Dataset generated and saved successfully']);
@@ -237,7 +246,7 @@ class ApiController
 
             // 2. Normalization occurs inside createWithCanonical in the Model
             $datasetModel = new Dataset();
-            $uploadedBy = $_SESSION['user_id'] ?? 3; // Fallback to confirmed valid user
+            $uploadedBy = (int)$_SESSION['user_id'];
             $datasetId = $datasetModel->createWithCanonical($canonical, $uploadedBy, 'pending', $dataset_name);
 
             $this->jsonResponse(true, ['dataset_id' => (int)$datasetId, 'message' => 'Dataset created successfully']);
@@ -251,6 +260,9 @@ class ApiController
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $datasetId = $input['dataset_id'] ?? null;
+        if ($datasetId) {
+            ensureDatasetAccess((int)$datasetId, $this->pdo);
+        }
         $parameters = $input['parameters'] ?? null;
 
         if (!$datasetId || !is_numeric($datasetId) || !is_array($parameters)) {
@@ -313,7 +325,7 @@ class ApiController
 
             // 4. Persistence (Normalization -> JSON -> Hash -> Store)
             $datasetModel = new Dataset();
-            $uploadedBy = $_SESSION['user_id'] ?? 3; // Fallback to a confirmed valid user_id if session is empty
+            $uploadedBy = (int)$_SESSION['user_id']; // Fallback to a confirmed valid user_id if session is empty
             $datasetId = $datasetModel->createWithCanonical($normalized, $uploadedBy, 'pending', $dataset_name);
 
             $this->jsonResponse(true, ['dataset_id' => (int)$datasetId]);
@@ -349,11 +361,35 @@ class ApiController
 
     private function getOptimizationHistory()
     {
+        $datasetId = $_GET['dataset_id'] ?? null;
+        if ($datasetId) {
+            ensureDatasetAccess((int)$datasetId, $this->pdo);
+        }
         try {
             $limit = (int)($_GET['limit'] ?? 20);
-            $stmt = $this->pdo->prepare("SELECT opt_id, created_at, dataset_id, parameters_json, status FROM optimizations ORDER BY created_at DESC LIMIT ?");
+            
+            if (isAdmin()) {
+                $sql = "SELECT o.opt_id, o.created_at, o.dataset_id, o.parameters_json, o.status 
+                        FROM optimizations o 
+                        ORDER BY o.created_at DESC LIMIT ?";
+                $stmt = $this->pdo->prepare($sql);
+            } else {
+                $sql = "SELECT o.opt_id, o.created_at, o.dataset_id, o.parameters_json, o.status 
+                        FROM optimizations o 
+                        JOIN datasets d ON o.dataset_id = d.dataset_id
+                        WHERE d.uploaded_by = ?
+                        ORDER BY o.created_at DESC LIMIT ?";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->bindValue(1, $_SESSION['user_id'], PDO::PARAM_INT);
+                $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+                $stmt->execute();
+                goto process_rows;
+            }
+
             $stmt->bindValue(1, $limit, PDO::PARAM_INT);
             $stmt->execute();
+
+            process_rows:
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($rows as &$row) {
                 $row['parameters'] = json_decode($row['parameters_json'], true);
@@ -367,6 +403,7 @@ class ApiController
 
     private function getOptimizationDetail(int $optId)
     {
+        ensureResultAccess($optId, $this->pdo);
         try {
             $stmt = $this->pdo->prepare("SELECT o.*, r.summary_json, r.detail_json FROM optimizations o LEFT JOIN results r ON o.opt_id = r.opt_id WHERE o.opt_id = ?");
             $stmt->execute([$optId]);
@@ -385,6 +422,7 @@ class ApiController
 
     private function deleteOptimization(int $optId)
     {
+        ensureResultAccess($optId, $this->pdo);
         try {
             $stmt = $this->pdo->prepare("DELETE FROM optimizations WHERE opt_id = ?");
             $stmt->execute([$optId]);

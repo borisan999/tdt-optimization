@@ -11,6 +11,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/config/db.php';
+require_once __DIR__ . '/../app/auth/require_login.php';
 require_once __DIR__ . '/../app/config/AppConfig.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -28,9 +29,9 @@ try {
 
     $DB = new Database();
     $pdo = $DB->getConnection();
-    $filename_id = '';
 
     if ($dataset_id > 0) {
+        ensureDatasetAccess($dataset_id, $pdo);
         // Fetch canonical_json directly from the dataset
         $sql = "SELECT canonical_json, dataset_name FROM datasets WHERE dataset_id = :dataset_id";
         $st = $pdo->prepare($sql);
@@ -39,6 +40,7 @@ try {
         $jsonData = $row['canonical_json'] ?? '';
         $filename_id = "dataset_{$dataset_id}";
     } else {
+        ensureResultAccess($opt_id, $pdo);
         // Fetch inputs_json from the result of an optimization
         $sql = "
             SELECT r.inputs_json, d.dataset_name 
