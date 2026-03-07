@@ -10,8 +10,6 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . "/../app/auth/session.php";
 require_once __DIR__ . "/../app/config/db.php";
-require_once __DIR__ . "/../app/controllers/DatasetController.php";
-require_once __DIR__ . "/../app/controllers/ApiController.php";
 
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $path = strtok($requestUri, '?');
@@ -109,65 +107,66 @@ if ($path === '/api/test') {
 }
 
 if (str_starts_with($path, '/api/')) {
+    require_once __DIR__ . "/../app/controllers/ApiController.php";
     $controller = new ApiController();
     $controller->handleRequest($path);
 } 
 // Dataset and Result routes - trailing slashes avoid matching results.php
 elseif (str_starts_with($path, '/dataset/') || str_starts_with($path, '/result/')) {
+    require_once __DIR__ . "/../app/controllers/DatasetController.php";
     $controller = new DatasetController();
     $controller->handleRequest($path);
-}
+} 
 // Page routes
 elseif ($path === '/' || $path === '' || $path === '/dashboard') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/dashboard.php';
-}
-elseif ($path === '/login' || $path === '/login.php') {
+} elseif ($path === '/login' || $path === '/login.php') {
     require_once __DIR__ . '/login.php';
-}
-elseif ($path === '/logout' || $path === '/logout.php') {
+} elseif ($path === '/logout' || $path === '/logout.php') {
     require_once __DIR__ . '/logout.php';
-}
-elseif (preg_match('/^\/enter-data\/(\d+)$/', $path, $matches)) {
+} elseif (preg_match('/^\/enter-data\/(\d+)$/', $path, $matches)) {
     $_GET['dataset_id'] = $matches[1];
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/enter_data.php';
-}
-elseif ($path === '/enter-data' || $path === '/enter_data.php') {
+} elseif ($path === '/enter-data' || $path === '/enter_data.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/enter_data.php';
-}
-elseif ($path === '/history' || $path === '/history.php') {
+} elseif ($path === '/history' || $path === '/history.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/history.php';
-}
-elseif ($path === '/template-generator' || $path === '/template_generator.php') {
+} elseif ($path === '/template-generator' || $path === '/template_generator.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/template_generator.php';
-}
-elseif ($path === '/configurations' || $path === '/configurations.php') {
+} elseif ($path === '/configurations' || $path === '/configurations.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/configurations.php';
-}
-elseif ($path === '/general-params' || $path === '/general_params.php') {
+} elseif ($path === '/general-params' || $path === '/general_params.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/general_params.php';
-}
-elseif ($path === '/derivadores' || $path === '/derivadores.php') {
+} elseif ($path === '/derivadores' || $path === '/derivadores.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/derivadores.php';
-}
-elseif ($path === '/repartidores' || $path === '/repartidores.php') {
+} elseif ($path === '/repartidores' || $path === '/repartidores.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/repartidores.php';
-}
-elseif ($path === '/users' || $path === '/users.php') {
+} elseif ($path === '/users' || $path === '/users.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/users.php';
-}
-elseif (preg_match('/^\/view-dataset\/(\d+)$/', $path, $matches)) {
+} elseif (preg_match('/^\/view-dataset\/(\d+)$/', $path, $matches)) {
     $_GET['id'] = $matches[1];
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/view_dataset.php';
-}
-elseif (preg_match('/^\/view-result\/(\d+)$/', $path, $matches)) {
+} elseif (preg_match('/^\/view-result\/(\d+)$/', $path, $matches)) {
     $_GET['opt_id'] = $matches[1];
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/view_result.php';
-}
-elseif (preg_match('/^\/results-tree\/(\d+)$/', $path, $matches)) {
+} elseif (preg_match('/^\/results-tree\/(\d+)$/', $path, $matches)) {
     $_GET['opt_id'] = $matches[1];
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/results_tree.php';
-}
-elseif ($path === '/results-tree' || $path === '/results_tree.php') {
+} elseif ($path === '/results-tree' || $path === '/results_tree.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/results_tree.php';
 }
 elseif ($path === '/export_input_excel.php') {
@@ -183,9 +182,11 @@ elseif ($path === '/export_docx.php') {
     require_once __DIR__ . '/export_docx.php';
 }
 elseif ($path === '/optimization-logs' || $path === '/optimization-logs.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/optimization-logs.php';
 }
 elseif ($path === '/optimization-logs-view' || $path === '/optimization-logs-view.php') {
+    require_once __DIR__ . '/../app/auth/require_login.php';
     require_once __DIR__ . '/optimization-logs-view.php';
 }
 else {
