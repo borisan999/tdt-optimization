@@ -8,6 +8,7 @@ app/config/env.php
 ast.dump
 *.log
 *.sql
+!migrations/*.sql
 *.sqlite
 *.pyc
 /__pycache__/
