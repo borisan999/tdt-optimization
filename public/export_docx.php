@@ -399,7 +399,9 @@ if ($mode === 'report') {
 // --------------------------------------------------
 // Output
 // --------------------------------------------------
-$filename = ($mode === 'report' ? "Memoria_Tecnica_" : "Engineering_Report_") . "{$safe_name}_{$opt_id}.docx";
+$prefix = ($mode === 'report' ? __('report_title') : __('eng_report_title'));
+$prefix = str_replace(' ', '_', $prefix) . "_";
+$filename = "{$prefix}{$safe_name}_{$opt_id}.docx";
 
 header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 header('Content-Disposition: attachment; filename="' . $filename . '"');

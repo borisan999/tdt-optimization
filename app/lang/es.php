@@ -419,10 +419,10 @@ return [
     'report_compliance_statement' => 'Se certifica que el diseño técnico de la red de distribución TDT presentado en este documento ha sido validado mediante modelos de optimización determinísticos. Los resultados confirman que la totalidad de los puntos de entrega proyectados se encuentran dentro de los rangos de operación técnica requeridos para una recepción de señal de alta calidad.',
     
     // Engineering Report
-    'eng_report_title' => 'TDT DISTRIBUTION NETWORK',
-    'eng_report_subtitle' => 'ENGINEERING OPTIMIZATION REPORT',
-    'eng_header_info' => 'TDT Network Optimization Report — Opt ID {id}',
-    'eng_generated_at' => 'Generated: {date}',
+    'eng_report_title' => 'RED DE DISTRIBUCIÓN TDT',
+    'eng_report_subtitle' => 'REPORTE DE OPTIMIZACIÓN DE INGENIERÍA',
+    'eng_header_info' => 'Reporte de Optimización de Red TDT — Opt ID {id}',
+    'eng_generated_at' => 'Generado: {date}',
     'eng_notes_title' => 'Notas de Ingeniería y Supuestos del Modelo:',
     'eng_notes_footer' => 'Estas notas no invalidan los resultados de ingeniería, pero indican datos inferidos o asumidos.',
     'eng_col_opt_id' => 'ID de Optimización',
