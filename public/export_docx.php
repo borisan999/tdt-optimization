@@ -153,6 +153,10 @@ if ($mode === 'report') {
     $kpiTable->addCell()->addText("{$pct}%", ['bold' => true, 'color' => $pct >= 100 ? '00B050' : 'FF0000']);
 
     $kpiTable->addRow();
+    $kpiTable->addCell()->addText('Frecuencias de Análisis (MHz)');
+    $kpiTable->addCell()->addText("470 / 698", ['bold' => true]);
+
+    $kpiTable->addRow();
     $kpiTable->addCell()->addText('Nivel Mínimo Detectado (dBµV)');
     $kpiTable->addCell()->addText(number_format((float)($summary["min_nivel_tu"] ?? 0), 2));
 
