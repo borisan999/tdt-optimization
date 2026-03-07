@@ -6,6 +6,7 @@ error_reporting(E_ALL);
 ini_set('serialize_precision', -1);
 
 require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../auth/require_login.php";
 require_once __DIR__ . "/../models/Dataset.php";
 require_once __DIR__ . "/../models/Result.php";
 require_once __DIR__ . "/../services/CanonicalValidator.php";
