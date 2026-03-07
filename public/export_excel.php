@@ -77,38 +77,116 @@ $allTotals = $aggregatedData['totals'];
 // --------------------------------------------------
 $spreadsheet = new Spreadsheet();
 
-// --- SHEET 1: Detail Sheet ---
+// --- SHEET 1: Data Sheet ---
 $sheet = $spreadsheet->getActiveSheet();
 
 if ($mode === 'resumido') {
     $sheet->setTitle(__('xls_sheet_resumido'));
-    $headers = [__('xls_col_piso'), __('xls_col_apto'), __('xls_col_num_tus'), __('xls_col_range'), __('xls_overall_status')];
+    
+    $headers = [
+        'Toma',
+        'distancia total hasta la toma',
+        'atenuacion por el cable a 0.2dB',
+        'atenuación por el cable a 470MHz',
+        'atenuacion por el cable a 698MHz',
+        'total de conectores hasta la toma',
+        'atenuacion total conectores hasta la toma',
+        'pérdida por repartidor troncal',
+        'pérdida por derivacion de piso (incluyendo atenuaciones de paso)',
+        'pérdida repartidor apartamento',
+        'pérdida toma',
+        'pérdida total a 0.2dB',
+        'pérdida total a 470MHz',
+        'pérdida total a 698MHz',
+        'Nivel de señal a 0.2dB',
+        'Nivel de señal a 470MHz',
+        'Nivel de señal a 698MHz'
+    ];
     $sheet->fromArray($headers, null, 'A1');
 
-    // Group TUs by Apartment
-    $aptGroups = [];
-    foreach ($detail as $tu) {
-        $key = $tu['piso'] . '|' . $tu['apto'];
-        if (!isset($aptGroups[$key])) {
-            $aptGroups[$key] = ['piso' => $tu['piso'], 'apto' => $tu['apto'], 'levels' => [], 'cumple' => true];
-        }
-        $aptGroups[$key]['levels'][] = (float)$tu['nivel_tu'];
-        if (!($tu['cumple'] ?? false)) $aptGroups[$key]['cumple'] = false;
-    }
+    // Get multipliers from inputs
+    $at_02  = 0.2;
+    $at_470 = (float)($inputs['atenuacion_cable_470mhz'] ?? 0.127);
+    $at_698 = (float)($inputs['atenuacion_cable_698mhz'] ?? 0.1558);
+    $at_conn = (float)($inputs['atenuacion_conector'] ?? 0.2);
 
     $rowNum = 2;
-    foreach ($aptGroups as $g) {
-        $minL = min($g['levels']);
-        $maxL = max($g['levels']);
-        $range = number_format($minL, 1) . ' - ' . number_format($maxL, 1);
+    foreach ($raw_detail as $tu) {
+        $dist = (float)($tu['Distancia total hasta la toma (m)'] ?? 0);
         
-        $sheet->setCellValue('A' . $rowNum, $g['piso']);
-        $sheet->setCellValue('B' . $rowNum, $g['apto']);
-        $sheet->setCellValue('C' . $rowNum, count($g['levels']));
-        $sheet->setCellValue('D' . $rowNum, $range);
-        $sheet->setCellValue('E' . $rowNum, $g['cumple'] ? __('xls_pass') : __('xls_fail'));
+        // Cable losses
+        $c_02  = round($dist * $at_02, 2);
+        $c_470 = round($dist * $at_470, 2);
+        $c_698 = round($dist * $at_698, 2);
+
+        // Connectors
+        // Calculated as: (Antena↔Troncal) + (Feeder) + (Riser) + (Apto) + (Conexión TU)
+        // Note: some are uds, some are dB. We need uds.
+        // If not available in uds, we infer from dB / at_conn
+        $conn_uds = (int)($tu['Riser Conectores (uds)'] ?? 0);
+        $conn_uds += 2; // Antena-Troncal
+        $conn_uds += 2; // Feeder
+        $conn_uds += 2; // Apto (Deriv-Rep)
+        $conn_uds += 2; // Apto (Rep-TU)
+        $conn_uds += 1; // TU connection
+        
+        $conn_loss = round($conn_uds * $at_conn, 2);
+
+        // Passive losses
+        $loss_troncal = (float)($tu['Pérdida Repartidor Troncal (dB)'] ?? 0);
+        
+        // Derivacion piso includes: (Riser Taps if any) + (Derivador Piso) + (Paso attenuations from previous floors)
+        // In the detail, 'Pérdida Riser dentro del Bloque (dB)' usually includes the pass losses.
+        // 'Pérdida Derivador Piso (dB)' is the specific deriv loss.
+        $loss_piso = (float)($tu['Pérdida Riser dentro del Bloque (dB)'] ?? 0) + (float)($tu['Pérdida Derivador Piso (dB)'] ?? 0);
+        
+        $loss_apto = (float)($tu['Pérdida Repartidor Apt (dB)'] ?? 0);
+        $loss_toma = (float)($tu['Pérdida Conexión TU (dB)'] ?? 1.0);
+
+        // Total losses per scenario
+        // Total = Cable + Conn + Troncal + Piso + Apto
+        // Note: loss_toma is already in conn_uds? usually yes. 
+        // Let's follow client example logic if possible. 
+        // Total Loss = c_X + conn_loss + loss_troncal + loss_piso + loss_apto
+        $base_passives = $loss_troncal + $loss_piso + $loss_apto; // without cable/conn
+        
+        $tot_02  = round($c_02 + $conn_loss + $base_passives, 2);
+        $tot_470 = round($c_470 + $conn_loss + $base_passives, 2);
+        $tot_698 = round($c_698 + $conn_loss + $base_passives, 2);
+
+        // Signal levels
+        $niv_02  = round($P_IN - $tot_02, 2);
+        $niv_470 = round($P_IN - $tot_470, 2);
+        $niv_698 = round($P_IN - $tot_698, 2);
+
+        $rowData = [
+            $tu['Toma'],
+            $dist,
+            $c_02,
+            $c_470,
+            $c_698,
+            $conn_uds,
+            $conn_loss,
+            $loss_troncal,
+            $loss_piso,
+            $loss_apto,
+            $loss_toma,
+            $tot_02,
+            $tot_470,
+            $tot_698,
+            $niv_02,
+            $niv_470,
+            $niv_698
+        ];
+
+        $sheet->fromArray($rowData, null, 'A' . $rowNum);
         $rowNum++;
     }
+    
+    foreach (range('A', 'Q') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
 } else {
     $sheet->setTitle(__('xls_sheet_detail'));
     $DETALLE_TOMAS_COLUMNS = [
