@@ -31,11 +31,71 @@ class InventoryAggregator
     {
         $this->processDetailForAggregation();
         $this->calculateGlobalTotals();
-        $this->calculateScopeSummaries(); // New step
+        $this->calculateScopeSummaries();
+        $this->groupIdenticalApartments(); // New step for Task 2.2
         return [
             'inventory' => $this->aggregatedInventory,
             'totals'    => $this->allTotals,
         ];
+    }
+
+    /**
+     * Groups apartments with identical components across floors.
+     * Result stored in $this->aggregatedInventory['Grouped Apartment Interior']
+     */
+    private function groupIdenticalApartments(): void
+    {
+        $grouped = [];
+        $aptInventory = $this->aggregatedInventory['Apartment Interior'];
+
+        // 1. Collect all identical apartments regardless of floor
+        // key: JSON representation of components
+        // val: list of [floor, apto]
+        $fingerprints = [];
+
+        foreach ($aptInventory as $piso => $apts) {
+            foreach ($apts as $apto => $components) {
+                // Sort components by name to ensure consistent fingerprint
+                usort($components, fn($a, $b) => strcmp($a['Componente'], $b['Componente']));
+                $fingerprint = json_encode($components);
+                
+                if (!isset($fingerprints[$fingerprint])) {
+                    $fingerprints[$fingerprint] = [
+                        'components' => $components,
+                        'locations' => []
+                    ];
+                }
+                $fingerprints[$fingerprint]['locations'][] = ['piso' => $piso, 'apto' => $apto];
+            }
+        }
+
+        // 2. Format locations into readable strings (e.g., "Pisos 1-5, Aptos 1,2")
+        foreach ($fingerprints as $data) {
+            $locations = $data['locations'];
+            
+            // Group by floor range
+            $byFloor = [];
+            foreach ($locations as $loc) {
+                $byFloor[$loc['piso']][] = $loc['apto'];
+            }
+            ksort($byFloor);
+
+            $locationStrings = [];
+            // Simplified grouping: if all floors have same apartments, group floors
+            // For now, let's just list them clearly
+            foreach ($byFloor as $piso => $apts) {
+                sort($apts);
+                $aptStr = implode(', ', $apts);
+                $locationStrings[] = "Piso $piso (Aptos $aptStr)";
+            }
+
+            $grouped[] = [
+                'Location' => implode('; ', $locationStrings),
+                'Components' => $data['components']
+            ];
+        }
+
+        $this->aggregatedInventory['Grouped Apartment Interior'] = $grouped;
     }
 
     private function calculateScopeSummaries(): void

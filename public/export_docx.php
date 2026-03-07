@@ -353,20 +353,18 @@ if ($mode === 'report') {
 
     // Sección: Interior de Apartamentos
     $section->addText(__('eng_apt_int_title'), ['bold' => true, 'size' => 12]);
-    ksort($categorizedInventory['Apartment Interior']);
-    foreach ($categorizedInventory['Apartment Interior'] as $piso => $apts) {
-        ksort($apts);
-        foreach ($apts as $apto => $items) {
-            $section->addText(__('eng_apt_label', ['piso' => $piso, 'apto' => $apto]), ['bold' => true, 'italic' => true]);
-            $iTable = $section->addTable(['borderSize' => 6, 'cellMargin' => 80, 'width' => 100*50, 'unit' => 'pct']);
+    $groupedApts = $categorizedInventory['Grouped Apartment Interior'] ?? [];
+    
+    foreach ($groupedApts as $group) {
+        $section->addText($group['Location'], ['bold' => true, 'italic' => true]);
+        $iTable = $section->addTable(['borderSize' => 6, 'cellMargin' => 80, 'width' => 100*50, 'unit' => 'pct']);
+        $iTable->addRow();
+        foreach([__('eng_col_type'),__('eng_col_component'),__('eng_col_unit'),__('eng_col_qty'),__('eng_col_obs')] as $h) { $iTable->addCell()->addText($h, ['bold' => true]); }
+        foreach ($group['Components'] as $item) {
             $iTable->addRow();
-            foreach([__('eng_col_type'),__('eng_col_component'),__('eng_col_unit'),__('eng_col_qty'),__('eng_col_obs')] as $h) { $iTable->addCell()->addText($h, ['bold' => true]); }
-            foreach ($items as $item) {
-                $iTable->addRow();
-                foreach(['Tipo','Componente','Unidad','Cantidad','Observación'] as $k) { $iTable->addCell()->addText((string)($item[$k] ?? '')); }
-            }
-            $section->addTextBreak(1);
+            foreach(['Tipo','Componente','Unidad','Cantidad','Observación'] as $k) { $iTable->addCell()->addText((string)($item[$k] ?? '')); }
         }
+        $section->addTextBreak(1);
     }
 
     $section->addPageBreak();

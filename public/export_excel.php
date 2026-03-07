@@ -190,23 +190,19 @@ $horizontalSheet->getStyle('A' . $globalTotalRowStart . ':G' . ($row - 1))->getF
 // --- SHEET 4: Apartment Interior ---
 $apartmentSheet = $spreadsheet->createSheet();
 $apartmentSheet->setTitle(__('xls_sheet_apartment'));
-$apartmentSheet->fromArray([__('xls_col_piso'), __('xls_col_apto'), __('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity'), __('xls_col_obs')], null, 'A1');
+$apartmentSheet->fromArray([__('xls_col_location'), __('xls_col_scope'), __('xls_col_type'), __('xls_col_component'), __('xls_col_unit'), __('xls_col_quantity'), __('xls_col_obs')], null, 'A1');
 $row = 2;
-ksort($categorizedInventory['Apartment Interior']);
-foreach ($categorizedInventory['Apartment Interior'] as $piso => $apts) {
-    ksort($apts);
-    foreach ($apts as $apto => $items) {
-        foreach ($items as $item) {
-            $apartmentSheet->setCellValue('A' . $row, $piso);
-            $apartmentSheet->setCellValue('B' . $row, $apto);
-            $apartmentSheet->setCellValue('C' . $row, $item['Scope']);
-            $apartmentSheet->setCellValue('D' . $row, $item['Tipo']);
-            $apartmentSheet->setCellValue('E' . $row, $item['Componente']);
-            $apartmentSheet->setCellValue('F' . $row, $item['Unidad']);
-            $apartmentSheet->setCellValue('G' . $row, $item['Cantidad']);
-            $apartmentSheet->setCellValue('H' . $row, $item['Observación']);
-            $row++;
-        }
+$groupedApts = $categorizedInventory['Grouped Apartment Interior'] ?? [];
+foreach ($groupedApts as $group) {
+    foreach ($group['Components'] as $item) {
+        $apartmentSheet->setCellValue('A' . $row, $group['Location']);
+        $apartmentSheet->setCellValue('B' . $row, $item['Scope']);
+        $apartmentSheet->setCellValue('C' . $row, $item['Tipo']);
+        $apartmentSheet->setCellValue('D' . $row, $item['Componente']);
+        $apartmentSheet->setCellValue('E' . $row, $item['Unidad']);
+        $apartmentSheet->setCellValue('F' . $row, $item['Cantidad']);
+        $apartmentSheet->setCellValue('G' . $row, $item['Observación']);
+        $row++;
     }
 }
 $row++;

@@ -468,6 +468,7 @@ return [
     'xls_col_obs' => 'Observación',
     'xls_col_piso' => 'Piso',
     'xls_col_apto' => 'Apto',
+    'xls_col_location' => 'Ubicación',
     'xls_total' => 'TOTAL',
     'xls_subtotal' => 'SUBTOTAL PISO {piso}',
     'xls_dist_vertical' => 'DISTRIBUCIÓN VERTICAL',
