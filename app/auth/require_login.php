@@ -18,13 +18,13 @@ function ensureDatasetAccess(int $datasetId, PDO $pdo): void {
         return;
     }
 
-    $stmt = $pdo->prepare(\"SELECT uploaded_by FROM datasets WHERE dataset_id = :id\");
+    $stmt = $pdo->prepare("SELECT uploaded_by FROM datasets WHERE dataset_id = :id");
     $stmt->execute(['id' => $datasetId]);
     $dataset = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$dataset || (int)$dataset['uploaded_by'] !== (int)$_SESSION['user_id']) {
         http_response_code(403);
-        die(\"Access Denied: You do not have permission to access this dataset.\");
+        die("Access Denied: You do not have permission to access this dataset.");
     }
 }
 
@@ -38,18 +38,18 @@ function ensureResultAccess(int $optId, PDO $pdo): void {
         return;
     }
 
-    $stmt = $pdo->prepare(\"
+    $stmt = $pdo->prepare("
         SELECT d.uploaded_by 
         FROM results r
         JOIN datasets d ON r.dataset_id = d.dataset_id
         WHERE r.opt_id = :id
-    \");
+    ");
     $stmt->execute(['id' => $optId]);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$result || (int)$result['uploaded_by'] !== (int)$_SESSION['user_id']) {
         http_response_code(403);
-        die(\"Access Denied: You do not have permission to access this result.\");
+        die("Access Denied: You do not have permission to access this result.");
     }
 }
 
