@@ -117,28 +117,31 @@ include __DIR__ . '/templates/navbar.php';
 
             <!-- Floor Repetition Utility -->
             <div class="card shadow-sm mb-4 border-start border-4 border-warning">
-                <div class="card-header bg-white">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#repetitionCollapse">
                     <h5 class="mb-0 fw-bold text-warning"><i class="fas fa-copy me-2"></i> <?= __('repetition_title') ?></h5>
+                    <i class="fas fa-chevron-down text-warning"></i>
                 </div>
-                <div class="card-body">
-                    <p class="small text-muted"><?= __('repetition_desc') ?></p>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold"><?= __('source_floor') ?></label>
-                            <input type="number" name="sourceFloorId" class="form-control form-control-sm" placeholder="e.g. 1" title="<?= __('source_floor_tooltip') ?>">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold"><?= __('target_start') ?></label>
-                            <input type="number" name="targetStartFloor" class="form-control form-control-sm" placeholder="e.g. 2" title="<?= __('target_start_floor_tooltip') ?>">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold"><?= __('target_end') ?></label>
-                            <input type="number" name="targetEndFloor" class="form-control form-control-sm" placeholder="e.g. 10" title="<?= __('target_end_floor_tooltip') ?>">
-                        </div>
-                        <div class="col-md-3">
-                            <button type="button" id="applyRepetitionBtn" class="btn btn-warning btn-sm w-100 fw-bold">
-                                <i class="fas fa-magic"></i> <?= __('apply_range_btn') ?>
-                            </button>
+                <div id="repetitionCollapse" class="collapse">
+                    <div class="card-body">
+                        <p class="small text-muted"><?= __('repetition_desc') ?></p>
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold"><?= __('source_floor') ?></label>
+                                <input type="number" name="sourceFloorId" class="form-control form-control-sm" placeholder="e.g. 1" title="<?= __('source_floor_tooltip') ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold"><?= __('target_start') ?></label>
+                                <input type="number" name="targetStartFloor" class="form-control form-control-sm" placeholder="e.g. 2" title="<?= __('target_start_floor_tooltip') ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold"><?= __('target_end') ?></label>
+                                <input type="number" name="targetEndFloor" class="form-control form-control-sm" placeholder="e.g. 10" title="<?= __('target_end_floor_tooltip') ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" id="applyRepetitionBtn" class="btn btn-warning btn-sm w-100 fw-bold">
+                                    <i class="fas fa-magic"></i> <?= __('apply_range_btn') ?>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
