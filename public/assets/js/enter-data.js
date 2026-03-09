@@ -150,6 +150,7 @@ function addApartmentRow(piso = '', apto = '', tus = '', deriv = '') {
     if (!apartmentsBody) return;
     const newRowHtml = `
         <tr>
+            <td class="row-counter text-center align-middle small text-muted"></td>
             <td><input type="number" name="piso[]" class="form-control form-control-sm validate-field" data-field="piso" value="${piso}" required title="${__('col_piso_tooltip')}"></td>
             <td><input type="number" name="apartamento[]" class="form-control form-control-sm validate-field" data-field="apartamento" value="${apto}" required title="${__('col_apto_tooltip')}"></td>
             <td><input type="number" name="tus_requeridos[]" class="form-control form-control-sm validate-field" data-field="tus_requeridos" value="${tus}" title="${__('col_tus_tooltip')}" required></td>
@@ -169,6 +170,7 @@ function addTuRow(piso = '', apto = '', idx = '', len = '') {
     if (!tuBody) return;
     const newRowHtml = `
         <tr>
+            <td class="row-counter text-center align-middle small text-muted"></td>
             <td><input type="number" name="tu_piso[]" class="form-control form-control-sm validate-field" data-field="piso" value="${piso}" required title="${__('col_piso_tooltip')}"></td>
             <td><input type="number" name="tu_apartamento[]" class="form-control form-control-sm validate-field" data-field="apartamento" value="${apto}" required title="${__('col_apto_tooltip')}"></td>
             <td><input type="number" name="tu_index[]" class="form-control form-control-sm validate-field" data-field="tu_index" value="${idx}" required title="${__('col_tu_idx_tooltip')}"></td>

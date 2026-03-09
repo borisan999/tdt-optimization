@@ -5,6 +5,31 @@ include __DIR__ . '/templates/header.php';
 include __DIR__ . '/templates/navbar.php';
 
 ?>
+<style>
+    /* Automatic Row Numbering using CSS Counters */
+    .custom-numbered-table {
+        counter-reset: rowNumber;
+    }
+    .custom-numbered-table tbody tr {
+        counter-increment: rowNumber;
+    }
+    .custom-numbered-table tbody tr td.row-counter::before {
+        content: counter(rowNumber);
+        font-weight: bold;
+        color: #6c757d;
+    }
+    
+    /* Custom Zebra Striping: Alternating White and Light Blue */
+    .table-striped > tbody > tr:nth-of-type(odd) > * {
+        background-color: #ffffff !important;
+    }
+    .table-striped > tbody > tr:nth-of-type(even) > * {
+        background-color: #f0f7ff !important; /* Very light blue */
+    }
+    .table-hover > tbody > tr:hover > * {
+        background-color: #e2f0ff !important; /* Slightly darker blue on hover */
+    }
+</style>
 <main class="container mt-4 mb-5">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -131,9 +156,10 @@ include __DIR__ . '/templates/navbar.php';
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive" style="max-height: 500px;">
-                                <table class="table table-hover table-striped table-bordered table-sm mb-0" id="apartmentsTable">
+                                <table class="table table-hover table-striped table-bordered table-sm mb-0 custom-numbered-table" id="apartmentsTable">
                                     <thead class="table-light sticky-top">
                                         <tr>
+                                            <th style="width: 40px;">#</th>
                                             <th><?= __('col_piso') ?></th>
                                             <th><?= __('col_apto') ?></th>
                                             <th><?= __('col_tus') ?></th>
@@ -158,9 +184,10 @@ include __DIR__ . '/templates/navbar.php';
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive" style="max-height: 500px;">
-                                <table class="table table-hover table-striped table-bordered table-sm mb-0" id="tuTable">
+                                <table class="table table-hover table-striped table-bordered table-sm mb-0 custom-numbered-table" id="tuTable">
                                     <thead class="table-light sticky-top">
                                         <tr>
+                                            <th style="width: 40px;">#</th>
                                             <th><?= __('col_piso') ?></th>
                                             <th><?= __('col_apto') ?></th>
                                             <th><?= __('col_tu_idx') ?></th>
