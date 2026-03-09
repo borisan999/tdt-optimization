@@ -49,8 +49,6 @@ class InventoryAggregator
         $aptInventory = $this->aggregatedInventory['Apartment Interior'];
 
         // 1. Collect all identical apartments regardless of floor
-        // key: JSON representation of components
-        // val: list of [floor, apto]
         $fingerprints = [];
 
         foreach ($aptInventory as $piso => $apts) {
@@ -71,28 +69,54 @@ class InventoryAggregator
                         'locations' => []
                     ];
                 }
-                $fingerprints[$fingerprint]['locations'][] = ['piso' => $piso, 'apto' => $apto];
+                $fingerprints[$fingerprint]['locations'][] = ['piso' => (int)$piso, 'apto' => (int)$apto];
             }
         }
 
-        // 2. Format locations into readable strings (e.g., "Pisos 1-5, Aptos 1,2")
+        // 2. Advanced Location Grouping: Group floors that share the SAME set of apartment numbers
         foreach ($fingerprints as $data) {
             $locations = $data['locations'];
             
-            // Group by floor range
+            // Map: Apartment String (e.g. "1,2,3") -> List of Floors
+            $aptsToFloors = [];
+            
+            // First group by exact floor
             $byFloor = [];
             foreach ($locations as $loc) {
                 $byFloor[$loc['piso']][] = $loc['apto'];
             }
-            ksort($byFloor);
+            
+            foreach ($byFloor as $piso => $aptList) {
+                sort($aptList);
+                $aptKey = implode(',', $aptList);
+                $aptsToFloors[$aptKey][] = $piso;
+            }
 
             $locationStrings = [];
-            // Simplified grouping: if all floors have same apartments, group floors
-            // For now, let's just list them clearly
-            foreach ($byFloor as $piso => $apts) {
-                sort($apts);
-                $aptStr = implode(', ', $apts);
-                $locationStrings[] = "Piso $piso (Aptos $aptStr)";
+            foreach ($aptsToFloors as $aptKey => $floors) {
+                sort($floors);
+                
+                // Compress floors into ranges (e.g. 1,2,3,5,6 -> "1-3, 5-6")
+                $ranges = [];
+                if (!empty($floors)) {
+                    $start = $floors[0];
+                    $prev = $floors[0];
+                    
+                    for ($i = 1; $i < count($floors); $i++) {
+                        if ($floors[$i] == $prev + 1) {
+                            $prev = $floors[$i];
+                        } else {
+                            $ranges[] = ($start == $prev) ? (string)$start : "$start-$prev";
+                            $start = $floors[$i];
+                            $prev = $floors[$i];
+                        }
+                    }
+                    $ranges[] = ($start == $prev) ? (string)$start : "$start-$prev";
+                }
+                
+                $floorStr = (count($ranges) > 1 || str_contains($ranges[0], '-')) ? "Pisos " : "Piso ";
+                $floorStr .= implode(', ', $ranges);
+                $locationStrings[] = "$floorStr (Aptos $aptKey)";
             }
 
             $grouped[] = [
