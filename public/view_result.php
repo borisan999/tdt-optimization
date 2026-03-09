@@ -674,6 +674,7 @@ $isInventoryAvailable = $canonicalAvailable;
     </div>
     <?php endif; ?>
 
+    <?php if (isAdmin()): ?>
     <hr class="my-5">
 
     <!-- ADVANCED ENGINEERING DATA (Collapsed by default) -->
@@ -690,65 +691,67 @@ $isInventoryAvailable = $canonicalAvailable;
                 <div class="card-body">
                     <?php
                     // Function to render all inputs structurally
-                    function renderStructuredInputs($data) {
-                        foreach ($data as $key => $value) {
-                            echo "<h6 class='mt-3 mb-2 fw-bold text-secondary'>" . htmlspecialchars((string)$key) . "</h6>";
+                    if (!function_exists('renderStructuredInputs')) {
+                        function renderStructuredInputs($data) {
+                            foreach ($data as $key => $value) {
+                                echo "<h6 class='mt-3 mb-2 fw-bold text-secondary'>" . htmlspecialchars((string)$key) . "</h6>";
 
-                            if (is_array($value)) {
-                                $isTuTable = false;
+                                if (is_array($value)) {
+                                    $isTuTable = false;
 
-                                if (count($value) > 0) {
-                                    $firstKey = (string)array_keys($value)[0];
-                                    if (preg_match('/^\(\d+,\d+,\d+\)$/', $firstKey) || preg_match('/^\d+\|\d+\|\d+$/', $firstKey)) {
-                                        $isTuTable = true;
-                                    }
-                                }
-
-                                if ($isTuTable) {
-                                    echo '<table class="table table-sm table-bordered mb-2 small">';
-                                    echo '<thead><tr><th>' . __('col_piso') . '</th><th>' . __('col_apto') . '</th><th>' . __('col_tu_index') . '</th><th>' . __('col_value_m') . '</th></tr></thead><tbody>';
-                                    foreach ($value as $tuple => $v) {
-                                        $parts = preg_split('/[,|]/', trim((string)$tuple, '()'));
-                                        echo '<tr>';
-                                        echo '<td>' . htmlspecialchars($parts[0] ?? '?') . '</td>';
-                                        echo '<td>' . htmlspecialchars($parts[1] ?? '?') . '</td>';
-                                        echo '<td>' . htmlspecialchars($parts[2] ?? '?') . '</td>';
-                                        echo '<td>' . htmlspecialchars((string)$v) . '</td>';
-                                        echo '</tr>';
-                                    }
-                                    echo '</tbody></table>';
-                                } else {
-                                    $firstRow = reset($value);
-                                    if (is_array($firstRow) || is_object($firstRow)) {
-                                        $firstRow = (array)$firstRow;
-                                        echo '<table class="table table-sm table-bordered mb-2 small">';
-                                        echo '<thead><tr>';
-                                        foreach ($firstRow as $col => $_) {
-                                            echo '<th>' . htmlspecialchars((string)$col) . '</th>';
+                                    if (count($value) > 0) {
+                                        $firstKey = (string)array_keys($value)[0];
+                                        if (preg_match('/^\(\d+,\d+,\d+\)$/', $firstKey) || preg_match('/^\d+\|\d+\|\d+$/', $firstKey)) {
+                                            $isTuTable = true;
                                         }
-                                        echo '</tr></thead><tbody>';
-                                        foreach ($value as $row) {
-                                            $row = (array)$row;
+                                    }
+
+                                    if ($isTuTable) {
+                                        echo '<table class="table table-sm table-bordered mb-2 small">';
+                                        echo '<thead><tr><th>' . __('col_piso') . '</th><th>' . __('col_apto') . '</th><th>' . __('col_tu_index') . '</th><th>' . __('col_value_m') . '</th></tr></thead><tbody>';
+                                        foreach ($value as $tuple => $v) {
+                                            $parts = preg_split('/[,|]/', trim((string)$tuple, '()'));
                                             echo '<tr>';
-                                            foreach ($row as $cell) {
-                                                echo '<td>' . htmlspecialchars((string)$cell) . '</td>';
-                                            }
+                                            echo '<td>' . htmlspecialchars($parts[0] ?? '?') . '</td>';
+                                            echo '<td>' . htmlspecialchars($parts[1] ?? '?') . '</td>';
+                                            echo '<td>' . htmlspecialchars($parts[2] ?? '?') . '</td>';
+                                            echo '<td>' . htmlspecialchars((string)$v) . '</td>';
                                             echo '</tr>';
                                         }
                                         echo '</tbody></table>';
                                     } else {
-                                        echo '<table class="table table-sm table-bordered mb-2 small">';
-                                        echo '<tbody>';
-                                        foreach ($value as $i => $v) {
-                                            echo '<tr><td>' . htmlspecialchars((string)$i) . '</td><td>' . htmlspecialchars((string)$v) . '</td></tr>';
+                                        $firstRow = reset($value);
+                                        if (is_array($firstRow) || is_object($firstRow)) {
+                                            $firstRow = (array)$firstRow;
+                                            echo '<table class="table table-sm table-bordered mb-2 small">';
+                                            echo '<thead><tr>';
+                                            foreach ($firstRow as $col => $_) {
+                                                echo '<th>' . htmlspecialchars((string)$col) . '</th>';
+                                            }
+                                            echo '</tr></thead><tbody>';
+                                            foreach ($value as $row) {
+                                                $row = (array)$row;
+                                                echo '<tr>';
+                                                foreach ($row as $cell) {
+                                                    echo '<td>' . htmlspecialchars((string)$cell) . '</td>';
+                                                }
+                                                echo '</tr>';
+                                            }
+                                            echo '</tbody></table>';
+                                        } else {
+                                            echo '<table class="table table-sm table-bordered mb-2 small">';
+                                            echo '<tbody>';
+                                            foreach ($value as $i => $v) {
+                                                echo '<tr><td>' . htmlspecialchars((string)$i) . '</td><td>' . htmlspecialchars((string)$v) . '</td></tr>';
+                                            }
+                                            echo '</tbody></table>';
                                         }
-                                        echo '</tbody></table>';
                                     }
-                                }
 
-                            } else {
-                                echo '<table class="table table-sm table-bordered mb-2 small">';
-                                echo '<tbody><tr><td style="width: 40%">' . htmlspecialchars((string)$key) . '</td><td>' . htmlspecialchars((string)$value) . '</td></tr></tbody></table>';
+                                } else {
+                                    echo '<table class="table table-sm table-bordered mb-2 small">';
+                                    echo '<tbody><tr><td style="width: 40%">' . htmlspecialchars((string)$key) . '</td><td>' . htmlspecialchars((string)$value) . '</td></tr></tbody></table>';
+                                }
                             }
                         }
                     }
@@ -844,6 +847,7 @@ $isInventoryAvailable = $canonicalAvailable;
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
 </div>
 
