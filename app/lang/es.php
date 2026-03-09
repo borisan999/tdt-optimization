@@ -16,6 +16,7 @@ return [
     'add_row' => 'Añadir Fila',
     'action' => 'Acción',
     'id' => 'ID',
+    'user' => 'Usuario',
     'status' => 'Estado',
     'name' => 'Nombre',
     'created_date' => 'Fecha Creación',

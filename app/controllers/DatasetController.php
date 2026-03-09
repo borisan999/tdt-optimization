@@ -61,7 +61,7 @@ class DatasetController
     private function listDatasets()
     {
         try {
-            if (($_SESSION['role'] ?? 'admin') === 'admin') {
+            if (strtolower((string)($_SESSION['role'] ?? 'admin')) === 'admin') {
                 $datasetModel = new Dataset();
                 $datasets = $datasetModel->getAll();
             } else {

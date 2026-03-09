@@ -9,6 +9,9 @@
         <?php endif; ?>
     </div>
     <div class="d-flex align-items-center me-3">
+        <span class="badge bg-light text-primary border me-3 py-2 px-3">
+            <i class="fas fa-user me-1"></i> <?= htmlspecialchars($_SESSION['username'] ?? 'User') ?>
+        </span>
         <div class="lang-switcher me-3">
             <a href="api/lang/en" class="text-decoration-none <?= \app\helpers\Translation::getLang() === 'en' ? 'fw-bold border-bottom border-2 border-primary' : '' ?>">EN</a>
             <span class="text-muted mx-1">|</span>

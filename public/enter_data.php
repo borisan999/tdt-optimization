@@ -38,9 +38,9 @@ include __DIR__ . '/templates/navbar.php';
 
     <!-- SECTION: UPLOAD EXCEL -->
     <div id="upload_tab" class="tab-pane fade show active section-box">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm border-start border-4 border-success">
             <div class="card-body p-4">
-                <h4 class="card-title mb-3"><?= __('upload_title') ?></h4>
+                <h4 class="card-title mb-3 text-success"><i class="fas fa-file-excel me-2"></i><?= __('upload_title') ?></h4>
                 <p class="text-muted"><?= __('upload_desc') ?></p>
                 <form id="excelUploadForm" method="POST" enctype="multipart/form-data">
                     <div class="input-group mb-3">
@@ -59,7 +59,7 @@ include __DIR__ . '/templates/navbar.php';
         <form id="manualInputForm" method="POST">
             
             <!-- Dataset Name -->
-            <div class="card shadow-sm mb-4 border-primary">
+            <div class="card shadow-sm mb-4 border-start border-4 border-primary">
                 <div class="card-body py-3">
                     <div class="row align-items-center">
                         <div class="col-md-3">
@@ -78,9 +78,9 @@ include __DIR__ . '/templates/navbar.php';
             </div>
 
             <!-- Complex Data (Catalogs) - Collapsible -->
-            <div class="card shadow-sm mb-4 border-info">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#catalogCollapse">
-                    <h5 class="mb-0"><i class="fas fa-boxes"></i> <?= __('catalogs_title') ?></h5>
+            <div class="card shadow-sm mb-4 border-start border-4 border-info">
+                <div class="card-header bg-white text-info d-flex justify-content-between align-items-center" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#catalogCollapse">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-boxes me-2"></i> <?= __('catalogs_title') ?></h5>
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div id="catalogCollapse" class="collapse">
@@ -91,9 +91,9 @@ include __DIR__ . '/templates/navbar.php';
             </div>
 
             <!-- Floor Repetition Utility -->
-            <div class="card shadow-sm mb-4 border-primary">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-copy"></i> <?= __('repetition_title') ?></h5>
+            <div class="card shadow-sm mb-4 border-start border-4 border-warning">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold text-warning"><i class="fas fa-copy me-2"></i> <?= __('repetition_title') ?></h5>
                 </div>
                 <div class="card-body">
                     <p class="small text-muted"><?= __('repetition_desc') ?></p>
@@ -111,7 +111,7 @@ include __DIR__ . '/templates/navbar.php';
                             <input type="number" name="targetEndFloor" class="form-control form-control-sm" placeholder="e.g. 10" title="<?= __('target_end_floor_tooltip') ?>">
                         </div>
                         <div class="col-md-3">
-                            <button type="button" id="applyRepetitionBtn" class="btn btn-primary btn-sm w-100">
+                            <button type="button" id="applyRepetitionBtn" class="btn btn-warning btn-sm w-100 fw-bold">
                                 <i class="fas fa-magic"></i> <?= __('apply_range_btn') ?>
                             </button>
                         </div>
@@ -122,16 +122,16 @@ include __DIR__ . '/templates/navbar.php';
             <!-- Topology Tables -->
             <div class="row">
                 <div class="col-xl-6">
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header d-flex justify-content-between align-items-center bg-white">
-                            <h5 class="mb-0"><?= __('apt_config_title') ?></h5>
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addApartmentRow()">
-                                <i class="fas fa-plus"></i> <?= __('add_row') ?>
+                    <div class="card shadow-sm mb-4 border-top border-4 border-primary">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
+                            <h5 class="mb-0 fw-bold text-primary"><?= __('apt_config_title') ?></h5>
+                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3" onclick="addApartmentRow()">
+                                <i class="fas fa-plus me-1"></i> <?= __('add_row') ?>
                             </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive" style="max-height: 500px;">
-                                <table class="table table-hover table-sm mb-0" id="apartmentsTable">
+                                <table class="table table-hover table-striped table-bordered table-sm mb-0" id="apartmentsTable">
                                     <thead class="table-light sticky-top">
                                         <tr>
                                             <th><?= __('col_piso') ?></th>
@@ -149,16 +149,16 @@ include __DIR__ . '/templates/navbar.php';
                 </div>
 
                 <div class="col-xl-6">
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header d-flex justify-content-between align-items-center bg-white">
-                            <h5 class="mb-0"><?= __('tu_lengths_title') ?></h5>
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addTuRow()">
-                                <i class="fas fa-plus"></i> <?= __('add_row') ?>
+                    <div class="card shadow-sm mb-4 border-top border-4 border-primary">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
+                            <h5 class="mb-0 fw-bold text-primary"><?= __('tu_lengths_title') ?></h5>
+                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3" onclick="addTuRow()">
+                                <i class="fas fa-plus me-1"></i> <?= __('add_row') ?>
                             </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive" style="max-height: 500px;">
-                                <table class="table table-hover table-sm mb-0" id="tuTable">
+                                <table class="table table-hover table-striped table-bordered table-sm mb-0" id="tuTable">
                                     <thead class="table-light sticky-top">
                                         <tr>
                                             <th><?= __('col_piso') ?></th>
@@ -177,16 +177,16 @@ include __DIR__ . '/templates/navbar.php';
             </div>
 
             <!-- Global Actions -->
-            <div class="card shadow-sm sticky-bottom bg-white border-top border-primary mt-4">
+            <div class="card shadow-sm sticky-bottom bg-white border-top border-4 border-primary mt-4">
                 <div class="card-body d-flex justify-content-end gap-3 p-3">
                     <input type="hidden" id="current_dataset_id" name="dataset_id">
                     
-                    <button id="saveBtn" class="btn btn-primary px-4" type="submit">
-                        <i class="fas fa-save"></i> <?= __('save_config_btn') ?>
+                    <button id="saveBtn" class="btn btn-outline-primary px-4 fw-bold" type="submit">
+                        <i class="fas fa-save me-1"></i> <?= __('save_config_btn') ?>
                     </button>
                     
-                    <button id="runOptimizationBtn" class="btn btn-warning px-4 hidden" type="button">
-                        <i class="fas fa-play"></i> <?= __('run_opt_btn') ?>
+                    <button id="runOptimizationBtn" class="btn btn-primary px-4 fw-bold hidden" type="button">
+                        <i class="fas fa-play me-1"></i> <?= __('run_opt_btn') ?>
                     </button>
                 </div>
             </div>
@@ -195,18 +195,18 @@ include __DIR__ . '/templates/navbar.php';
     
     <!-- SECTION: LOAD FROM HISTORY -->
     <div id="history_tab" class="tab-pane fade hidden section-box">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm border-start border-4 border-info">
             <div class="card-body p-4">
-                <h4 class="card-title mb-3"><?= __('load_history_title') ?></h4>
+                <h4 class="card-title mb-3 text-info"><i class="fas fa-history me-2"></i><?= __('load_history_title') ?></h4>
                 <form id="historyLoadForm">
                     <div class="mb-3">
-                        <label class="form-label"><?= __('select_prev_config') ?></label>
+                        <label class="form-label fw-bold"><?= __('select_prev_config') ?></label>
                         <select id="historySelect" class="form-select" required>
                             <option value=""><?= __('choose_dataset') ?></option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-info text-white">
-                        <i class="fas fa-folder-open"></i> <?= __('load_config_btn') ?>
+                    <button type="submit" class="btn btn-info text-white fw-bold px-4">
+                        <i class="fas fa-folder-open me-1"></i> <?= __('load_config_btn') ?>
                     </button>
                 </form>
             </div>

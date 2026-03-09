@@ -14,7 +14,7 @@ if (empty($_SESSION['user_id'])) {
  * Engineers only have access to datasets they uploaded.
  */
 function ensureDatasetAccess(int $datasetId, PDO $pdo): void {
-    if (($_SESSION['role'] ?? 'admin') === 'admin') {
+    if (strtolower((string)($_SESSION['role'] ?? 'admin')) === 'admin') {
         return;
     }
 
@@ -34,7 +34,7 @@ function ensureDatasetAccess(int $datasetId, PDO $pdo): void {
  * Engineers only have access to results from datasets they uploaded.
  */
 function ensureResultAccess(int $optId, PDO $pdo): void {
-    if (($_SESSION['role'] ?? 'admin') === 'admin') {
+    if (strtolower((string)($_SESSION['role'] ?? 'admin')) === 'admin') {
         return;
     }
 
@@ -57,5 +57,5 @@ function ensureResultAccess(int $optId, PDO $pdo): void {
  * Check if current user is admin
  */
 function isAdmin(): bool {
-    return ($_SESSION['role'] ?? 'admin') === 'admin';
+    return strtolower((string)($_SESSION['role'] ?? 'admin')) === 'admin';
 }

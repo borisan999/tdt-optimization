@@ -16,6 +16,7 @@ return [
     'add_row' => 'Add Row',
     'action' => 'Action',
     'id' => 'ID',
+    'user' => 'User',
     'status' => 'Status',
     'name' => 'Name',
     'created_date' => 'Created Date',

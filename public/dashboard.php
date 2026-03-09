@@ -100,6 +100,7 @@
             </a>
         </div>
 
+        <?php if (isAdmin()): ?>
         <div class="col-md-6 col-xl-3 animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
             <a href="configurations" class="dash-card">
                 <div class="card-icon icon-conf">
@@ -111,6 +112,7 @@
                 </p>
             </a>
         </div>
+        <?php endif; ?>
 
     </section>
 

@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: tdt-mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: tdt_optimization
+      MYSQL_USER: newuser
+      MYSQL_PASSWORD: C6oVYnXd26ByFhaoGZmcPWqhUiVcxl3EK3WOWEpP6yQ=
+    volumes:
+      - tdt-mysql-data:/var/lib/mysql
+    networks:
+      - tdt-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: tdt-app
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: tdt_optimization
+      DB_USER: newuser
+      DB_PASS: C6oVYnXd26ByFhaoGZmcPWqhUiVcxl3EK3WOWEpP6yQ=
+      PYTHON_DB_HOST: db
+    volumes:
+      - ./app:/var/www/html/app:ro
+      - ./public:/var/www/html/public:ro
+      - ./.env:/var/www/html/.env:ro
+      - ./scripts:/var/www/html/scripts:ro
+      - ./vendor:/var/www/html/vendor:ro
+      - ./storage:/var/www/html/storage:rw
+    depends_on:
+      - db
+    networks:
+      - tdt-network
+
+networks:
+  tdt-network:
+    driver: bridge
+
+volumes:
+  tdt-mysql-data:

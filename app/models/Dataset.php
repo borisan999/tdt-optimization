@@ -89,9 +89,10 @@ class Dataset
             $params = ['uid' => $user_id];
         }
 
-        $sql = "SELECT d.*, 
+        $sql = "SELECT d.*, u.username as uploader_name,
                 (SELECT opt_id FROM optimizations WHERE dataset_id = d.dataset_id ORDER BY created_at DESC LIMIT 1) as latest_opt_id
                 FROM datasets d 
+                LEFT JOIN users u ON d.uploaded_by = u.user_id
                 $where
                 ORDER BY d.created_at DESC";
         

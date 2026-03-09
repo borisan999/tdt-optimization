@@ -217,12 +217,13 @@ $isInventoryAvailable = $canonicalAvailable;
                        title="<?= __('view_tree_btn') ?>">
                        <i class="fas fa-project-diagram me-1"></i> <?= __('view_tree_btn') ?>
                     </a>
+                    <?php if (isAdmin()): ?>
                     <a class="btn btn-secondary btn-sm"
                        href="optimization-logs"
                        title="<?= __('solver_logs') ?>">
                        <i class="fas fa-file-alt me-1"></i> <?= __('solver_logs') ?? 'Solver Logs' ?>
                     </a>
-                </div>
+                    <?php endif; ?>                </div>
             </div>
         </div>
     </div>

@@ -26,6 +26,9 @@ $history = $datasetModel->getHistory(isAdmin() ? null : $_SESSION['user_id']);
                     <thead class="table-light">
                         <tr>
                             <th class="ps-3"><?= __('id') ?></th>
+                            <?php if (isAdmin()): ?>
+                                <th><?= __('user') ?></th>
+                            <?php endif; ?>
                             <th><?= __('name') ?></th>
                             <th><?= __('status') ?></th>
                             <th><?= __('created_date') ?></th>
@@ -42,6 +45,11 @@ $history = $datasetModel->getHistory(isAdmin() ? null : $_SESSION['user_id']);
                             ?>
                             <tr>
                                 <td class="ps-3 fw-bold">#<?= htmlspecialchars((string)$d['dataset_id']) ?></td>
+                                <?php if (isAdmin()): ?>
+                                    <td>
+                                        <span class="badge bg-light text-dark border"><i class="fas fa-user me-1 text-muted"></i> <?= htmlspecialchars($d['uploader_name'] ?? 'System') ?></span>
+                                    </td>
+                                <?php endif; ?>
                                 <td><?= htmlspecialchars($d['dataset_name'] ?? 'Unnamed Dataset') ?></td>
                                 <td>
                                     <span class="badge bg-<?= $statusColor ?>"><?= __('status_' . strtolower(htmlspecialchars($d['status']))) ?></span>
